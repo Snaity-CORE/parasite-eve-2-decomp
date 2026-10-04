@@ -523,7 +523,7 @@ void Gp_DrawHpMpStats(UiPanel* arg0, s32 arg1)
     s32           xOff;
     s32           x;
     s32           y;
-    register s32  y2 asm("s2");
+    register s32  y2 PSX_REG("s2");
     s32           barX;
     s32           color;
     s32           max;
@@ -1289,10 +1289,10 @@ void Gp_DrawItemOrderRow(UiList* arg0, UiObject* arg1)
 
 void Gp_CountAmmoRows(UiList* arg0, s32 arg1)
 {
-    register s32               count asm("t0");
+    register s32               count PSX_REG("t0");
     s32                        i;
-    register InventoryItemRow* rec asm("a3");
-    register s32               item asm("v1");
+    register InventoryItemRow* rec PSX_REG("a3");
+    register s32               item PSX_REG("v1");
     s32                        j;
     s32                        off;
     s32                        temp;
@@ -1308,12 +1308,16 @@ void Gp_CountAmmoRows(UiList* arg0, s32 arg1)
     // Byte offsets select whole rows; accesses resume through the row type.
     rowBytes = (u8*)&gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.itemRows;
     scan     = &gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems;
+#ifdef PC_PORT
+    cfg = &gPlayerStatus;
+#else
     {
-        register s32 hi asm("v1");
+        register s32 hi PSX_REG("v1");
         asm volatile("lui %1, %%hi(gPlayerStatus)\n\t"
                      "addiu %0, %1, %%lo(gPlayerStatus)"
                      : "=r"(cfg), "=r"(hi));
     }
+#endif
     limit = scan->rowCount;
     item  = scan->firstRow;
     i     = count;
@@ -2523,7 +2527,7 @@ void Gp_ArmorMenuTask(Task* arg0)
             } else {
                 s32          row9;
                 s32          f5;
-                register s32 vis asm("a0");
+                register s32 vis PSX_REG("a0");
                 t    = t / h;
                 row9 = menu->firstVisibleItemIndex.signedValue;
                 f5   = menu->visibleRowCount.signedValue;

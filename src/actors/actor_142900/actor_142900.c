@@ -740,7 +740,11 @@ s32 D_actor_142900_801382AC;
 
 void func_actor_142900_80131E24(Task* arg0)
 {
+#ifndef PC_PORT
+    /* Unprototyped on purpose: the call passes an unpromoted int. Native
+     * builds use the (s8) prototype from main/display.h instead. */
     extern void displaySetShakeY();
+#endif
     s32         var_a0;
 
     if (D_actor_142900_801382AC == 2) {

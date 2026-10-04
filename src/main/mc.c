@@ -852,7 +852,7 @@ static s32 Mc_PromptDialog(Task* task, s32 arg1, s32 unused3)
     s32            ret;
     s32            one;
     UiObject*      obj;
-    register Task* childTask asm("a0");
+    register Task* childTask PSX_REG("a0");
     UiObject*      childObject;
     McPromptPair*  entry;
     McPromptPair*  base;
@@ -893,7 +893,7 @@ static s32 Mc_PromptDialogChoice(Task* task, s32 arg1, s32 unused3)
     s32            ret;
     s32            one;
     UiObject*      obj;
-    register Task* childTask asm("a0");
+    register Task* childTask PSX_REG("a0");
     UiObject*      childObject;
     McPromptPair*  entry;
     McPromptPair*  base;
@@ -934,7 +934,7 @@ static s32 Mc_PromptDialogSpawn(Task* task, s32 arg1, s32 unused3)
     s32            ret;
     s32            one;
     UiObject*      obj;
-    register Task* childTask asm("a0");
+    register Task* childTask PSX_REG("a0");
     UiObject*      childObject;
     McPromptPair*  entry;
     McPromptPair*  base;
@@ -975,7 +975,7 @@ static s32 Mc_PromptDialogFile(Task* task, s32 arg1, s32 unused3)
     s32            ret;
     s32            one;
     UiObject*      obj;
-    register Task* childTask asm("a0");
+    register Task* childTask PSX_REG("a0");
     UiObject*      childObject;
     McPromptPair*  entry;
     McPromptPair*  base;

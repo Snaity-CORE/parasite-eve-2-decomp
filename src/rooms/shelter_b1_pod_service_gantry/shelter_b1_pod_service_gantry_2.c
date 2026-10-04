@@ -372,7 +372,7 @@ void waterDrawSpinU16(GfxCoord* coord, u16 textureColumn, s16 radiusScale, s16 s
     void**                                          scratch;
     _ShelterB1PodServiceGantrySpinScratch*          head;
     _ShelterB1PodServiceGantrySpinScratch*          block;
-    register _ShelterB1PodServiceGantrySpinScratch* depthBlock asm("s0");
+    register _ShelterB1PodServiceGantrySpinScratch* depthBlock PSX_REG("s0");
     POLY_FT4*                                       prim;
     s32                                             u0;
     s32                                             u1;

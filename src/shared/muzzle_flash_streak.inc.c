@@ -33,9 +33,9 @@ void muzzleFlashDrawStreak(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&blk->vertices[0]);
     gte_rtv0();
     gte_stsv(&blk->vertices[0]);
-    (u16) blk->vertices[0].vx = (u16)blk->vertices[0].vx + (u16)arg0->workm.t[0];
-    (u16) blk->vertices[0].vy = (u16)blk->vertices[0].vy + (u16)arg0->workm.t[1];
-    (u16) blk->vertices[0].vz = (u16)blk->vertices[0].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->vertices[0].vx = (u16)blk->vertices[0].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->vertices[0].vy = (u16)blk->vertices[0].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->vertices[0].vz = (u16)blk->vertices[0].vz + (u16)arg0->workm.t[2];
 
     /* Corner 1: the far tip, a full 0x600 out and 0x200 towards the camera. */
     len                 = 0x600;
@@ -46,9 +46,9 @@ void muzzleFlashDrawStreak(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&blk->vertices[1]);
     gte_rtv0();
     gte_stsv(&blk->vertices[1]);
-    (u16) blk->vertices[1].vx = (u16)blk->vertices[1].vx + (u16)arg0->workm.t[0];
-    (u16) blk->vertices[1].vy = (u16)blk->vertices[1].vy + (u16)arg0->workm.t[1];
-    (u16) blk->vertices[1].vz = (u16)blk->vertices[1].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->vertices[1].vx = (u16)blk->vertices[1].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->vertices[1].vy = (u16)blk->vertices[1].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->vertices[1].vz = (u16)blk->vertices[1].vz + (u16)arg0->workm.t[2];
 
     /* Corner 2: on the small circle, straight along the flash direction. This
        is the only lit corner. */
@@ -59,10 +59,10 @@ void muzzleFlashDrawStreak(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&blk->vertices[2]);
     gte_rtv0();
     gte_stsv(&blk->vertices[2]);
-    (u16) blk->vertices[2].vx = (u16)blk->vertices[2].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->vertices[2].vx = (u16)blk->vertices[2].vx + (u16)arg0->workm.t[0];
     ang                       = ang + 0xC0;
-    (u16) blk->vertices[2].vy = (u16)blk->vertices[2].vy + (u16)arg0->workm.t[1];
-    (u16) blk->vertices[2].vz = (u16)blk->vertices[2].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->vertices[2].vy = (u16)blk->vertices[2].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->vertices[2].vz = (u16)blk->vertices[2].vz + (u16)arg0->workm.t[2];
 
     /* Corner 3: on the small circle, 0xC0 ahead of the flash direction. */
     blk->vertices[3].vx = (u32)rsin(ang) >> 4;
@@ -72,9 +72,9 @@ void muzzleFlashDrawStreak(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&blk->vertices[3]);
     gte_rtv0();
     gte_stsv(&blk->vertices[3]);
-    (u16) blk->vertices[3].vx = (u16)blk->vertices[3].vx + (u16)arg0->workm.t[0];
-    (u16) blk->vertices[3].vy = (u16)blk->vertices[3].vy + (u16)arg0->workm.t[1];
-    (u16) blk->vertices[3].vz = (u16)blk->vertices[3].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->vertices[3].vx = (u16)blk->vertices[3].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->vertices[3].vy = (u16)blk->vertices[3].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->vertices[3].vz = (u16)blk->vertices[3].vz + (u16)arg0->workm.t[2];
 
     gte_SetRotMatrix(&GsWSMATRIX);
     gte_ldv0(&blk->vertices[0]);

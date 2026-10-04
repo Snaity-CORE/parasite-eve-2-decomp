@@ -1082,7 +1082,7 @@ static void Shop_QuantityTask(Task* task)
     s32          maxQty;
     s32          afford;
     s32          held;
-    register s32 maxHeld asm("v0");
+    register s32 maxHeld PSX_REG("v0");
     s32          count;
     s32          left;
     s32          top;

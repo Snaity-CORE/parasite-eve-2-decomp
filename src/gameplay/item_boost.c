@@ -332,7 +332,7 @@ void Gp_UiBoostAttach(UiObject* arg0, Task* arg1)
     s32          x;
     s32          y;
     s32          color;
-    register s32 row asm("s1");
+    register s32 row PSX_REG("s1");
     s32          one;
 
     item = gPlayerStatus.armor + 0x5F;

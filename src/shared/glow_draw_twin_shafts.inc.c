@@ -27,50 +27,50 @@ void glowDrawTwinShafts(GfxCoord* coord)
     gte_ldv0(&gSaloonLightPoints[14]);
     gte_rtv0();
     gte_stsv(&block->vertices[0]);
-    (u16) block->vertices[0].vx = (u16)block->vertices[0].vx + (u16)coord->workm.t[0];
-    (u16) block->vertices[0].vy = (u16)block->vertices[0].vy + (u16)coord->workm.t[1];
-    (u16) block->vertices[0].vz = (u16)block->vertices[0].vz + (u16)coord->workm.t[2];
+    PSX_LVALUE_CAST(u16) block->vertices[0].vx = (u16)block->vertices[0].vx + (u16)coord->workm.t[0];
+    PSX_LVALUE_CAST(u16) block->vertices[0].vy = (u16)block->vertices[0].vy + (u16)coord->workm.t[1];
+    PSX_LVALUE_CAST(u16) block->vertices[0].vz = (u16)block->vertices[0].vz + (u16)coord->workm.t[2];
 
     gte_SetRotMatrix(&coord->workm);
     gte_ldv0(&gSaloonLightPoints[17]);
     gte_rtv0();
     gte_stsv(&block->vertices[1]);
-    (u16) block->vertices[1].vx = (u16)block->vertices[1].vx + (u16)coord->workm.t[0];
-    (u16) block->vertices[1].vy = (u16)block->vertices[1].vy + (u16)coord->workm.t[1];
-    (u16) block->vertices[1].vz = (u16)block->vertices[1].vz + (u16)coord->workm.t[2];
+    PSX_LVALUE_CAST(u16) block->vertices[1].vx = (u16)block->vertices[1].vx + (u16)coord->workm.t[0];
+    PSX_LVALUE_CAST(u16) block->vertices[1].vy = (u16)block->vertices[1].vy + (u16)coord->workm.t[1];
+    PSX_LVALUE_CAST(u16) block->vertices[1].vz = (u16)block->vertices[1].vz + (u16)coord->workm.t[2];
 
     for (i = 0; i < 2; i++) {
         j                           = i + 15;
         dirA                        = &gSaloonLightPoints[j];
-        (u16) block->vertices[2].vx = (u16)gSaloonLightPoints[14].vx +
+        PSX_LVALUE_CAST(u16) block->vertices[2].vx = (u16)gSaloonLightPoints[14].vx +
                                       ((u16)dirA->vx - (u16)gSaloonLightPoints[14].vx) * 4;
-        (u16) block->vertices[2].vy = (u16)gSaloonLightPoints[14].vy +
+        PSX_LVALUE_CAST(u16) block->vertices[2].vy = (u16)gSaloonLightPoints[14].vy +
                                       ((u16)dirA->vy - (u16)gSaloonLightPoints[14].vy) * 4;
-        (u16) block->vertices[2].vz = (u16)gSaloonLightPoints[14].vz +
+        PSX_LVALUE_CAST(u16) block->vertices[2].vz = (u16)gSaloonLightPoints[14].vz +
                                       ((u16)dirA->vz - (u16)gSaloonLightPoints[14].vz) * 4;
         gte_SetRotMatrix(&coord->workm);
         gte_ldv0(&block->vertices[2]);
         gte_rtv0();
         gte_stsv(&block->vertices[2]);
-        (u16) block->vertices[2].vx = (u16)block->vertices[2].vx + (u16)coord->workm.t[0];
-        (u16) block->vertices[2].vy = (u16)block->vertices[2].vy + (u16)coord->workm.t[1];
-        (u16) block->vertices[2].vz = (u16)block->vertices[2].vz + (u16)coord->workm.t[2];
+        PSX_LVALUE_CAST(u16) block->vertices[2].vx = (u16)block->vertices[2].vx + (u16)coord->workm.t[0];
+        PSX_LVALUE_CAST(u16) block->vertices[2].vy = (u16)block->vertices[2].vy + (u16)coord->workm.t[1];
+        PSX_LVALUE_CAST(u16) block->vertices[2].vz = (u16)block->vertices[2].vz + (u16)coord->workm.t[2];
 
         j                           = i + 18;
         dirB                        = &gSaloonLightPoints[j];
-        (u16) block->vertices[3].vx = (u16)gSaloonLightPoints[17].vx +
+        PSX_LVALUE_CAST(u16) block->vertices[3].vx = (u16)gSaloonLightPoints[17].vx +
                                       ((u16)dirB->vx - (u16)gSaloonLightPoints[17].vx) * 4;
-        (u16) block->vertices[3].vy = (u16)gSaloonLightPoints[17].vy +
+        PSX_LVALUE_CAST(u16) block->vertices[3].vy = (u16)gSaloonLightPoints[17].vy +
                                       ((u16)dirB->vy - (u16)gSaloonLightPoints[17].vy) * 4;
-        (u16) block->vertices[3].vz = (u16)gSaloonLightPoints[17].vz +
+        PSX_LVALUE_CAST(u16) block->vertices[3].vz = (u16)gSaloonLightPoints[17].vz +
                                       ((u16)dirB->vz - (u16)gSaloonLightPoints[17].vz) * 4;
         gte_SetRotMatrix(&coord->workm);
         gte_ldv0(&block->vertices[3]);
         gte_rtv0();
         gte_stsv(&block->vertices[3]);
-        (u16) block->vertices[3].vx = (u16)block->vertices[3].vx + (u16)coord->workm.t[0];
-        (u16) block->vertices[3].vy = (u16)block->vertices[3].vy + (u16)coord->workm.t[1];
-        (u16) block->vertices[3].vz = (u16)block->vertices[3].vz + (u16)coord->workm.t[2];
+        PSX_LVALUE_CAST(u16) block->vertices[3].vx = (u16)block->vertices[3].vx + (u16)coord->workm.t[0];
+        PSX_LVALUE_CAST(u16) block->vertices[3].vy = (u16)block->vertices[3].vy + (u16)coord->workm.t[1];
+        PSX_LVALUE_CAST(u16) block->vertices[3].vz = (u16)block->vertices[3].vz + (u16)coord->workm.t[2];
 
         gte_SetRotMatrix(&GsWSMATRIX);
         gte_ldv0(&block->vertices[0]);

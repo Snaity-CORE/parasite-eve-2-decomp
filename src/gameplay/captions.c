@@ -656,7 +656,9 @@ u16 func_800E5578(const u16* arg0, s32 arg1, u8 arg2, u16 arg3)
             Gp_CapCaretX = x + 4;
             t2           = lineIdx + 1;
             next         = &body[i + 1];
+#ifndef PC_PORT
             asm("" : "=r"(g), "+m"(*next) : "r"(lineIdx));
+#endif
             lineIdx = t2;
             if (layout->vertical == 0) {
                 y += func_800E6BB8(next);
@@ -666,7 +668,9 @@ u16 func_800E5578(const u16* arg0, s32 arg1, u8 arg2, u16 arg3)
                     x = (u16)D_801155B2 - 0xA0;
                 }
             } else {
+#ifndef PC_PORT
                 asm("" : "+r"(i) : "r"(g));
+#endif
                 y  = -0x58;
                 x -= func_800E6BB8(next);
             }

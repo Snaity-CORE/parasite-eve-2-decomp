@@ -491,8 +491,8 @@ static inline void _gpDrawItemNameUnmarkedAt(UiObject* obj, s32 x, s32 y, s32 co
 
 void Gp_DrawAmmoRow(UiList* arg0, UiObject* obj)
 {
-    register UiList* prompt asm("s5");
-    register s32     spawnArg asm("s4");
+    register UiList* prompt PSX_REG("s5");
+    register s32     spawnArg PSX_REG("s4");
     s32              item;
     s32              status;
     UiObject*        spawned;

@@ -1,8 +1,9 @@
 #ifndef INCLUDE_ASM_H
 #define INCLUDE_ASM_H
 
+/* Native (PC_PORT) builds are fully decompiled C: no assembly to pull in. */
 #if !defined(SPLAT) && !defined(M2CTX) && !defined(PERMUTER) && \
-    !defined(SKIP_ASM)
+    !defined(SKIP_ASM) && !defined(PC_PORT)
 #ifdef VER_USA
 #define BASE_ASM_PATH "USA"
 #elif VER_JAP

@@ -62,6 +62,8 @@ static u32* func_8009AC58(TmdStreamWorkspace* ws, s32 arg1, u32* arg2);
 /// shifting a single full product. Final additions wrap at 32 bits.
 /// Clobbers GTE V0..V2, MAC1..3, IR1..3 and FLAG; leaves RT and TR intact.
 /// No combined overflow status is returned.
+/* Native builds take the C translation from the port's generated gte.h. */
+#ifndef PC_PORT
 #define gte_RotTransLV(inputVector, outputVector)                                                                     \
     do {                                                                                                              \
         enum {                                                                                                        \
@@ -202,6 +204,7 @@ static u32* func_8009AC58(TmdStreamWorkspace* ws, s32 arg1, u32* arg2);
               "i"(GTE_ROT_TRANS_LV_HIGH_ROTATE)                                                                       \
             : "$12", "$13", "$14", "$15", "$16", "memory");                                                           \
     } while (0)
+#endif
 
 /// Stores the signed screen-space area used to test a flat triangle's winding.
 ///

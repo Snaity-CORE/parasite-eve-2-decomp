@@ -6981,7 +6981,13 @@ static void func_actor_403100_8013AA04(Task* arg0)
         D_actor_403100_80155808->subState          = 0;
     }
 }
+#ifdef PC_PORT
+/* The parameter is unused: the body's own `task` local shadows it, which
+ * GCC 2.8.1 accepts and modern compilers reject. */
+static void func_actor_403100_8013AC04(Task* unusedTask)
+#else
 static void func_actor_403100_8013AC04(Task* task)
+#endif
 {
     s32              state;
     s32              message;
@@ -7820,7 +7826,7 @@ static void func_actor_403100_8013CBE0(Task* task)
     s16          next;
     s16          next2;
     s32          sound;
-    register s32 soundId asm("a1");
+    register s32 soundId PSX_REG("a1");
     s32          pan;
     u32          random;
     s32          depth;

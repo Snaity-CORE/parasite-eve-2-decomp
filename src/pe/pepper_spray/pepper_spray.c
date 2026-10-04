@@ -218,9 +218,9 @@ static void func_pepper_spray_8012F634(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&head[-1].corners[0]);
     gte_rtv0();
     gte_stsv(&head[-1].corners[0]);
-    (u16) blk->corners[0].vx = (u16)blk->corners[0].vx + (u16)arg0->workm.t[0];
-    (u16) blk->corners[0].vy = (u16)blk->corners[0].vy + (u16)arg0->workm.t[1];
-    (u16) blk->corners[0].vz = (u16)blk->corners[0].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->corners[0].vx = (u16)blk->corners[0].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->corners[0].vy = (u16)blk->corners[0].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->corners[0].vz = (u16)blk->corners[0].vz + (u16)arg0->workm.t[2];
 
     blk->corners[1].vx = (u32)rsin(ang) >> 1;
     blk->corners[1].vy = (u32)rcos(ang) >> 1;
@@ -229,9 +229,9 @@ static void func_pepper_spray_8012F634(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&head[-1].corners[1]);
     gte_rtv0();
     gte_stsv(&head[-1].corners[1]);
-    (u16) blk->corners[1].vx = (u16)blk->corners[1].vx + (u16)arg0->workm.t[0];
-    (u16) blk->corners[1].vy = (u16)blk->corners[1].vy + (u16)arg0->workm.t[1];
-    (u16) blk->corners[1].vz = (u16)blk->corners[1].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->corners[1].vx = (u16)blk->corners[1].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->corners[1].vy = (u16)blk->corners[1].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->corners[1].vz = (u16)blk->corners[1].vz + (u16)arg0->workm.t[2];
 
     blk->corners[2].vx = (u32)rsin(ang) >> 4;
     blk->corners[2].vy = (u32)rcos(ang) >> 4;
@@ -240,10 +240,10 @@ static void func_pepper_spray_8012F634(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&head[-1].corners[2]);
     gte_rtv0();
     gte_stsv(&head[-1].corners[2]);
-    (u16) blk->corners[2].vx = (u16)blk->corners[2].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->corners[2].vx = (u16)blk->corners[2].vx + (u16)arg0->workm.t[0];
     ang                      = ang + 0xC0;
-    (u16) blk->corners[2].vy = (u16)blk->corners[2].vy + (u16)arg0->workm.t[1];
-    (u16) blk->corners[2].vz = (u16)blk->corners[2].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->corners[2].vy = (u16)blk->corners[2].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->corners[2].vz = (u16)blk->corners[2].vz + (u16)arg0->workm.t[2];
 
     blk->corners[3].vx = (u32)rsin(ang) >> 4;
     blk->corners[3].vy = (u32)rcos(ang) >> 4;
@@ -252,9 +252,9 @@ static void func_pepper_spray_8012F634(GfxCoord* arg0, s16 arg1, s16 arg2)
     gte_ldv0(&head[-1].corners[3]);
     gte_rtv0();
     gte_stsv(&head[-1].corners[3]);
-    (u16) blk->corners[3].vx = (u16)blk->corners[3].vx + (u16)arg0->workm.t[0];
-    (u16) blk->corners[3].vy = (u16)blk->corners[3].vy + (u16)arg0->workm.t[1];
-    (u16) blk->corners[3].vz = (u16)blk->corners[3].vz + (u16)arg0->workm.t[2];
+    PSX_LVALUE_CAST(u16) blk->corners[3].vx = (u16)blk->corners[3].vx + (u16)arg0->workm.t[0];
+    PSX_LVALUE_CAST(u16) blk->corners[3].vy = (u16)blk->corners[3].vy + (u16)arg0->workm.t[1];
+    PSX_LVALUE_CAST(u16) blk->corners[3].vz = (u16)blk->corners[3].vz + (u16)arg0->workm.t[2];
 
     gte_SetRotMatrix(&GsWSMATRIX);
     gte_ldv0(&head[-1].corners[0]);

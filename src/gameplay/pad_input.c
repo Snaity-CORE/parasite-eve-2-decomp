@@ -128,7 +128,7 @@ void Gp_UpdatePadInput(void)
     Task*         work;
     GameActor*    actor;
     u16           mask;
-    register u16  pressedButtons asm("s2"); // pinned: global-alloc otherwise ranks `actor` just above %hi(gGameSession) and gives it $s2
+    register u16  pressedButtons PSX_REG("s2"); // pinned: global-alloc otherwise ranks `actor` just above %hi(gGameSession) and gives it $s2
     u16           releasedButtons;
 
     pad  = &gPadStates[0];

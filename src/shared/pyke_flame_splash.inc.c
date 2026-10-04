@@ -36,9 +36,9 @@ static void pykeFlameDrawSplash(VECTOR3* pos, s32 width)
         gte_ldv0(&block->vertices[i]);
         gte_rtv0();
         gte_stsv(&block->vertices[i]);
-        (u16) block->vertices[i].vx = (u16)block->vertices[i].vx + (u16)pos->vx;
-        (u16) block->vertices[i].vy = (u16)block->vertices[i].vy + (u16)pos->vy;
-        (u16) block->vertices[i].vz = (u16)block->vertices[i].vz + (u16)pos->vz;
+        PSX_LVALUE_CAST(u16) block->vertices[i].vx = (u16)block->vertices[i].vx + (u16)pos->vx;
+        PSX_LVALUE_CAST(u16) block->vertices[i].vy = (u16)block->vertices[i].vy + (u16)pos->vy;
+        PSX_LVALUE_CAST(u16) block->vertices[i].vz = (u16)block->vertices[i].vz + (u16)pos->vz;
         i++;
     } while (i < ARRAY_SIZE(D_80111E38));
 

@@ -3267,10 +3267,10 @@ static void func_800FCD00(Task* arg0)
         gte_ldv0(&block->vertices[i]);
         gte_rtv0();
         gte_stsv(&block->vertices[i]);
-        (u16) block->vertices[i].vx = (u16)block->vertices[i].vx + (u16)coord->workm.t[0];
+        PSX_LVALUE_CAST(u16) block->vertices[i].vx = (u16)block->vertices[i].vx + (u16)coord->workm.t[0];
         a                          += 0x155;
-        (u16) block->vertices[i].vy = (u16)block->vertices[i].vy + (u16)coord->workm.t[1];
-        (u16) block->vertices[i].vz = (u16)block->vertices[i].vz + (u16)coord->workm.t[2];
+        PSX_LVALUE_CAST(u16) block->vertices[i].vy = (u16)block->vertices[i].vy + (u16)coord->workm.t[1];
+        PSX_LVALUE_CAST(u16) block->vertices[i].vz = (u16)block->vertices[i].vz + (u16)coord->workm.t[2];
         c                           = rcos(a);
         i++;
         block->vertices[i].vy = y;
@@ -3280,9 +3280,9 @@ static void func_800FCD00(Task* arg0)
         gte_ldv0(&block->vertices[i]);
         gte_rtv0();
         gte_stsv(&block->vertices[i]);
-        (u16) block->vertices[i].vx = (u16)block->vertices[i].vx + (u16)coord->workm.t[0];
-        (u16) block->vertices[i].vy = (u16)block->vertices[i].vy + (u16)coord->workm.t[1];
-        (u16) block->vertices[i].vz = (u16)block->vertices[i].vz + (u16)coord->workm.t[2];
+        PSX_LVALUE_CAST(u16) block->vertices[i].vx = (u16)block->vertices[i].vx + (u16)coord->workm.t[0];
+        PSX_LVALUE_CAST(u16) block->vertices[i].vy = (u16)block->vertices[i].vy + (u16)coord->workm.t[1];
+        PSX_LVALUE_CAST(u16) block->vertices[i].vz = (u16)block->vertices[i].vz + (u16)coord->workm.t[2];
         i++;
     } while (i < EFFECT_DEATH_FLAME_VERTEX_COUNT);
 
@@ -4058,10 +4058,10 @@ void func_800FF710(Task* arg0)
     GfxCoord*    coord;
     MATRIX*      m;
     s16          flag;
-    register s32 old asm("v1");
-    register s32 k asm("a2");
+    register s32 old PSX_REG("v1");
+    register s32 k PSX_REG("a2");
     s32          lcg;
-    register s32 one asm("v1");
+    register s32 one PSX_REG("v1");
     s32          temp;
     s32          temp2;
     s32          i;
@@ -4785,7 +4785,7 @@ void Gp_UpdatePlayerMove(void)
 {
     Task*              work;
     GameActor*         actor;
-    register GfxCoord* coord asm("s1");
+    register GfxCoord* coord PSX_REG("s1");
     SVECTOR*           vec;
     Task*              task;
     MATRIX*            mat;

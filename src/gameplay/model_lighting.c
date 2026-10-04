@@ -103,6 +103,8 @@ u32 D_80114BAC = 0x10FF2220;
 
 /* r1 = long vector in, r2 = long vector out: r2 = RT * r1 + TR at full
  * 32-bit precision, the input split into three 10/11-bit slices. */
+/* Native builds take the C translation from the port's generated gte.h. */
+#ifndef PC_PORT
 #define gte_RotTransLV(r1, r2) __asm__ volatile( \
     "lw	$14, 0( %0 );"                           \
     "lw	$15, 4( %0 );"                           \
@@ -210,6 +212,7 @@ u32 D_80114BAC = 0x10FF2220;
     :                                            \
     : "r"(r1), "r"(r2)                           \
     : "$12", "$13", "$14", "$15", "$16", "memory")
+#endif
 
 /// Initializes one flat textured triangle's persistent texture coordinates and GPU addresses.
 ///

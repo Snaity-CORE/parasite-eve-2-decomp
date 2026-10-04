@@ -86,6 +86,61 @@
  * declarations globally reserve the register. Local fp pins can be invalid.
  * Instruction-emitting asm (lui/lo, sll, move) stays written out.
  */
+#ifdef PC_PORT
+/*
+ * Native (PC port) builds: the matching helpers only steer GCC 2.8.1's MIPS
+ * code generation, so they keep just their C semantics here. MOVE_ZERO and
+ * COPY_REG assign; everything else is a no-op. Register pins and the GCC
+ * lvalue-cast extension are spelled through PSX_REG / PSX_LVALUE_CAST so the
+ * PSX build preprocesses to the same text as before.
+ */
+#define PSX_REG(reg)
+/* Only used on 16-bit lvalues with a 16-bit cast, where dropping the cast
+ * stores the same bits. */
+#define PSX_LVALUE_CAST(type)
+
+#define SCHED_BARRIER()                 ((void)0)
+#define SOFT_BARRIER()                  ((void)0)
+#define CSE_STEER(flag)                 flag = 0
+#define COMPILER_BARRIER()              __asm__ volatile("" ::: "memory")
+#define SOFT_COMPILER_BARRIER()         __asm__ volatile("" ::: "memory")
+#define TOUCH_REG(x)                    ((void)0)
+#define TOUCH_REG2(a, b)                ((void)0)
+#define TOUCH_REG3(a, b, c)             ((void)0)
+#define TOUCH_REG4(a, b, c, d)          ((void)0)
+#define TOUCH_REG5(a, b, c, d, e)       ((void)0)
+#define TOUCH_REG_MEM(x)                ((void)0)
+#define TOUCH_REG2_MEM(a, b)            ((void)0)
+#define TOUCH_REG_USE(x, y)             ((void)0)
+#define TOUCH_REG_USE2(x, y, z)         ((void)0)
+#define TOUCH_REG2_USE(a, b, c)         ((void)0)
+#define SOFT_TOUCH_REG(x)               ((void)0)
+#define SOFT_TOUCH_REG2(a, b)           ((void)0)
+#define SOFT_TOUCH_REG3(a, b, c)        ((void)0)
+#define SOFT_TOUCH_REG4(a, b, c, d)     ((void)0)
+#define SOFT_TOUCH_REG5(a, b, c, d, e)  ((void)0)
+#define SOFT_TOUCH_REG_USE(x, y)        ((void)0)
+#define SOFT_TOUCH_REG_USE2(x, y, z)    ((void)0)
+#define SOFT_TOUCH_REG2_USE(a, b, c)    ((void)0)
+#define DEF_REG(x)                      ((void)0)
+#define SOFT_DEF_REG(x)                 ((void)0)
+#define USE_REG(x)                      ((void)0)
+#define USE_REG2(a, b)                  ((void)0)
+#define USE_REG3(a, b, c)               ((void)0)
+#define USE_REG4(a, b, c, d)            ((void)0)
+#define USE_REG5(a, b, c, d, e)         ((void)0)
+#define SOFT_USE_REG(x)                 ((void)0)
+#define SOFT_USE_REG2(a, b)             ((void)0)
+#define CLOBBER_REG(reg)                ((void)0)
+#define TOUCH_MEM(x)                    ((void)0)
+#define MOVE_ZERO(x)                    ((x) = 0)
+#define SOFT_MOVE_ZERO(x)               ((x) = 0)
+#define COPY_REG(dst, src)              ((dst) = (src))
+#define COPY_REG_EC(dst, src)           ((void)0)
+#else
+#define PSX_REG(reg)          asm(reg)
+#define PSX_LVALUE_CAST(type) (type)
+
 #define SCHED_BARRIER() __asm__ volatile("")
 #define SOFT_BARRIER()  __asm__("")
 
@@ -154,5 +209,6 @@
 #define COPY_REG(dst, src) __asm__ volatile("" : "=r"(dst) : "r"(src))
 /* `+&r` / `"r"` cannot overlap, so GCC emits `move` and frees src. */
 #define COPY_REG_EC(dst, src) __asm__ volatile("" : "+&r"(dst) : "r"(src))
+#endif // PC_PORT
 
 #endif // COMMON_H

@@ -3406,7 +3406,7 @@ static void func_actor_403600_8013EA04(Task* arg0)
     s32              temp_lo_3;
     s32              temp_s0;
     s32              temp_s0_2;
-    register s32     temp_threshold asm("a0");
+    register s32     temp_threshold PSX_REG("a0");
     s32              temp_work_limit;
     s32              temp_v0_3;
     s32              temp_v1;

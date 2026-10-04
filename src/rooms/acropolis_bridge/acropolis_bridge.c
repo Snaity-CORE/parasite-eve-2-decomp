@@ -4248,10 +4248,10 @@ void func_acropolis_bridge_801819C8(Task* task)
         gte_ldv0(&block->vertices[i]);
         gte_rtv0();
         gte_stsv(&block->vertices[i]);
-        (u16) v->vx = (u16)coord->workm.t[0];
+        PSX_LVALUE_CAST(u16) v->vx = (u16)coord->workm.t[0];
         i++;
-        (u16) v->vy = (u16)coord->workm.t[1];
-        (u16) v->vz = (u16)coord->workm.t[2];
+        PSX_LVALUE_CAST(u16) v->vy = (u16)coord->workm.t[1];
+        PSX_LVALUE_CAST(u16) v->vz = (u16)coord->workm.t[2];
     } while (i < ARRAY_SIZE(D_acropolis_bridge_8018990C));
 
     gte_SetTransMatrix(&GsWSMATRIX);

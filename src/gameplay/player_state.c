@@ -1475,7 +1475,7 @@ void func_8010BE5C(Task* task, VECTOR3* targetPoint)
     GfxCoord*               coord;
     SVECTOR*                offset;
     TmdObject*              extra;
-    register GfxCoord*      parts asm("v0");
+    register GfxCoord*      parts PSX_REG("v0");
     GameActor*              actor;
     s32                     yawStep;
 

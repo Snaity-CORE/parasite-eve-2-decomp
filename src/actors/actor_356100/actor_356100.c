@@ -2002,7 +2002,7 @@ static void func_actor_356100_801668FC(Task* actor)
     GfxCoord*         coord;
     GfxCoord*         root;
     // Matching constraint: preserve the state-selection register across the byte load.
-    register s32 nextState asm("v0");
+    register s32 nextState PSX_REG("v0");
 
     work         = actor->work;
     enemy        = actor->spawnArg2.pointer;

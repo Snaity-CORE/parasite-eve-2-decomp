@@ -29,6 +29,8 @@ static GfxCoord* _gActorRenderLastFullChainCoord = NULL;
 
 /* r1 = long vector in, r2 = long vector out: r2 = RT * r1 + TR at full
  * 32-bit precision, the input split into three 10/11-bit slices. */
+/* Native builds take the C translation from the port's generated gte.h. */
+#ifndef PC_PORT
 #define gte_RotTransLV(r1, r2) __asm__ volatile( \
     "lw	$14, 0( %0 );"                           \
     "lw	$15, 4( %0 );"                           \
@@ -136,6 +138,7 @@ static GfxCoord* _gActorRenderLastFullChainCoord = NULL;
     :                                            \
     : "r"(r1), "r"(r2)                           \
     : "$12", "$13", "$14", "$15", "$16", "memory")
+#endif
 
 /// Visits a coordinate after its ancestors and refreshes its composed matrix when stale.
 ///
@@ -186,8 +189,8 @@ static __inline__ void _actorRenderRefreshCoord(GfxCoord* coord, s32 stamp, s32 
 static __inline__ void _gpRefreshAllCoords(void)
 {
     // The cursors have disjoint lifetimes and reuse one saved register.
-    register ModelObjectCoordBody* display asm("s3");
-    register TmdObject*            model asm("s3");
+    register ModelObjectCoordBody* display PSX_REG("s3");
+    register TmdObject*            model PSX_REG("s3");
     GfxCoord*                      coord;
     s32                            stamp;
     s32                            parity;
