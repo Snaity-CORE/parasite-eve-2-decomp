@@ -1221,7 +1221,9 @@ def ninja_build(
                 outputs=[str(inc) for inc in outputs], rule="collision-inc", inputs=str(raw),
                 implicit=[str(GEN_COLLISION_INC)],
                 variables={"load": hex(load), "source": hex(source),
-                           "pieces": " ".join(f"'{p}'" for p in pieces)},
+                           # Double quotes: cmd.exe (ninja's shell on Windows)
+                           # does not treat single quotes as quoting.
+                           "pieces": " ".join(f'"{p}"' for p in pieces)},
             )
         ASSET_INC_OUTPUTS.extend(str(inc) for inc in outputs)
     for raw, outputs, load, source in animation_includes(version):
