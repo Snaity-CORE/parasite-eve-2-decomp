@@ -2439,7 +2439,15 @@ void Ui_SmoothCursor(UiPanel* panel, s32 arg1, s32 arg2)
 
 s32 Ui_LookupTable(void* unused1, s32 arg1)
 {
+#ifdef PC_PORT
+    /* Callers index past this one-element table into the variables after it
+     * (index 2 reads D_80067644, the dimmed-text colour). Read memory as the
+     * console does: a compiler may otherwise assume the only valid index is
+     * 0 and always return D_8006763C[0]. */
+    return ((volatile s32*)D_8006763C)[arg1];
+#else
     return D_8006763C[arg1];
+#endif
 }
 
 s32 Ui_Scale15(s32 arg0)
