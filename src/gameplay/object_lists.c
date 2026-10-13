@@ -598,7 +598,15 @@ s32 func_800E0FEC(WorldCollisionContact* arg0, WorldCollisionDelta* delta, s32 a
     for (i = 0; i < arg2; i++) {
         rec = &arg0[i];
         if ((rec->flags & WORLD_COLLISION_CONTACT_OCCUPIED) && (rec->key.value & WORLD_COLLISION_CONTACT_KIND_MASK) == WORLD_COLLISION_CONTACT_GRID) {
+#ifdef PC_PORT
+            /* The key carries the contact kind in its high bits, so the shift
+             * count is far above 31: undefined in C, and compilers drop the
+             * update. The R3000 shift uses the count's low five bits, which hold
+             * the surface class; do the same. */
+            mask |= 1 << (rec->key.value & 31);
+#else
             mask |= 1 << rec->key.value;
+#endif
             if (Gp_RoomParams[rec->key.value & 7] == WORLD_COLLISION_SURFACE_APPLY_PUSHBACK) {
                 switch ((u32)(rec->key.value & 0xF00) >> 8) {
                     case WORLD_COLLISION_RESPONSE_PUSHBACK_OVERLAP:
