@@ -76,10 +76,25 @@ void func_m4a1_bayonet_8011D1E4(Task* task)
                 Gp_UpdateCoord(coord);
                 task->state = 1;
 
+#ifdef PC_PORT
+                {
+                    /* Element 1 is the hilt, the object after this
+                     * one-element table. Read memory as the console does: a
+                     * compiler may otherwise treat the out-of-range reads as
+                     * undefined and drop them, leaving the hilt frame's
+                     * translation uninitialized. */
+                    volatile SVECTOR* hiltPos = &((volatile SVECTOR*)D_m4a1_bayonet_8011DEC8)[1];
+
+                    vx = hiltPos->vx;
+                    vy = hiltPos->vy;
+                    vz = hiltPos->vz;
+                }
+#else
                 vx                = D_m4a1_bayonet_8011DEC8[1].vx;
                 vec               = &D_m4a1_bayonet_8011DEC8[1];
                 vy                = vec->vy;
                 vz                = vec->vz;
+#endif
                 hilt.parent       = coord;
                 hilt.composeStamp = GRAPHICS_COORD_DIRTY;
                 hilt.coord.t[0]   = vx;
