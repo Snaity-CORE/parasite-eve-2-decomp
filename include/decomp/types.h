@@ -1,7 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include "psyq/sys/types.h"
+#include <psyq/sys/types.h>
 
 #ifndef NULL
 #define NULL 0
