@@ -533,9 +533,10 @@ static s32 tmdProjectTriangle(const u32* element, const u8* verts, u8* packet, u
     if (reverse ? area >= 0 : area <= 0) {
         return 0;
     }
-    TMD_XY(packet, xyStride, 0) = pcgte_read_data(12);
-    TMD_XY(packet, xyStride, 1) = pcgte_read_data(13);
-    TMD_XY(packet, xyStride, 2) = pcgte_read_data(14);
+    /* Through pcgte_store_sxy: the renderer may use the exact positions. */
+    pcgte_store_sxy(12, &TMD_XY(packet, xyStride, 0));
+    pcgte_store_sxy(13, &TMD_XY(packet, xyStride, 1));
+    pcgte_store_sxy(14, &TMD_XY(packet, xyStride, 2));
     return 1;
 }
 
@@ -544,6 +545,8 @@ static s32 tmdProjectTriangle(const u32* element, const u8* verts, u8* packet, u
 typedef struct {
     u32 key;
     u32 xy;
+    /* Where xy was stored (with its exact position), or 0. */
+    u32* stored;
 } TmdQuadReuse;
 
 static void tmdQuadReuseInit(TmdQuadReuse* reuse, const u32* elements)
@@ -553,6 +556,7 @@ static void tmdQuadReuseInit(TmdQuadReuse* reuse, const u32* elements)
      * previous handler result: this record's address. Only the reversed GT4
      * walk, which keeps the key after a failed projection, can read it. */
     reuse->xy = (u32)(uintptr_t)(elements - 3);
+    reuse->stored = 0;
 }
 
 /* tmdProjectQuad modes. */
@@ -579,10 +583,13 @@ static s32 tmdProjectQuad(const u32* element, const u8* verts, u8* packet, u32 x
         if ((s32)pcgte_read_ctrl(31) < 0) {
             goto failed;
         }
-        TMD_XY(packet, xyStride, 3) = pcgte_read_data(14);
+        pcgte_store_sxy(14, &TMD_XY(packet, xyStride, 3));
     } else {
         reuse->key = w0 & 0xFFFF;
         TMD_XY(packet, xyStride, 3) = reuse->xy;
+        if (reuse->stored) {
+            pc_pgxp_copy((u32)(uintptr_t)&TMD_XY(packet, xyStride, 3), (u32)(uintptr_t)reuse->stored);
+        }
     }
     tmdLoadVector(0, verts + (w1 & 0xFFFF));
     tmdLoadVector(1, verts + (w0 >> 16));
@@ -593,18 +600,19 @@ static s32 tmdProjectQuad(const u32* element, const u8* verts, u8* packet, u32 x
     }
     pcgte_op(TMD_GTE_NCLIP);
     reuse->xy = pcgte_read_data(14);
-    TMD_XY(packet, xyStride, 2) = pcgte_read_data(12);
-    TMD_XY(packet, xyStride, 1) = pcgte_read_data(13);
-    TMD_XY(packet, xyStride, 0) = reuse->xy;
+    pcgte_store_sxy(12, &TMD_XY(packet, xyStride, 2));
+    pcgte_store_sxy(13, &TMD_XY(packet, xyStride, 1));
+    pcgte_store_sxy(14, &TMD_XY(packet, xyStride, 0));
+    reuse->stored = &TMD_XY(packet, xyStride, 0);
     area = (s32)pcgte_read_data(24);
     if (mode & TMD_QUAD_RELOAD_XY) {
-        pcgte_write_data(14, TMD_XY(packet, xyStride, 3));
+        pcgte_load_sxy(14, &TMD_XY(packet, xyStride, 3));
     }
     if (reverse ? area > 0 : area < 0) {
         return 1;
     }
     if (!(mode & TMD_QUAD_RELOAD_XY)) {
-        pcgte_write_data(14, TMD_XY(packet, xyStride, 3));
+        pcgte_load_sxy(14, &TMD_XY(packet, xyStride, 3));
     }
     pcgte_op(TMD_GTE_NCLIP);
     area = (s32)pcgte_read_data(24);
@@ -659,7 +667,7 @@ u32* tmdXformStreamVerts(TmdStreamWorkspace* ws, s32 objectFlags, u32* elements)
         dests = *(u32*)(element + 4);
         element += stride;
         pcgte_op(TMD_GTE_NCCS);
-        *(u32*)(packets + (dests & 0xFFFF)) = pcgte_read_data(14);
+        pcgte_store_sxy(14, (u32*)(packets + (dests & 0xFFFF)));
         *(u32*)(packets + (dests >> 16))    = pcgte_read_data(22);
     }
     return (u32*)element;
@@ -704,7 +712,7 @@ u32* tmdXformStreamVertsElemColor(TmdStreamWorkspace* ws, s32 objectFlags, u32* 
         }
         element += stride;
         pcgte_op(TMD_GTE_NCCS);
-        *(u32*)(packets + (dests & 0xFFFF)) = pcgte_read_data(14);
+        pcgte_store_sxy(14, (u32*)(packets + (dests & 0xFFFF)));
         *(u32*)(packets + (dests >> 16))    = pcgte_read_data(22);
     }
     return (u32*)element;
@@ -1151,9 +1159,9 @@ static u32* tmdDrawPreXformTriangles(TmdStreamWorkspace* ws, u32* elements, u8 c
     for (; count != 0; count--, packet += bytes, element += stride) {
         u32 w0, w1;
         s32 area, d0, d1, d2;
-        pcgte_write_data(15, TMD_XY(packet, xyStride, 0));
-        pcgte_write_data(15, TMD_XY(packet, xyStride, 1));
-        pcgte_write_data(15, TMD_XY(packet, xyStride, 2));
+        pcgte_load_sxy(15, &TMD_XY(packet, xyStride, 0));
+        pcgte_load_sxy(15, &TMD_XY(packet, xyStride, 1));
+        pcgte_load_sxy(15, &TMD_XY(packet, xyStride, 2));
         pcgte_op(TMD_GTE_NCLIP);
         w0   = ((u32*)element)[0];
         w1   = ((u32*)element)[1];
@@ -1198,15 +1206,15 @@ static u32* tmdDrawPreXformQuads(TmdStreamWorkspace* ws, u32* elements, u8 code,
     for (; count != 0; count--, packet += bytes, element += stride) {
         u32 w0, w1;
         s32 area, d0, d1, d2, d3;
-        pcgte_write_data(15, TMD_XY(packet, xyStride, 0));
-        pcgte_write_data(15, TMD_XY(packet, xyStride, 1));
-        pcgte_write_data(15, TMD_XY(packet, xyStride, 2));
+        pcgte_load_sxy(15, &TMD_XY(packet, xyStride, 0));
+        pcgte_load_sxy(15, &TMD_XY(packet, xyStride, 1));
+        pcgte_load_sxy(15, &TMD_XY(packet, xyStride, 2));
         pcgte_op(TMD_GTE_NCLIP);
         w0   = ((u32*)element)[0];
         w1   = ((u32*)element)[1];
         area = (s32)pcgte_read_data(24);
         if (reverse ? area >= 0 : area <= 0) {
-            pcgte_write_data(15, TMD_XY(packet, xyStride, 3));
+            pcgte_load_sxy(15, &TMD_XY(packet, xyStride, 3));
             pcgte_op(TMD_GTE_NCLIP);
             area = (s32)pcgte_read_data(24);
             if (reverse ? area <= 0 : area >= 0) {
