@@ -378,6 +378,9 @@ u32* Tmd_DispatchStream(TmdStreamWorkspace* ws, s32 flags, u32* stream)
     }
 }
 
+/* The model part being drawn (its coordinate block), for vertex keys. */
+static u32 tmdPartKey;
+
 /// See src/main/hasm/Tmd_SetupGteMatrices.s: for each part of the object
 /// with a stream group, loads the GTE with the part's rotation (RT), the
 /// light matrix rotated into the part's frame (LLM = viewLightRotation *
@@ -392,6 +395,7 @@ void Tmd_SetupGteMatrices(TmdStreamWorkspace* ws, u32 flags, void* streamArg, Tm
     u8* coord   = (u8*)node->coords;
     const u32* light = (const u32*)((u8*)ws + 0x50); /* viewLightRotation, as words */
 
+    tmdPartKey = (u32)(uintptr_t)coord;
     for (;; stream++, parts--, coord += 0x50) {
         u32 word = stream[0];
         if (word == (u32)-1) {
@@ -455,6 +459,7 @@ void Tmd_SetupGteMatrices(TmdStreamWorkspace* ws, u32 flags, void* streamArg, Tm
             pcgte_write_ctrl(5, m[5]);
             pcgte_write_ctrl(6, m[6]);
             pcgte_write_ctrl(7, m[7]);
+            tmdPartKey = (u32)(uintptr_t)coord;
         }
         stream = Tmd_DispatchStream(ws, (s32)flags, stream);
     }
@@ -492,11 +497,13 @@ void Tmd_SetupGteMatrices(TmdStreamWorkspace* ws, u32 flags, void* streamArg, Tm
 #define TMD_XFORM_NO_PREVIOUS      0x0FFE0000u
 #define TMD_VERTEX_DEPTH_INVALID   0x80000000u
 
-/* Loads GTE vector n (V0..V2) from the SVECTOR at addr. */
+/* Loads GTE vector n (V0..V2) from the SVECTOR at addr, keyed by the
+ * part being drawn and the vertex's address (for in-between frames). */
 static inline void tmdLoadVector(u32 n, const u8* addr)
 {
     pcgte_write_data(n * 2, *(const u32*)addr);
     pcgte_write_data(n * 2 + 1, *(const u32*)(addr + 4));
+    pcgte_set_vector_key(n, (tmdPartKey * 0x9E3779B1u ^ (u32)(uintptr_t)addr) | 1);
 }
 
 /* Prepends a packet (by its 24-bit DMA address) to the ordering-table
