@@ -2437,3 +2437,34 @@ static s32 SndBank_FreeById(u16 arg0, s32 arg1)
     SndBankSlot_Free((s8)slot);
     return 0;
 }
+
+#ifdef PC_PORT
+/// PC: the resident song's state, for the host to replace its music with a
+/// mod's recording (crates/pe2-host/src/mods/music.rs). Read-only: unlike
+/// LinInterp_Apply, reading the fade does not touch it.
+typedef struct {
+    u8  sequenceId; // 255 when no sequence is loaded
+    u8  status;     // MIDI_SONG_* phase
+    u8  gameMuted;  // The game silences the song's voices (D_800820E9)
+    u8  unused;
+    u32 ramp;        // Fade, mute and unmute gain, 0..65535
+    s32 volumeScale; // The song's gain, as voice volumes use it
+    s32 baseScale;   // Its gain at startup
+    s32 master;      // MIDI master volume, 0..127
+} PcMidiState;
+
+void pc_midi_state(PcMidiState* out)
+{
+    _MidiSong* song = &Midi_Song;
+    u8         id   = song->sequenceId;
+
+    out->sequenceId = id;
+    out->status     = song->status;
+    out->gameMuted  = D_800820E9 == 1 && id != 0x5A;
+    out->unused     = 0;
+    out->ramp       = song->volumeRamp.enabled == LINEAR_INTERPOLATOR_SCALE ? song->volumeRamp.gain : 65535;
+    out->baseScale  = id != SOUND_EVENT_MIDI_INVALID_SEQUENCE ? (D_800689F0[id] * 3) << 5 : 0;
+    out->volumeScale = id == 0x5A ? out->baseScale : (u16)song->volumeScale;
+    out->master     = D_8007F2F0;
+}
+#endif
