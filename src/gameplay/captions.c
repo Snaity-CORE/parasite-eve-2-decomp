@@ -504,6 +504,14 @@ resumeView:
     }
 }
 
+#ifdef PC_PORT
+// Mods' translations (the host's mods/translate.rs): the CAP file to use
+// instead of one the game loads (or it unchanged), and the glyphs a
+// translated file adds, put into its glyph page before its text is drawn.
+extern CapFile* pc_cap_translate(CapFile* file);
+extern void pc_cap_glyphs(const CapFile* file, s32 pageX, s32 pageY);
+#endif
+
 u16 func_800E5578(const u16* arg0, s32 arg1, u8 arg2, u16 arg3)
 {
     u8             title;
@@ -545,6 +553,9 @@ u16 func_800E5578(const u16* arg0, s32 arg1, u8 arg2, u16 arg3)
 
     const CapTextLayout* layout;
 
+#ifdef PC_PORT
+    pc_cap_glyphs(Gp_CapFile, D_80115654, D_80115656);
+#endif
     text     = arg0;
     layout   = &D_80097518;
     nChoice  = 0;
@@ -1172,7 +1183,11 @@ void Gp_LoadCapFile(s32 arg0)
                 if (gDisplayState.debugMode != 0) {
                     func_80724714();
                 }
+#ifdef PC_PORT
+                Gp_CapFile = pc_cap_translate(D_8006C338[i].data);
+#else
                 Gp_CapFile = D_8006C338[i].data;
+#endif
                 Gp_RelocCapFile(Gp_CapFile);
                 break;
             }

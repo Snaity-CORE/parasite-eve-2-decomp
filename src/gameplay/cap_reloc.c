@@ -81,7 +81,14 @@ s32 Gp_RelocCapFile(CapFile* file)
     }
 
     i = 0;
+#ifdef PC_PORT
+    // A relocated file holds pointers: on the console negative (KSEG0), here
+    // possibly not (a translation the host built in its own memory, see
+    // pc_cap_translate), but never below the file itself.
+    if (file->glyphs.offset > 0 && (u32)file->glyphs.offset < (u32)file) {
+#else
     if (file->glyphs.offset > 0) {
+#endif
         file->glyphs.offset    += (u32)file;
         file->sequences.offset += (u32)file;
         file->commands.offset  += (u32)file;
