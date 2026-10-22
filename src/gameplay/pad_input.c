@@ -208,18 +208,32 @@ extern void pc_trace_movement(s32 sx, s32 sy, s32 want, s32 yaw, s32 x, s32 z);
 
 #define PC_ABS(x) ((x) < 0 ? -(x) : (x))
 
-/* Yaw per tick: turning toward the stick, and a quick turn (4096 a turn). */
-#define PC_MODERN_TURN_STEP 0x100
+/* Yaw per tick (4096 a turn): turning toward the stick, as quick as the
+ * Resident Evil remake's alternate controls (half a turn in four ticks),
+ * and a quick turn. */
+#define PC_MODERN_TURN_STEP 0x200
 #define PC_QUICK_TURN_STEP  0x155
+
+/* Modern movement walks once the player faces within this of where the
+ * stick points (90 degrees), turning on the way. */
+#define PC_MODERN_WALK_ARC 0x400
+
+/* A stick turned this far from where it was when the camera was taken
+ * (45 degrees) takes the camera again. */
+#define PC_MODERN_RETAKE_ARC 0x200
 
 /* Yaw a quick turn still has to turn. */
 static s16 pcQuickTurn;
 
 /* The camera's ground axes modern movement goes by (right, then forward,
- * x and z), taken when a direction is first pushed and kept until it is
- * released, so camera cuts do not change where the player is heading. */
+ * x and z), taken when a direction is first pushed and kept while the
+ * stick holds it, so camera cuts do not change where the player is
+ * heading; released or turned elsewhere (PC_MODERN_RETAKE_ARC), the stick
+ * goes by the camera of the moment again, as in the Resident Evil remake.
+ * pcMoveStickYaw: the stick's own direction when they were taken. */
 static s32 pcMoveAxes[4];
 static s32 pcMoveHeld;
+static s32 pcMoveStickYaw;
 
 /* The ground direction (x, z) of a row of the view rotation, scaled to
  * 4096; 0 when the row is vertical. */
@@ -244,10 +258,11 @@ static void pcViewGroundAxis(s32 row, s32* x, s32* z)
 /// directions keep their original job (left and right pick another
 /// target).
 ///
-/// Modern movement: the stick (or the d-pad) points where to go, relative
-/// to the camera. The player turns toward it (rotation.vy, whose forward is
-/// (sin, cos) in world x, z) and walks forward once facing within 60
-/// degrees; a full push runs, as with the original analog handling.
+/// Modern movement, as the Resident Evil remake's alternate controls: the
+/// stick (or the d-pad) points where to go, relative to the camera. The
+/// player turns toward it quickly (rotation.vy, whose forward is (sin, cos)
+/// in world x, z), walking as soon as facing within 90 degrees; a slight
+/// push walks and a full one runs (the d-pad runs with the run button).
 ///
 /// Quick turn (tank movement): back and the run button turn the player
 /// half a turn in a few ticks.
@@ -257,7 +272,7 @@ static u16 pc_movement(const PadState* pad, GameActor* actor, u16 held)
     u16 run     = gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.buttonLayout == PAD_INPUT_LAYOUT_B ? PAD_BUTTON_SQUARE
                                                                                             : PAD_BUTTON_CIRCLE;
     s32 sx = 0, sy = 0, analog = 0;
-    s32 rx, rz, fx, fz, dx, dz, yaw, diff, step, magnitude;
+    s32 rx, rz, fx, fz, dx, dz, yaw, diff, step, magnitude, stickYaw;
     u16 out;
 
     if (actor->mode != GAME_ACTOR_MODE_NORMAL || (actor->state != 0 && actor->state != PAD_INPUT_PLAYER_STATE_AIM) ||
@@ -305,8 +320,13 @@ static u16 pc_movement(const PadState* pad, GameActor* actor, u16 held)
 
     /* Stick right is the camera's right, stick up its forward, on the
      * ground: rows 0 and 2 of the world-to-camera rotation. */
+    stickYaw = ratan2(sx, -sy) & 0xFFF;
+    if (pcMoveHeld && PC_ABS(((stickYaw - pcMoveStickYaw + 0x800) & 0xFFF) - 0x800) > PC_MODERN_RETAKE_ARC) {
+        pcMoveHeld = 0;
+    }
     if (!pcMoveHeld) {
-        pcMoveHeld = 1;
+        pcMoveHeld     = 1;
+        pcMoveStickYaw = stickYaw;
         pcViewGroundAxis(0, &pcMoveAxes[0], &pcMoveAxes[1]);
         pcViewGroundAxis(2, &pcMoveAxes[2], &pcMoveAxes[3]);
     }
@@ -327,7 +347,7 @@ static u16 pc_movement(const PadState* pad, GameActor* actor, u16 held)
     }
     pc_trace_movement(sx, sy, yaw, actor->rotation.vy, actor->previousPosition.vx, actor->previousPosition.vz);
     actor->rotation.vy = (actor->rotation.vy + step) & 0xFFF;
-    if (PC_ABS(diff - step) <= 0x2AA) {
+    if (PC_ABS(diff - step) < PC_MODERN_WALK_ARC) {
         out |= PAD_BUTTON_UP;
     }
 
