@@ -85,16 +85,30 @@
  * Expansions are plain statement-asm. Do not wrap them in do/while or
  * extra braces: that changes stack and scheduling.
  */
+#ifdef PC_PORT
+/* Native (PC port) builds: the helpers only steer GCC 2.8.1's MIPS code
+ * generation, so they have no effect there. */
+#define SOFT_TOUCH_REG(x) ((void)0)
+#define SOFT_USE_REG(x)   ((void)0)
+#else
 #define SOFT_TOUCH_REG(x) __asm__("" : "+r"(x))
 #define SOFT_USE_REG(x)   __asm__("" :: "r"(x))
+#endif
 
 /// Exports `orig`, defined in this file, under a second name `alias`: one more
 /// global symbol at the same address, adding no bytes. The compiler has no
 /// alias attribute for this target, so the assembler makes it, and it has to be
 /// in the object that defines `orig`.
+#ifdef PC_PORT
+/* Native (PC port, i686 Windows) builds: C symbols carry a leading underscore. */
+#define DEFINE_ALIAS(orig, alias)                                                                  \
+    extern __typeof__(orig) alias;                                                                 \
+    __asm__(".globl _" #alias "\n_" #alias " = _" #orig)
+#else
 #define DEFINE_ALIAS(orig, alias)                                                                  \
     extern __typeof__(orig) alias;                                                                 \
     __asm__(".globl " #alias "\n" #alias " = " #orig)
+#endif
 
 /// Extra export declarations for the package's shared-source definitions.
 ///

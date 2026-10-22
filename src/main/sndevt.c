@@ -336,6 +336,13 @@ s8 _gMidiMusicMuteActive;
 
 SndLoadState gSndLoadState;
 
+#ifdef PC_PORT
+/// PC: the tracks (a bit each) whose endless loops began, and went back to
+/// their start, since the extract last asked (pc_music_frame).
+static u32 pc_music_loop_starts;
+static u32 pc_music_loop_repeats;
+#endif
+
 volatile u8 gSndScriptStage;
 
 volatile u8 gSndLoadSavedCharacterRestartState;
@@ -2011,6 +2018,11 @@ static u8* _midiHandleControlChange(s32 status, u8* event, _MidiSong* song, _Mid
                 } else {
                     track->loopRepeatsLeft = MIDI_TRACK_LOOP_FOREVER;
                 }
+#ifdef PC_PORT
+                if (track->loopRepeatsLeft == MIDI_TRACK_LOOP_FOREVER) {
+                    pc_music_loop_starts |= 1u << (track - song->tracks);
+                }
+#endif
                 track->nrpnMsb = MIDI_TRACK_NRPN_IDLE;
             } else {
                 if (track->nrpnLsb != nrpnSelector) {
@@ -2061,6 +2073,11 @@ static u8* _midiHandleControlChange(s32 status, u8* event, _MidiSong* song, _Mid
                 }
                 track->loopRepeatsLeft = track->loopRepeatsLeft - 1;
             }
+#ifdef PC_PORT
+            else {
+                pc_music_loop_repeats |= 1u << (track - song->tracks);
+            }
+#endif
             return track->loopCursor;
 
         default:
@@ -2909,3 +2926,98 @@ static s32 _sndLoadPrepareBankSlot(u16 bankId, s32 imageKind)
     sndBankSlotReleaseImage((s8)slotIndex);
     return 0;
 }
+
+#ifdef PC_PORT
+/// PC: loads a song for the extract to render it without the game running
+/// (crates/pe2-host/src/mods/music.rs): the sound system set up as the
+/// game's boot sets it up, the song's file (`sectors` CD sectors of a
+/// STAGE0 sequence bank) fed sector by sector as the sector stream feeds it,
+/// and the song started as the stage music task starts it. Answers its
+/// sequence id, or -1 if it did not load.
+s32 pc_music_begin(const u8* file, s32 sectors)
+{
+    static u32    sector[0x200];
+    SndLoadState* state = &gSndLoadState;
+    s32           ret   = -1;
+    s32           i;
+    s32           j;
+    u8            id;
+
+    spuInitSystem();
+    sndLoadBeginSectorLoad(sector);
+    state->syncUpload = 0;
+    for (i = 0; i < sectors; i++) {
+        for (j = 0; j < 0x800; j++) {
+            ((u8*)sector)[j] = file[i * 0x800 + j];
+        }
+        ret = sndLoadFeedSector(sector);
+        if (ret == -1 || ret == SOUND_LOAD_PHASE_DONE) {
+            break;
+        }
+    }
+    if (ret != SOUND_LOAD_PHASE_DONE || sndLoadInstallSequence(state) != 0) {
+        return -1;
+    }
+    id = _gMidiSongSlots[0].sequenceId;
+    sndEvtRequestMidiStart(id, 0);
+    midiApplyMusicVolume(0);
+    pc_music_loop_starts  = 0;
+    pc_music_loop_repeats = 0;
+    return id;
+}
+
+/// PC: one vertical blank of the game's sound work for the song
+/// pc_music_begin started. Answers its track count (0 once it stopped),
+/// and as a bit per track: in `starts` and `repeats` those whose endless
+/// loops began or went back to their start, in `ended` those that ended.
+s32 pc_music_frame(u32* starts, u32* repeats, u32* ended)
+{
+    _MidiSong* song = &_gMidiSongSlots[0];
+    s32        i;
+
+    spuRunVBlankAudioUpdate();
+    *starts               = pc_music_loop_starts;
+    *repeats              = pc_music_loop_repeats;
+    pc_music_loop_starts  = 0;
+    pc_music_loop_repeats = 0;
+    *ended                = 0;
+    if (song->status == MIDI_SONG_IDLE) {
+        return 0;
+    }
+    for (i = 0; i < song->trackCount; i++) {
+        if (song->tracks[i].ended != false) {
+            *ended |= 1u << i;
+        }
+    }
+    return song->trackCount;
+}
+
+/// PC: the resident song's state, for the host to replace its music with a
+/// mod's recording (crates/pe2-host/src/mods/music.rs). Read-only: reading
+/// the fade does not touch it.
+typedef struct {
+    u8  sequenceId; // 255 when no sequence is loaded
+    u8  status;     // MIDI_SONG_* phase
+    u8  gameMuted;  // The game silences the song's voices (_gMidiMusicMuteActive)
+    u8  unused;
+    u32 ramp;        // Fade, mute and unmute gain, 0..65535
+    s32 volumeScale; // The song's gain, as voice volumes use it
+    s32 baseScale;   // Its gain at startup
+    s32 master;      // MIDI master volume, 0..127
+} PcMidiState;
+
+void pc_midi_state(PcMidiState* out)
+{
+    _MidiSong* song = &_gMidiSongSlots[0];
+    u8         id   = song->sequenceId;
+
+    out->sequenceId  = id;
+    out->status      = song->status;
+    out->gameMuted   = _gMidiMusicMuteActive == 1 && id != 0x5A;
+    out->unused      = 0;
+    out->ramp        = song->volumeRamp.enabled == LINEAR_INTERPOLATOR_SCALE ? song->volumeRamp.gain : 65535;
+    out->baseScale   = id != SOUND_EVENT_MIDI_INVALID_SEQUENCE ? (_gMidiSequenceMixLevels[id] * MIDI_STARTUP_GAIN_MULTIPLIER) << MIDI_STARTUP_GAIN_SHIFT : 0;
+    out->volumeScale = id == 0x5A ? out->baseScale : (u16)song->volumeScale;
+    out->master      = _gMidiMasterVolume;
+}
+#endif

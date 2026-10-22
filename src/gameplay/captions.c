@@ -640,6 +640,14 @@ static inline void _capDrawTextBackground(void)
 /// save and stage state. OT entries 2/3 and primitive storage must stay writable
 /// through GPU completion: two G4s and a DR_MODE, one FT4 per title/icon, and two
 /// GT4s per glyph. The borrowed stream and glyph/icon tables are not modified.
+#ifdef PC_PORT
+// Mods' translations and fonts (the host's mods/translate.rs): the CAP file to
+// use instead of one the game loads (or it unchanged), and the glyphs that copy
+// adds, put into its glyph page before its text is drawn.
+extern CapFile* pc_cap_translate(CapFile* file);
+extern void pc_cap_glyphs(const CapFile* file, s32 pageX, s32 pageY);
+#endif
+
 static u16 _capDrawTextStream(const u16* textStream, s32 unusedDrawArg, u8 revealAll, u16 titleAndFlags)
 {
     enum {
@@ -700,6 +708,9 @@ static u16 _capDrawTextStream(const u16* textStream, s32 unusedDrawArg, u8 revea
 
     const CapTextLayout* layout;
 
+#ifdef PC_PORT
+    pc_cap_glyphs(gCapFile, gCapTexturePageVramX, gCapTexturePageVramY);
+#endif
     // Convert cached screen-space metrics to centre-relative pen coordinates.
     text              = textStream;
     layout            = &gCapTextLayout;
@@ -788,7 +799,9 @@ static u16 _capDrawTextStream(const u16* textStream, s32 unusedDrawArg, u8 revea
             nextLineIndex      = lineIndex + 1;
             nextLine           = &codes[codeIndex + 1];
             // Retained scheduling dependencies preserve the spilled line-index update.
+#ifndef PC_PORT
             asm("" : "=r"(lineBreakDependency), "+m"(*nextLine) : "r"(lineIndex));
+#endif
             lineIndex = nextLineIndex;
             if (layout->vertical == 0) {
                 penY += _capGetTextLineAdvance(nextLine);
@@ -798,7 +811,9 @@ static u16 _capDrawTextStream(const u16* textStream, s32 unusedDrawArg, u8 revea
                     penX = (u16)gCapTextBlockLeftX - CAP_TEXT_SCREEN_CENTER_X;
                 }
             } else {
+#ifndef PC_PORT
                 asm("" : "+r"(codeIndex) : "r"(lineBreakDependency));
+#endif
                 penY  = CAP_TEXT_COLUMN_TOP_Y;
                 penX -= _capGetTextLineAdvance(nextLine);
             }
@@ -1332,7 +1347,11 @@ void capSelectLoadedFile(s32 dataResourceOrdinal)
                 if (gDisplayState.debugMode != 0) {
                     func_80724714();
                 }
+#ifdef PC_PORT
+                gCapFile = pc_cap_translate(gFsResourceSlots[resourceSlotIndex].data);
+#else
                 gCapFile = gFsResourceSlots[resourceSlotIndex].data;
+#endif
                 capRelocateFile(gCapFile);
                 break;
             }

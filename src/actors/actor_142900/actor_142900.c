@@ -1106,7 +1106,10 @@ static void _actor142900ScreenShakeTask(Task* task)
     };
 
     // The display callee narrows to s8; its prototype adds a conversion absent here.
+#ifndef PC_PORT
+    /* Native builds use the (s8) prototype from main/display.h instead. */
     extern void displaySetShakeY();
+#endif
     s32         offsetY;
 
     if (_gActor142900ScreenShakePhase == ACTOR_142900_SCREEN_SHAKE_BEGIN_FADE) {

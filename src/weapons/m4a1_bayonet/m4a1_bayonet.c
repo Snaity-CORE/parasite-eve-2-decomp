@@ -104,10 +104,24 @@ void m4a1BayonetTrailTask(Task* task)
                 // The seed chains the second endpoint beneath the tip; recording uses the weapon parent.
                 // This retained one-past access reads the adjacent near-offset bytes in the image,
                 // but is outside the C array's bounds. A bounded pair still needs rematching.
+#ifdef PC_PORT
+                {
+                    /* Element 1 is the object after this one-element table.
+                     * Read memory as the console does: a compiler may treat
+                     * the out-of-range reads as undefined and drop them,
+                     * leaving the near endpoint's translation uninitialized. */
+                    volatile SVECTOR* hiltOffset = &((volatile SVECTOR*)_gM4a1BayonetTrailTipOffset)[1];
+
+                    offsetX = hiltOffset->vx;
+                    offsetY = hiltOffset->vy;
+                    offsetZ = hiltOffset->vz;
+                }
+#else
                 offsetX                   = _gM4a1BayonetTrailTipOffset[1].vx;
                 nearOffset                = &_gM4a1BayonetTrailTipOffset[1];
                 offsetY                   = nearOffset->vy;
                 offsetZ                   = nearOffset->vz;
+#endif
                 nearEndpoint.parent       = tipCoord;
                 nearEndpoint.composeStamp = GRAPHICS_COORD_DIRTY;
                 nearEndpoint.coord.t[0]   = offsetX;

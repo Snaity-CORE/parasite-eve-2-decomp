@@ -442,9 +442,16 @@ static void _flamethrowerFlameDrawSplash(const VECTOR3* worldPosition, s32 halfS
         gte_ldv0(&scratch->vertices[cornerIndex]);
         gte_rtv0();
         gte_stsv(&scratch->vertices[cornerIndex]);
+#ifdef PC_PORT
+        /* GCC's lvalue cast: on these 16-bit fields the cast stores the same bits. */
+        scratch->vertices[cornerIndex].vx = (u16)scratch->vertices[cornerIndex].vx + (u16)worldPosition->vx;
+        scratch->vertices[cornerIndex].vy = (u16)scratch->vertices[cornerIndex].vy + (u16)worldPosition->vy;
+        scratch->vertices[cornerIndex].vz = (u16)scratch->vertices[cornerIndex].vz + (u16)worldPosition->vz;
+#else
         (u16) scratch->vertices[cornerIndex].vx = (u16)scratch->vertices[cornerIndex].vx + (u16)worldPosition->vx;
         (u16) scratch->vertices[cornerIndex].vy = (u16)scratch->vertices[cornerIndex].vy + (u16)worldPosition->vy;
         (u16) scratch->vertices[cornerIndex].vz = (u16)scratch->vertices[cornerIndex].vz + (u16)worldPosition->vz;
+#endif
         cornerIndex++;
     } while (cornerIndex < ARRAY_SIZE(gEffectUnitQuadCorners));
 

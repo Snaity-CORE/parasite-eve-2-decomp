@@ -322,6 +322,9 @@ typedef union {
     s32           value;          // Signed value or packed argument bits
     u32           unsignedValue;  // Unsigned view of the same bits
     void*         pointer;        // Object pointer, interpreted by the receiving callback
+#ifdef PC_PORT
+    const void*   constPointer;   // PC: clang takes a const pointer only through a member of its own type
+#endif
     TaskArgHalves halves;         // Unsigned low half and signed high half
     s8            signedBytes[4]; // Signed byte view of the complete argument word
 } TaskSpawnArg __attribute__((transparent_union));

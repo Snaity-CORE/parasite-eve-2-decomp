@@ -4685,7 +4685,11 @@ void effectHitSparkBurstTask(Task* task)
     EffectWork*  work;
     GfxCoord*    coord;
     s16          effectControl;
+#ifdef PC_PORT
+    s32 previousRandomState; // PC: no MIPS register to pin
+#else
     register s32 previousRandomState asm("v1");
+#endif
     s32          requestedWidth;
     s32          durationUnits;
     s32          particleIndex;

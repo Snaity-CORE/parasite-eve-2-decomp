@@ -3528,7 +3528,11 @@ static void _actor403600ChooseAttack(Task* task)
     s32 lowCornerARange;
     // Matching constraint: the load must not be a single-set pseudo, or sched1
     // promotes it as a register birth and moves it down beside the compare.
+#ifdef PC_PORT
+    s32     hp; // PC: no MIPS register to pin
+#else
     register s32     hp asm("a0");
+#endif
     s32              highCornerBRange;
     s32              playerY;
     s32              cornerDelta;

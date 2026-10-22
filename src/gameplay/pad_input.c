@@ -12,6 +12,13 @@
 #include "main/session.h"
 #include "main/wipsys.h"
 
+#ifdef PC_PORT
+#include <psyq/sys/types.h>
+#include <psyq/libgte.h>
+
+#include "main/gfx.h"
+#endif
+
 /// Last automatic menu-lock decision (0 unlocked, 1 locked), frozen by explicit hold.
 static u8 _gPadInputMenuLocked;
 
@@ -184,6 +191,164 @@ static inline void _padInputPublishButtons(const GameActor* player, u16 heldButt
     gGameSession->padReleased = _padInputRemapButtons(player, releasedButtons) & ~_gPadInputSuppressionMask & keepMask;
 }
 
+#ifdef PC_PORT
+/* PC: movement options from pe2.toml's [input] (the host's controls.rs):
+ * bit 0 camera-relative ("modern") movement, bit 1 quick turn. */
+extern u32 pc_input_options(void);
+/* PE2_TRACE=move: one line per tick of modern movement. */
+extern void pc_trace_movement(s32 sx, s32 sy, s32 want, s32 yaw, s32 x, s32 z);
+
+#define PC_INPUT_MODERN     1
+#define PC_INPUT_QUICK_TURN 2
+
+#define PC_PAD_DIRS (PAD_BUTTON_UP | PAD_BUTTON_RIGHT | PAD_BUTTON_DOWN | PAD_BUTTON_LEFT)
+
+/* The lock-on button, as remapped (held in battle, it picks targets). */
+#define PC_LOGICAL_LOCK 0x80
+
+#define PC_ABS(x) ((x) < 0 ? -(x) : (x))
+
+/* Yaw per tick: turning toward the stick, and a quick turn (4096 a turn). */
+#define PC_MODERN_TURN_STEP 0x100
+#define PC_QUICK_TURN_STEP  0x155
+
+/* Yaw a quick turn still has to turn. */
+static s16 pcQuickTurn;
+
+/* The camera's ground axes modern movement goes by (right, then forward,
+ * x and z), taken when a direction is first pushed and kept until it is
+ * released, so camera cuts do not change where the player is heading. */
+static s32 pcMoveAxes[4];
+static s32 pcMoveHeld;
+
+/* The ground direction (x, z) of a row of the view rotation, scaled to
+ * 4096; 0 when the row is vertical. */
+static void pcViewGroundAxis(s32 row, s32* x, s32* z)
+{
+    s32 vx  = gGfxViewRotCoord.coord.m[row][0];
+    s32 vz  = gGfxViewRotCoord.coord.m[row][2];
+    s32 len = SquareRoot0(vx * vx + vz * vz);
+    if (len == 0) {
+        *x = *z = 0;
+        return;
+    }
+    *x = vx * 4096 / len;
+    *z = vz * 4096 / len;
+}
+
+/// PC: modern movement and quick turn, applied to the button word `held`
+/// this frame (d-pad bits included, the stick folded in as the original
+/// does) while the player is free to walk: exploring (state 0) or armed in
+/// battle (state 2), where releasing the directions lets the game turn back
+/// to the lock target. In battle, while the lock button is held, the
+/// directions keep their original job (left and right pick another
+/// target).
+///
+/// Modern movement: the stick (or the d-pad) points where to go, relative
+/// to the camera. The player turns toward it (rotation.vy, whose forward is
+/// (sin, cos) in world x, z) and walks forward once facing within 60
+/// degrees; a full push runs, as with the original analog handling.
+///
+/// Quick turn (tank movement): back and the run button turn the player
+/// half a turn in a few ticks.
+static u16 pc_movement(const PadState* pad, GameActor* actor, u16 held)
+{
+    u32 options = pc_input_options();
+    u16 run     = gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.buttonLayout == PAD_INPUT_LAYOUT_B ? PAD_BUTTON_SQUARE
+                                                                                            : PAD_BUTTON_CIRCLE;
+    s32 sx = 0, sy = 0, analog = 0;
+    s32 rx, rz, fx, fz, dx, dz, yaw, diff, step, magnitude;
+    u16 out;
+
+    if (actor->mode != GAME_ACTOR_MODE_NORMAL || (actor->state != 0 && actor->state != PAD_INPUT_PLAYER_STATE_AIM) ||
+        _gPadInputMenuLocked != 0 || actor->movementInputDisabled != 0) {
+        /* Doors, events, menus: the next push takes the camera then. */
+        pcQuickTurn = 0;
+        pcMoveHeld  = 0;
+        return held;
+    }
+    if (pcQuickTurn != 0) {
+        step                = pcQuickTurn < PC_QUICK_TURN_STEP ? pcQuickTurn : PC_QUICK_TURN_STEP;
+        actor->rotation.vy  = (actor->rotation.vy + step) & 0xFFF;
+        pcQuickTurn        -= step;
+        return held & ~(PC_PAD_DIRS | run);
+    }
+    /* Battle: the lock button held picks targets. */
+    if (actor->state == PAD_INPUT_PLAYER_STATE_AIM && (_padInputRemapButtons(actor, pad->buttons) & PC_LOGICAL_LOCK)) {
+        pcMoveHeld = 0;
+        return held;
+    }
+    if (!(options & PC_INPUT_MODERN)) {
+        if ((options & PC_INPUT_QUICK_TURN) && (held & PAD_BUTTON_DOWN) && (pad->pressedButtons & run)) {
+            pcQuickTurn = 0x800;
+            return held & ~(PC_PAD_DIRS | run);
+        }
+        return held;
+    }
+
+    if (pad->inputFormat == PAD_INPUT_FORMAT_ANALOG) {
+        sx = pad->stickAxes[PAD_STICK_LEFT_X];
+        sy = pad->stickAxes[PAD_STICK_LEFT_Y];
+    }
+    if (PC_ABS(sx) < PAD_STICK_FULL_SCALE / 4 && PC_ABS(sy) < PAD_STICK_FULL_SCALE / 4) {
+        sx = (pad->buttons & PAD_BUTTON_RIGHT) ? PAD_STICK_FULL_SCALE : (pad->buttons & PAD_BUTTON_LEFT) ? -PAD_STICK_FULL_SCALE : 0;
+        sy = (pad->buttons & PAD_BUTTON_DOWN) ? PAD_STICK_FULL_SCALE : (pad->buttons & PAD_BUTTON_UP) ? -PAD_STICK_FULL_SCALE : 0;
+    } else {
+        analog = 1;
+    }
+    /* The pad's own buttons, without the directions the stick added. */
+    out = pad->buttons & ~PC_PAD_DIRS;
+    if (sx == 0 && sy == 0) {
+        pcMoveHeld = 0;
+        return out;
+    }
+
+    /* Stick right is the camera's right, stick up its forward, on the
+     * ground: rows 0 and 2 of the world-to-camera rotation. */
+    if (!pcMoveHeld) {
+        pcMoveHeld = 1;
+        pcViewGroundAxis(0, &pcMoveAxes[0], &pcMoveAxes[1]);
+        pcViewGroundAxis(2, &pcMoveAxes[2], &pcMoveAxes[3]);
+    }
+    rx  = pcMoveAxes[0];
+    rz  = pcMoveAxes[1];
+    fx  = pcMoveAxes[2];
+    fz  = pcMoveAxes[3];
+    dx  = sx * rx - sy * fx;
+    dz  = sx * rz - sy * fz;
+    yaw = ratan2(dx, dz) & 0xFFF;
+
+    diff = ((yaw - actor->rotation.vy + 0x800) & 0xFFF) - 0x800;
+    step = diff;
+    if (step > PC_MODERN_TURN_STEP) {
+        step = PC_MODERN_TURN_STEP;
+    } else if (step < -PC_MODERN_TURN_STEP) {
+        step = -PC_MODERN_TURN_STEP;
+    }
+    pc_trace_movement(sx, sy, yaw, actor->rotation.vy, actor->previousPosition.vx, actor->previousPosition.vz);
+    actor->rotation.vy = (actor->rotation.vy + step) & 0xFFF;
+    if (PC_ABS(diff - step) <= 0x2AA) {
+        out |= PAD_BUTTON_UP;
+    }
+
+    /* A full push runs (or walks, with running as the default), as the
+     * original's analog handling does, outside battle. */
+    if (analog && actor->state == 0) {
+        magnitude = SquareRoot0(sx * sx + sy * sy);
+        if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.moveMode == PAD_INPUT_MOVEMENT_WALK) {
+            if (magnitude > PAD_INPUT_STICK_RUN_THRESHOLD) {
+                out |= run;
+            }
+        } else if (magnitude > PAD_INPUT_STICK_RUN_THRESHOLD) {
+            out &= ~run;
+        } else {
+            out |= run;
+        }
+    }
+    return out;
+}
+#endif
+
 void padInputUpdate(void)
 {
     const PadState*     pad;
@@ -300,6 +465,9 @@ void padInputUpdate(void)
         pressedButtons  = pad->pressedButtons;
         releasedButtons = pad->releasedButtons;
     }
+#ifdef PC_PORT
+    heldButtons = pc_movement(pad, (GameActor*)player, heldButtons);
+#endif
     // Suppression masks address logical buttons, so apply them after remapping.
     _padInputPublishButtons(player, heldButtons, pressedButtons, releasedButtons, ~0);
     if (_gPadInputWheelBlockUpdates != 0) {

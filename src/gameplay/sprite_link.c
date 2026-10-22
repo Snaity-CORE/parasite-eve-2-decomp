@@ -350,7 +350,11 @@ void spriteAllocateViewCachedPackets(void)
     // The second buffer starts halfway through the words. Its address is an
     // inline's argument so that the word offset is the sum's first operand.
     {
+#ifdef PC_PORT
+        SpriteDrawModePacket* secondBuffer; // PC: no MIPS register to pin
+#else
         register SpriteDrawModePacket* secondBuffer asm("s1");
+#endif
 
         secondBuffer                       = _spriteCachedPacketsAtWord(&words[allocationBytes >> SPRITE_CACHED_BYTES_PER_BUFFER_WORD_SHIFT]);
         _gSpriteViewCachedPacketBuffers[1] = secondBuffer;

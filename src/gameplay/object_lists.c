@@ -567,7 +567,15 @@ s32 worldCollisionResolvePushback(const WorldCollisionContact* contacts, WorldCo
         for (contactIndex = 0; contactIndex < contactCount; contactIndex++) {
             contact = &contacts[contactIndex];
             if ((contact->flags & WORLD_COLLISION_CONTACT_OCCUPIED) && (contact->key.value & WORLD_COLLISION_CONTACT_KIND_MASK) == WORLD_COLLISION_CONTACT_GRID) {
+#ifdef PC_PORT
+                /* The key carries the contact kind in its high bits, so the shift
+                 * count is far above 31: undefined in C, and compilers drop the
+                 * update. The R3000 shift uses the count's low five bits, which hold
+                 * the surface class; do the same. */
+                surfaceMask |= 1 << (contact->key.value & 31);
+#else
                 surfaceMask |= 1 << contact->key.value;
+#endif
                 if (gWorldCollisionSurfacePushbackSuppression[contact->key.value & WORLD_COLLISION_PUSHBACK_SURFACE_CLASS_MASK] == WORLD_COLLISION_SURFACE_APPLY_PUSHBACK) {
                     if (contact->response.direction.vy >= WORLD_COLLISION_FLOOR_NORMAL_Y) {
                         scratch->nonFloorSum.vx         += contact->response.direction.vx * contact->distance;
@@ -646,7 +654,15 @@ s32 worldCollisionResolveResponsePushback(const WorldCollisionContact* contacts,
     for (contactIndex = 0; contactIndex < contactCount; contactIndex++) {
         contact = &contacts[contactIndex];
         if ((contact->flags & WORLD_COLLISION_CONTACT_OCCUPIED) && (contact->key.value & WORLD_COLLISION_CONTACT_KIND_MASK) == WORLD_COLLISION_CONTACT_GRID) {
+#ifdef PC_PORT
+            /* The key carries the contact kind in its high bits, so the shift
+             * count is far above 31: undefined in C, and compilers drop the
+             * update. The R3000 shift uses the count's low five bits, which hold
+             * the surface class; do the same. */
+            surfaceMask |= 1 << (contact->key.value & 31);
+#else
             surfaceMask |= 1 << contact->key.value;
+#endif
             if (gWorldCollisionSurfacePushbackSuppression[contact->key.value & WORLD_COLLISION_PUSHBACK_SURFACE_CLASS_MASK] == WORLD_COLLISION_SURFACE_APPLY_PUSHBACK) {
                 switch ((u32)(contact->key.value & WORLD_COLLISION_PUSHBACK_RESPONSE_MASK) >> WORLD_COLLISION_PUSHBACK_RESPONSE_SHIFT) {
                     case WORLD_COLLISION_RESPONSE_PUSHBACK_OVERLAP:
