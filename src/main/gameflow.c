@@ -792,6 +792,12 @@ static inline u16 _padSampleRawButtons(_PadScratch* scratch, const PadRawPort* r
     return buttons;
 }
 
+#ifdef PC_PORT
+/// The PC port's input recording and replay: called once per main-loop
+/// update, before the controller's buttons are sampled.
+extern void pc_pad_frame(void);
+#endif
+
 void padUpdatePort0(void)
 {
     enum {
@@ -812,6 +818,9 @@ void padUpdatePort0(void)
     port        = 0;
     display     = &gDisplayState;
     scratch     = SCRATCH_STACK_RESERVE_BLOCK_AT(scratchHead, _PadScratch);
+#ifdef PC_PORT
+    pc_pad_frame();
+#endif
 
     do {
         pad = &gPadStates[port];
