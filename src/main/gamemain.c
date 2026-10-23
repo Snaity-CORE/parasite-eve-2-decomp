@@ -430,6 +430,11 @@ static inline void _gameMainAdvanceSceneTimingCursor(CdCmdQueue* queue)
 /// and stay on a zero terminator while continuing to accumulate elapsed time.
 /// Each accessed word must fit the scene's live timing reservation. Deadlines
 /// must be reachable before this loop's 15-bit elapsed counter wraps.
+#ifdef PC_PORT
+/* PE2_TRACE=scene: the scene's accumulated scanlines and deadline, each frame. */
+extern void pc_trace_scene_timing(u32 accumulated, u32 deadline, s32 elapsed);
+#endif
+
 static inline s32 _gameMainPaceToSceneTiming(s32 frameStartLines, s32 elapsedLines)
 {
     enum { GAME_MAIN_ELAPSED_SCANLINE_MASK = 0x7FFF };
@@ -445,6 +450,9 @@ static inline s32 _gameMainPaceToSceneTiming(s32 frameStartLines, s32 elapsedLin
         } else {
             queue->timingElapsedLines += elapsedLines;
         }
+#ifdef PC_PORT
+        pc_trace_scene_timing(queue->timingElapsedLines, *queue->timingCursor, elapsedLines);
+#endif
         // Zero terminates advancement, rather than disabling time accounting.
         _gameMainAdvanceSceneTimingCursor(queue);
     }

@@ -392,6 +392,12 @@ s32 damageComputeReceived(s32 attackKey, s32 unused, s32* outReaction, s32 victi
     return damage;
 }
 
+#ifdef PC_PORT
+/* The PC port's cheats (pe2.toml [cheats] always_critical): every weapon hit
+ * is a critical hit. */
+extern s32 pc_cheat_always_critical(void);
+#endif
+
 s32 damageRollCriticalHit(const Enemy* enemy, u32 attackKey, s32 chanceMultiplier)
 {
     Task*                         playerTask;
@@ -413,6 +419,11 @@ s32 damageRollCriticalHit(const Enemy* enemy, u32 attackKey, s32 chanceMultiplie
     if ((attackKey & DAMAGE_PLAYER_ATTACK_ATTACHMENT) != 0) {
         return 0;
     }
+#ifdef PC_PORT
+    if (pc_cheat_always_critical()) {
+        return 1;
+    }
+#endif
 
     baseChance = (enemy->param->critChance << DAMAGE_CHANCE_FRACTION_BITS) / 100;
     if (baseChance == 0) {
