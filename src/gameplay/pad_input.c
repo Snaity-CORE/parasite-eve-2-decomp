@@ -197,6 +197,8 @@ static inline void _padInputPublishButtons(const GameActor* player, u16 heldButt
 extern u32 pc_input_options(void);
 /* PE2_TRACE=move: one line per tick of modern movement. */
 extern void pc_trace_movement(s32 sx, s32 sy, s32 want, s32 yaw, s32 x, s32 z);
+/* Input recordings (replay.rs): where the player is, each update. */
+extern void pc_replay_player(s32 x, s32 z, s32 yaw);
 
 #define PC_INPUT_MODERN     1
 #define PC_INPUT_QUICK_TURN 2
@@ -486,6 +488,7 @@ void padInputUpdate(void)
         releasedButtons = pad->releasedButtons;
     }
 #ifdef PC_PORT
+    pc_replay_player(player->previousPosition.vx, player->previousPosition.vz, player->rotation.vy);
     heldButtons = pc_movement(pad, (GameActor*)player, heldButtons);
 #endif
     // Suppression masks address logical buttons, so apply them after remapping.
