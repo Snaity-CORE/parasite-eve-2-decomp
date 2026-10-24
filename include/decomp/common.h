@@ -90,6 +90,8 @@
  * generation, so they have no effect there. */
 #define SOFT_TOUCH_REG(x) ((void)0)
 #define SOFT_USE_REG(x)   ((void)0)
+/* Nonzero when PE2_TRACE names `name` (the port's runtime traces). */
+extern int pc_trace_enabled(const char* name);
 #else
 #define SOFT_TOUCH_REG(x) __asm__("" : "+r"(x))
 #define SOFT_USE_REG(x)   __asm__("" :: "r"(x))

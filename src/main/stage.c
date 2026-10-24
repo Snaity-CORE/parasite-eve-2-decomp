@@ -1,3 +1,6 @@
+#ifdef PC_PORT
+#include <psyq/stdio.h>
+#endif
 #include "main/stage.h"
 
 #include <psyq/sys/types.h>
@@ -1152,6 +1155,12 @@ void mdecRequestSceneImageDecode(const u8* viewId)
             break;
         }
     }
+#ifdef PC_PORT
+    if (pc_trace_enabled("sceneimg")) {
+        printf("[sceneimg] request view %d: %s%s\n", requestedView, headerFound ? "found" : "no header",
+               queue->scenePayloadLoading ? ", payload loading" : "");
+    }
+#endif
     if (!headerFound || queue->scenePayloadLoading != 0) {
         queue->imageDecodePending = 1;
         queue->imageLoadStatus    = CD_COMMAND_IMAGE_PENDING;

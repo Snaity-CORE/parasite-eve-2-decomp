@@ -735,6 +735,13 @@ s32 streamReadSceneImageSector(s32 unused0, s32 unused1)
             if ((_gStreamScenePayloadForceReload == 0) && ((s16)queue->scenePayloadReusable != 0)) {
                 _gStreamScenePayloadTransferEnabled = STREAM_SCENE_PAYLOAD_SKIP;
             }
+#ifdef PC_PORT
+            if (pc_trace_enabled("sceneimg")) {
+                printf("[sceneimg] header view %d kind %d sectors %u force %d copy %d strips %X %X %X\n", header.viewId, header.bufferKind,
+                       header.sectorCount, header.forceReload, _gStreamScenePayloadTransferEnabled, header.stripListOffsets[0],
+                       header.stripListOffsets[1], header.stripListOffsets[2]);
+            }
+#endif
             if ((s16)header.sectorCount != 0) {
                 // The member-address form keeps its halfword address folded across the copy.
                 queue->scenePayloadLoading            = 1;
@@ -766,6 +773,11 @@ s32 streamReadSceneImageSector(s32 unused0, s32 unused1)
                     gCdCmdQueue.scenePayloadAvailable = 1;
                 }
                 gCdCmdQueue.scenePayloadLoading = 0;
+#ifdef PC_PORT
+                if (pc_trace_enabled("sceneimg")) {
+                    printf("[sceneimg] payload done kind %d\n", _gStreamSceneReadState.bufferKind);
+                }
+#endif
                 if (_gStreamScenePayloadForceReload == 0) {
                     gCdCmdQueue.scenePayloadReusable = 1;
                 }
