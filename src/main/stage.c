@@ -1269,6 +1269,11 @@ static void _mdecStepSceneImageDecode(void)
             }
             break;
         case CD_COMMAND_IMAGE_START:
+#ifdef PC_PORT
+            if (pc_trace_enabled("sceneimg")) {
+                printf("[sceneimg] decode start: blank %d, vlc table mode %d\n", VSync(-1), queue->sceneVlcTableMode);
+            }
+#endif
             gpuResetAndInvalidateModelBuffers();
             queue->mdecOutputPending = 1;
             if (queue->sceneVlcTableMode == STREAM_SCENE_VLC_IMAGE_BUFFER) {
@@ -1285,6 +1290,11 @@ static void _mdecStepSceneImageDecode(void)
             DecDCTin(gMemActiveAuxHeap, queue->imageMdecMode);
             queue->imageMdecMode = MDEC_IMAGE_MODE_RGB16;
             DecDCTout(gFsImageWorkspacePtr->strips[0], FILE_SYSTEM_IMAGE_STRIP_WORDS);
+#ifdef PC_PORT
+            if (pc_trace_enabled("sceneimg")) {
+                printf("[sceneimg] decode handed to the MDEC: blank %d\n", VSync(-1));
+            }
+#endif
             _gMdecSceneWaitPolls = 0;
             queue->imageDecodeStep++;
             /* fallthrough */
@@ -1328,6 +1338,11 @@ static void _mdecStepSceneImageDecode(void)
                 if (_gMdecSceneImageHeader->bufferKind == STREAM_SCENE_BUFFER_DECODE) {
                     queue->decodeBufferBytes = queue->nextDecodeBufferBytes;
                 }
+#ifdef PC_PORT
+                if (pc_trace_enabled("sceneimg")) {
+                    printf("[sceneimg] decode done: blank %d, %d polls\n", VSync(-1), _gMdecSceneWaitPolls);
+                }
+#endif
                 // Refresh timing data before releasing the completed decode operation.
                 if (queue->sceneStream->control.scene.timingBufferKind != STREAM_TIMING_BUFFER_NONE) {
                     memCopyBytes(&_gMdecScenePayloadBase[_gMdecSceneImageHeader->timingDataOffset], queue->timingBuffer,
