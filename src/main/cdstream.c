@@ -6,6 +6,9 @@
 #include <psyq/libcd.h>
 #include <psyq/libspu.h>
 #include <psyq/libetc.h>
+#ifdef PC_PORT
+#include <psyq/stdio.h>
+#endif
 
 #include "common.h"
 
@@ -1639,6 +1642,22 @@ void cdStreamStop(void)
     _gCdReadyQueue.locked = savedLock;
 }
 
+#ifdef PC_PORT
+/// PE2_TRACE=cdstream: a stream event, with the playback clock and the blank count.
+static void _cdStreamTrace(const char* what)
+{
+    if (pc_trace_enabled("cdstream")) {
+        printf("[cdstream] %s: blank %d playhead %d chunk %d queued %d ready %d irq %d underruns %d sequence errors %d\n", what,
+               VSync(-1), _gCdStreamRuntime.state.playhead, _gCdStreamRuntime.state.chunkIndex, _gCdStreamRuntime.state.queuedChunk,
+               (_gCdStreamRuntime.state.flags0 >> CD_STREAM_CHUNK_READY_BIT) & 1, (_gCdStreamRuntime.state.flags0 >> CD_STREAM_SPU_IRQ_BIT) & 1,
+               _gCdStreamUnderrunCount, _gCdStreamChunkSequenceErrorCount);
+    }
+}
+#define CD_STREAM_TRACE(what) _cdStreamTrace(what)
+#else
+#define CD_STREAM_TRACE(what)
+#endif
+
 /// Stops the streaming voices and queues the requested restart chunk after a fault or underrun.
 ///
 /// Runs only while the requeue flag is set. Cancels the previous ready slot,
@@ -1651,6 +1670,7 @@ static void _cdStreamQueueRestartRead(void)
     s16           readySlot;
 
     if (_gCdStreamRuntime.state.flags2 & CD_STREAM_REQUEUE) {
+        CD_STREAM_TRACE("restart read");
         _gCdStreamRuntime.state.queuedChunk;
         _gCdStreamRuntime.state.flags2 &= CD_STREAM_CLEAR_REQUEUE;
         _gCdStreamRuntime.state.flags0 &= CD_STREAM_CLEAR_ACTIVE;
@@ -1794,6 +1814,7 @@ static void _cdStreamAdvanceEvenChunk(void)
         _gCdStreamRuntime.state.flags0 &= CD_STREAM_CLEAR_KEY_ON;
     }
     state = &_gCdStreamRuntime.state;
+    CD_STREAM_TRACE("even chunk");
     if ((state->queuedChunk + 1) < state->chunkCount) {
         if (((u8)state->flags0 >> CD_STREAM_SPU_IRQ_BIT) & 1) {
             state->playhead = state->chunkIndex * (s16)(u16)state->chunkVsyncs;
@@ -1885,6 +1906,7 @@ static void _cdStreamAdvanceOddChunk(void)
     u16           readySlot;
 
     playhead = _gCdStreamRuntime.state.playhead;
+    CD_STREAM_TRACE("odd chunk");
     if ((_gCdStreamRuntime.state.queuedChunk + 1) < _gCdStreamRuntime.state.chunkCount) {
         if (((u8)_gCdStreamRuntime.state.flags0 >> CD_STREAM_SPU_IRQ_BIT) & 1) {
             _gCdStreamRuntime.state.advanceDelay = (u16)_gCdStreamRuntime.state.chunkVsyncs + 1;
