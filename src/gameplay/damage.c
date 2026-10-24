@@ -230,6 +230,14 @@ static u16 _gDamageDistanceBandClasses[16] = {
     4
 };
 
+#ifdef PC_PORT
+/* The PC port's cheats (pe2.toml [cheats]): every hit of the player's kills
+ * (more damage than any enemy has health), and the player takes none. */
+extern s32 pc_cheat_one_hit_kill(void);
+extern s32 pc_cheat_infinite_hp(void);
+enum { DAMAGE_PC_ONE_HIT_KILL = 9999 };
+#endif
+
 u32 damageComputePlayerAttack(u32 attackKey, u32 playerDistance, s32 scaledReaction, s32 reactionScale)
 {
     enum {
@@ -347,6 +355,11 @@ u32 damageComputePlayerAttack(u32 attackKey, u32 playerDistance, s32 scaledReact
 
         damage = damage * gDamageAttackDifficultyPercent[gSceneCombatState.difficulty] / 100;
     }
+#ifdef PC_PORT
+    if (pc_cheat_one_hit_kill()) {
+        damage = DAMAGE_PC_ONE_HIT_KILL;
+    }
+#endif
     return damage;
 }
 
@@ -389,6 +402,11 @@ s32 damageComputeReceived(s32 attackKey, s32 unused, s32* outReaction, s32 victi
     if (damage == 0 && power != 0) {
         damage = 1;
     }
+#ifdef PC_PORT
+    if (victimIsCompanion == 0 && pc_cheat_infinite_hp()) {
+        damage = 0;
+    }
+#endif
     return damage;
 }
 
