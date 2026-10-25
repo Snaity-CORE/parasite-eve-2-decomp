@@ -408,7 +408,7 @@ objects = [
 # ======== aya (6 entries) ========
 
 [aya]
-description = "Aya costume / bonus overlay"
+description = "The player's character slot: Aya's costume models, and the game-over and ending screens that load into it when she is not loaded"
 imports = "configs/USA/sym/aya.imports.txt"
 load_addr = 0x80115770
 global_vram_start = 0x80010000
@@ -484,21 +484,21 @@ objects = [
   { unit = "aya_10500/aya_10500", data = "0x4" },
 ]
 
-[aya.overlays.aya_20900]
+[aya.overlays.game_over]
 label = "1.6 KB, 3 functions; role unknown"
 id = 43
 objects = [
   { kind = "packageId" },
-  { unit = "aya_20900/aya_20900", rodata = "0x4", text = "0x1C", data = "0x62C" },
+  { unit = "game_over/game_over", rodata = "0x4", text = "0x1C", data = "0x62C" },
 ]
 
-[aya.overlays.replay_bonus]
+[aya.overlays.ending]
 label = "Complete Bonus / GET ITEM / BONUS BP"
 id = 45
 objects = [
   { kind = "packageId" },
-  { unit = "replay_bonus/replay_bonus", rodata = "0x4", text = "0x150" },
-  { unit = "replay_bonus/replay_bonus_2", rodata = "0x74", text = "0x1A24", data = "0x37FC" },
+  { unit = "ending/ending", rodata = "0x4", text = "0x150" },
+  { unit = "ending/ending_2", rodata = "0x74", text = "0x1A24", data = "0x37FC" },
 ]
 
 
@@ -5583,23 +5583,23 @@ objects = [
   { unit = "energyball/energyball", rodata = "0x4", text = "0x18", data = "0x224C", bss = "0x2270" },
 ]
 
-[pe.overlays.ofuda]
-id = 60
-objects = [
-  { kind = "packageId" },
-  { unit = "ofuda/ofuda", rodata = "0x4", text = "0x4" },
-]
-
 [pe.overlays.flare]
-id = 61
+id = 60
 objects = [
   { kind = "packageId" },
   { unit = "flare/flare", rodata = "0x4", text = "0x4" },
 ]
 
 [pe.overlays.pepper_spray]
+id = 61
+objects = [
+  { kind = "packageId" },
+  { unit = "pepper_spray/pepper_spray", rodata = "0x4", text = "0x4" },
+]
+
+[pe.overlays.combat_light]
 id = 62
 objects = [
   { kind = "packageId" },
-  { unit = "pepper_spray/pepper_spray", rodata = "0x4", text = "0x4", data = "0xC6C" },
+  { unit = "combat_light/combat_light", rodata = "0x4", text = "0x4", data = "0xC6C" },
 ]

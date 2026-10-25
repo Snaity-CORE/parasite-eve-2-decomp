@@ -1,0 +1,59 @@
+# The assets of the group items/combat_light, each named items/combat_light/<table name>.
+# Written by tools/peassets/dump_asset_db.py; hand-written fields are kept, matched by sha1.
+
+[use]
+type = "sound"
+mode = "low"
+sha1 = "1d042c09840f0697aa103fc43e53f8219aa2f1d6"
+
+[file]
+type = "file"
+
+[[file.contents]]
+chunk = "palette"
+palettes = [{ texture = "texture", variant = "default", region = "engine/vram/preview_palette" }]
+sha1 = "b18af84a7b2ac0730e6bca230b1ffb25f6d781ec"
+
+[[file.contents]]
+chunk = "image"
+pages = [{ texture = "texture", region = "engine/vram/preview_picture" }]
+sha1 = "7c58aaa7776cadee30dbbd55399390198ec7efdc"
+
+[[file.contents]]
+chunk = "text"
+
+[item]
+type = "shaped"
+outputs = { catalog = "catalog", info = "text", descriptor = "descriptor" }
+shape = "effect_item"
+
+[text]
+type = "txt"
+sha1 = "9f42a609a39c674db785b2519c3a7e015822f5db"
+
+[sounds]
+type = "sound_bank"
+samples = ["items/combat_light/use"]
+sounds = { use = 1 }
+sha1 = "c16b1ef36a0c000d9f9c5fbd0b222c50c3b4b053"
+
+[catalog]
+type = "txt"
+sha1 = "8bb881eb352f81f0a3b68db660fd9423330c4a15"
+
+[package]
+type = "pe2pkg"
+package_name = "combat_light"
+required = true
+sha1 = "26a0d0f40b00f3b3331d71d09ca546ebb3505d89"
+
+[texture]
+type = "texture"
+bpp = 8
+height = 96
+variants = ["default"]
+width = 128
+
+[descriptor]
+type = "item_descriptor"
+sha1 = "1565f7247e4349ebe04d01219ea7cd8e02ac1747"

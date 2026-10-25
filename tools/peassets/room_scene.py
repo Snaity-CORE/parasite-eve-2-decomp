@@ -1267,7 +1267,7 @@ class Scene:
         out["fileId"], out["fileExists"] = file_id, node is not None
         if node:
             out["chunks"] = list((node.get("chunks") or {}).values())
-            package = next((self.p.assets[c].get("package_name", c) for c in out["chunks"] if self.p.assets.get(c, {}).get("type") == "pe2pkg"), None)
+            package = next((self.p.assets[c].get("package_name", c) for c in out["chunks"] if self.p.assets.get(c, {}).get("type") in ("pe2pkg", "room", "stage")), None)
             out["package"] = package
             out["models"] = list(self.p.models_of.get(package, [])) if package else []
         return out
@@ -1401,18 +1401,18 @@ class Scene:
         return out
 
     def model_key(self, address: int) -> str | None:
-        """The asset key of the model a TmdSource record draws: its stream, matched to the catalogue."""
+        """The asset key of the model a TmdSource record draws: its stream, matched to the catalog."""
         text = self.ref(address)
         owner = self.owner_of(address)
         if owner is None:
-            # An actor overlay's model: the map naming it says whose, and the record's stream word is the catalogue's address.
+            # An actor overlay's model: the map naming it says whose, and the record's stream word is the catalog's address.
             _name, owner = self.foreign(address)
             stream = self.p.word(owner, address + 0x20) if owner in self.p.load_of else None
             key = self.p.model_at.get((owner, stream))
             if owner is None:
                 self.miss("objects", text, "model source is in no mapped image and no symbol map says whose it is")
             elif key is None:
-                self.miss("objects", text, f"its stream in {owner} is not a catalogued model")
+                self.miss("objects", text, f"its stream in {owner} is not a cataloged model")
             return key
         data, load = self.p.package(self.room), self.p.load["rooms"]
         if owner != self.room or address - load + 0x24 > len(data):
@@ -1421,13 +1421,13 @@ class Scene:
         stream = struct.unpack_from("<I", data, address - load + 0x20)[0]
         key = self.p.model_at.get((self.room, stream))
         if key is None:
-            # A mesh several packages carry is catalogued once, under its SHA-1 (asset_data.MODELS).
+            # A mesh several packages carry is cataloged once, under its SHA-1 (asset_data.MODELS).
             try:
-                key = tmd.catalogue_name(data, load, address - load)
+                key = tmd.catalog_name(data, load, address - load)
             except Exception:  # noqa: BLE001 - an unreadable stream is reported below
                 key = None
         if key is None:
-            self.miss("objects", text, f"its stream at 0x{stream:08X} is not a catalogued model")
+            self.miss("objects", text, f"its stream at 0x{stream:08X} is not a cataloged model")
         return key
 
     # ---- checks

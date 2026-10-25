@@ -34,10 +34,12 @@ from asset_db import (  # noqa: E402
     embedded_for_source,
     lookup,
     lookup_image_bpps,
+    get_asset,
     tree_chunk_asset,
     validate_asset_db,
 )
-from parallel_util import default_jobs, run_jobs  # noqa: E402
+from parallel_util import default_jobs, map_calls, run_jobs, shared_pool  # noqa: E402
+from concurrent.futures import ThreadPoolExecutor  # noqa: E402
 import asset_schema  # noqa: E402
 from texture import declaration as texture_declaration  # noqa: E402
 
@@ -197,39 +199,20 @@ def infer_rom_root(stage0_hed: Path) -> Path | None:
     return None
 
 
-def extract_cd_streams(
-    rom_usa: Path,
-    assets_root: Path,
-    *,
-    write_raw: bool = True,
-    write_decoded: bool = True,
-    jobs: int | None = None,
-) -> None:
-    """Extract MTS audio and STR movies from the dumped ``rom/USA`` tree.
-
-    Streaming-list payloads live in ``STAGE*.CDF`` and ``INTER*.STR``, not in
-    the file-chunk walk. Delegates to :mod:`extract_streams` / :mod:`extract_movies`.
-    """
+def extract_cd_streams(rom_usa: Path, assets_root: Path, write_decoded: bool) -> None:
+    """The MTS audio and the STR movies at once, each on the shared pool; a failure is logged, not fatal."""
     import extract_movies
     import extract_streams
 
-    logging.info("Extracting CD audio streams from %s", rom_usa)
-    extract_streams.extract_all(
-        rom_usa,
-        assets_root,
-        write_raw=write_raw,
-        write_wav=write_decoded,
-        jobs=jobs,
-    )
-    logging.info("Extracting CD movie streams from %s", rom_usa)
-    extract_movies.extract_all(
-        rom_usa,
-        assets_root,
-        write_raw=write_raw,
-        write_mp4=write_decoded,
-        write_audio=write_decoded,
-        jobs=jobs,
-    )
+    def run(label, fn, **kw):
+        try:
+            logging.info("Extracting CD %s streams from %s", label, rom_usa)
+            fn(rom_usa, assets_root, write_raw=True, **kw)
+        except Exception:
+            logging.exception("Failed to extract CD %s streams", label)
+    with ThreadPoolExecutor(max_workers=2) as both:
+        both.submit(run, "movie", extract_movies.extract_all, write_mp4=write_decoded, write_audio=write_decoded)
+        both.submit(run, "audio", extract_streams.extract_all, write_wav=write_decoded)
 
 
 def computeChecksum(exe: BinaryIO):
@@ -400,8 +383,11 @@ class AssetStore:
           stage0/…/trailer.bin        # pack sidecars only
           stages.json                 # pack manifest (the decoded paths)
 
-    Dedup is by SHA-1 of the **raw** clean payload. Inflated assets are
-    produced once per unique raw file via :meth:`materialize_inflated`.
+    Dedup is by SHA-1 of the **raw** clean payload, and only there: the raw
+    file is named for one of the assets holding it
+    (``asset_schema.canonical_names``), while each place keeps the asset table's
+    name for it (``tree_chunk_asset``) and is decoded under that name by
+    :meth:`materialize_inflated`, once per name.
     The in-memory :attr:`map` feeds ``stages.json`` during extract; it is not
     written to disk.
     """
@@ -417,8 +403,11 @@ class AssetStore:
         self._used_names: dict[str, set[str]] = {}
         # raw_rel → first canonical key that produced this file
         self._first_canonical: dict[str, str] = {}
-        # unique raw entries to inflate: raw_rel → (type_dir, stem, ext)
+        # unique raw entries: raw_rel → (type_dir, stem, ext)
         self._unique_raw: dict[str, tuple[str, str, str]] = {}
+        # every asset name to decode → its raw_rel: a raw file's own name and each place holding the same bytes
+        # under a name of its own (a placeholder file's copy of another item's picture)
+        self._names: dict[str, str] = {}
         # canonical chunk path → map entry
         self.map: dict[str, dict] = {}
 
@@ -528,15 +517,21 @@ class AssetStore:
 
         digest = hashlib.sha1(data).hexdigest()
         by_hash = self._by_hash.setdefault(type_dir, {})
+        # The asset table names the place; a name it gives other bytes (another release) is not this asset's.
+        place = tree_chunk_asset(stage, file_id, chunk_idx, folder_id)
+        if place is not None and (get_asset(place) or {}).get("sha1") != digest:
+            place = None
 
         if digest in by_hash:
             raw_rel = by_hash[digest]
             raw_path = self.assets_root / raw_rel
             stem = self._unique_raw[raw_rel][1]
+            name = place or stem
+            self._names.setdefault(name, raw_rel)
             first = self._first_canonical.get(raw_rel)
             self.map[canonical] = self._map_entry(
                 type_dir=type_dir,
-                stem=stem,
+                stem=name,
                 ext=ext,
                 raw_rel=raw_rel,
                 digest=digest,
@@ -561,9 +556,12 @@ class AssetStore:
         by_hash[digest] = raw_rel
         self._first_canonical[raw_rel] = canonical
         self._unique_raw[raw_rel] = (type_dir, stem, ext)
+        self._names.setdefault(stem, raw_rel)
+        name = place or stem
+        self._names.setdefault(name, raw_rel)
         self.map[canonical] = self._map_entry(
             type_dir=type_dir,
-            stem=stem,
+            stem=name,
             ext=ext,
             raw_rel=raw_rel,
             digest=digest,
@@ -597,6 +595,7 @@ class AssetStore:
         by_hash[digest] = raw_rel
         self._first_canonical[raw_rel] = canonical
         self._unique_raw[raw_rel] = (type_dir, stem, ext)
+        self._names.setdefault(stem, raw_rel)
         return raw_path, stem, True
 
     def put_embedded(
@@ -605,7 +604,7 @@ class AssetStore:
         """Store an asset carved out of a binary by address.
 
         Same raw/{type} store and SHA-1 dedup as :meth:`put_raw`; the stem is
-        the catalogue id rather than a chunk-derived name, since these have no
+        the catalog id rather than a chunk-derived name, since these have no
         chunk coordinates to fall back on.
         """
         ext = ext if ext.startswith(".") else f".{ext}"
@@ -617,9 +616,10 @@ class AssetStore:
             raw_rel = by_hash[digest]
             raw_path = self.assets_root / raw_rel
             stem = self._unique_raw[raw_rel][1]
+            self._names.setdefault(asset_id, raw_rel)       # its own name: the bytes are stored once
             self.map[canonical] = self._map_entry(
                 type_dir=type_dir,
-                stem=stem,
+                stem=asset_id,
                 ext=ext,
                 raw_rel=raw_rel,
                 digest=digest,
@@ -629,10 +629,12 @@ class AssetStore:
             return raw_path, stem, False
 
         used = self._used_names.setdefault(type_dir, set())
-        stem = asset_id
+        # The raw file is named for the asset the table keeps those bytes under (the others share it).
+        preferred = asset_id_for_sha1(digest) or asset_id
+        stem = preferred
         n = 2
         while stem in used:
-            stem = f"{asset_id}_{n}"
+            stem = f"{preferred}_{n}"
             n += 1
         used.add(stem)
 
@@ -644,9 +646,11 @@ class AssetStore:
         by_hash[digest] = raw_rel
         self._first_canonical[raw_rel] = canonical
         self._unique_raw[raw_rel] = (type_dir, stem, ext)
+        self._names.setdefault(stem, raw_rel)
+        self._names.setdefault(asset_id, raw_rel)
         entry = self._map_entry(
             type_dir=type_dir,
-            stem=stem,
+            stem=asset_id,
             ext=ext,
             raw_rel=raw_rel,
             digest=digest,
@@ -690,11 +694,21 @@ class AssetStore:
         from asset_data import ASSETS
 
         texture_chunks = texture_declaration.texture_chunks(ASSETS)
+        # A shaped asset's instance is the decoded form of the outputs its group owns; a shared plain text it names
+        # (one the Parasite Energies' files hold too) is still decoded where it is. A package keeps its image: a
+        # room's scene is only part of it, and the build and the other decoders read the rest.
+        shaped_outputs = {out for rec in ASSETS.values() if rec.get("type") == "shaped"
+                          for out in rec["outputs"].values()
+                          if (ASSETS.get(out) or {}).get("group") and ASSETS[out].get("type") not in ("pe2pkg", "room", "stage")}
+        # A font's glyph table is decoded as its UFO, and a palette a texture takes as `palettes_from` as the
+        # texture's variants; neither keeps a copy of its bytes beside them.
+        shaped_outputs |= {rec["table"] for rec in ASSETS.values() if rec.get("type") == "font" and "table" in rec}
+        shaped_outputs |= {rec["palettes_from"] for rec in ASSETS.values() if "palettes_from" in rec}
         work: list[dict] = []
-        for raw_rel, (type_dir, stem, ext) in sorted(
-            self._unique_raw.items(), key=lambda kv: asset_name_key(kv[0])
-        ):
-            if ext in RAW_ONLY_EXTS or stem in texture_chunks or (ASSETS.get(stem) or {}).get("type") == "sound_bank":
+        for stem, raw_rel in sorted(self._names.items(), key=lambda kv: asset_name_key(kv[0])):
+            type_dir, _raw_stem, ext = self._unique_raw[raw_rel]
+            if (ext in RAW_ONLY_EXTS or stem in texture_chunks or stem in shaped_outputs
+                    or (ASSETS.get(stem) or {}).get("type") == "sound_bank"):
                 continue                    # decoded by decode_declared
             if only_pe2pkg_stems is not None:
                 if type_dir != "pe2pkg" or stem not in only_pe2pkg_stems:
@@ -731,7 +745,7 @@ class AssetStore:
             )
 
         results = run_jobs(
-            _materialize_one_job, work, jobs=jobs, label_key="raw_rel"
+            _materialize_one_job, work, jobs=jobs, label_key="out_rel"
         )
         count = 0
         for r in results:
@@ -750,9 +764,9 @@ class AssetStore:
                     logging.debug("%s", r["traceback"])
             # Apply path fallback patches from worker (decode → raw copy)
             override = r.get("path_override")
-            if override and raw_rel:
-                for ent in self.map.values():
-                    if ent.get("raw_path") == raw_rel:
+            if override and r.get("out_rel"):
+                for ent in self.map.values():             # the places decoded under this name
+                    if ent.get("path") == r["out_rel"]:
                         ent["path"] = override
         return count
 
@@ -888,6 +902,7 @@ def _materialize_one_job(job: dict) -> dict:
         return {
             "ok": True,
             "raw_rel": raw_rel,
+            "out_rel": out_rel,
             "log": log,
             "path_override": path_override,
         }
@@ -1183,9 +1198,9 @@ def write_pack_manifests(args, output_path: Path, store: "AssetStore", rom_root)
 
 
 def store_embedded_assets(output_path: Path, store: "AssetStore", *, skip: bool) -> int:
-    """Carve catalogued assets out of the binaries and into the normal store.
+    """Carve cataloged assets out of the binaries and into the normal store.
 
-    Runs before materialization in every extraction mode. Decode catalogued
+    Runs before materialization in every extraction mode. Decode cataloged
     packages from this extraction's raw store, using their CDF load addresses;
     neither inflated packages nor stages.json exist yet on a fresh extraction.
     A raw-only run also collects these assets without writing inflated files.
@@ -1200,13 +1215,13 @@ def store_embedded_assets(output_path: Path, store: "AssetStore", *, skip: bool)
         return 0
 
     # Several CDF entries may share a package. Visit each raw file once and
-    # only decode packages with catalogued embedded assets.
+    # only decode packages with cataloged embedded assets.
     packages = {
         entry["raw_path"]: parse_load_addr(
             entry["load_addr"], chunk_type=FileChunkType.RoomPkg
         )
         for entry in store.map.values()
-        if entry["type"] == "pe2pkg"
+        if entry["type"] in ("pe2pkg", "room", "stage")
         and embedded_for_source(asset_schema.package_name(asset_schema.raw_key(entry["raw_path"])) + ".pe2pkg")
     }
     targets = [(output_path / "main.exe", None)] + [
@@ -1337,20 +1352,16 @@ def main():
     # stages.json     — pack manifest (paths of the inflated forms)
     # stage0/…        — pack sidecars only (trailers, layout, streaming)
     store = AssetStore(output_path)
+    with shared_pool(args.jobs), ThreadPoolExecutor(max_workers=4) as background:
+        _extract(args, output_path, store, background)
 
-    extract_stage_0(args.stage0_header, args.stage0_data, store=store)
-    extract_stage_n(args.stage1, stage=1, store=store)
-    extract_stage_n(args.stage2, stage=2, store=store)
-    extract_stage_n(args.stage3, stage=3, store=store)
-    extract_stage_n(args.stage4, stage=4, store=store)
-    extract_stage_n(args.stage5, stage=5, store=store)
 
-    rom_root = args.rom
-    if rom_root is not None:
-        rom_root = Path(rom_root)
-    else:
-        rom_root = infer_rom_root(Path(args.stage0_header.name))
-
+def _extract(args, output_path: Path, store: "AssetStore", background: ThreadPoolExecutor) -> None:
+    """The extraction, its process-pool work fed from every phase at once: the CD streams, which need only the
+    disc, from the start, beside the chunk walk, the inflation and the declared decoders."""
+    executable_disk1 = args.executable_disk1
+    rom_root = Path(args.rom) if args.rom is not None else infer_rom_root(Path(args.stage0_header.name))
+    streams = None
     if args.minimal_inflate:
         logging.info("minimal-inflate: skipped CD audio/movie streams")
     elif args.skip_streams:
@@ -1362,16 +1373,14 @@ def main():
             Path(args.stage0_header.name),
         )
     else:
-        try:
-            extract_cd_streams(
-                rom_root,
-                output_path,
-                write_raw=True,
-                write_decoded=not args.raw_only,
-                jobs=args.jobs,
-            )
-        except Exception:
-            logging.exception("Failed to extract CD audio/movie streams")
+        streams = background.submit(extract_cd_streams, rom_root, output_path, not args.raw_only)
+
+    extract_stage_0(args.stage0_header, args.stage0_data, store=store)
+    extract_stage_n(args.stage1, stage=1, store=store)
+    extract_stage_n(args.stage2, stage=2, store=store)
+    extract_stage_n(args.stage3, stage=3, store=store)
+    extract_stage_n(args.stage4, stage=4, store=store)
+    extract_stage_n(args.stage5, stage=5, store=store)
 
     for type_dir, st in sorted(store.stats().items()):
         logging.info(
@@ -1389,6 +1398,8 @@ def main():
         logging.info("Stored %d embedded asset(s) from the binaries", n_embedded)
 
     if args.raw_only:
+        if streams is not None:
+            streams.result()
         write_pack_manifests(args, output_path, store, rom_root)
         logging.info("raw-only: skipped inflate")
         logging.info("All done! (raw at %s)", store.raw_root)
@@ -1419,31 +1430,87 @@ def main():
     logging.info("Materialized %d inflated assets", n)
     decode_declared(output_path)
 
+    if streams is not None:
+        streams.result()
     write_pack_manifests(args, output_path, store, rom_root)
+    decode_dialogues()
 
     logging.info("All done!")
 
 
+def decode_dialogues() -> None:
+    """Each dialogue's named form and the dialogue font (cap_decode.py), from the dialogues and their atlases. After
+    the pack manifests: a dialogue with no atlas of its own is looked for in its folder, which stages.json names."""
+    import cap_decode
+    written, failed = cap_decode.decode_all()
+    logging.info("Dialogues: %d decoded, %d with no atlas on the disc to decode against", written, failed)
+
+
 def decode_declared(assets_root: Path) -> None:
-    """Decode what the asset table fully declares: each file's textures, as indexed PNGs (texture/), each
+    """Decode what the asset table fully declares: each file's textures, as indexed PNGs, and each atlas's layout
+    (texture/), each font as UFO (font/), each
     rig (derived from its models), each model with its slots and bindings, and each clip, as USD (model/,
-    animation/), and each sound bank as SFZ and its own text with its sounds as WAVs (sound/). The rest stays raw
-    until it is declared."""
+    animation/), each sound bank as SFZ and its own text with its sounds as WAVs (sound/), each shaped asset
+    as its instance (shape/), and each room as its instance (room/). The rest stays raw until it is declared."""
+    import room
+    import shape
     from animation import declared as clips
+    from asset_data import ASSETS
+    from font import declared as fonts
     from model import declared
-    from asset_data import ASSETS, EMBEDDED_ASSETS
     from sound import declared as sounds
     from texture import files
 
-    for name in files.declared_files(ASSETS):
-        files.decode_file(name, ASSETS, assets_root)
-    for name in declared.rigs(ASSETS):               # before the models and clips that reference them
-        declared.decode_rig(name, ASSETS, EMBEDDED_ASSETS, assets_root)
-    for name in declared.declared(ASSETS):
-        declared.decode(name, ASSETS, EMBEDDED_ASSETS, assets_root)
-    for name in clips.declared(ASSETS):
-        clips.decode(name, ASSETS, EMBEDDED_ASSETS, assets_root)
-    sounds.decode_all(ASSETS, assets_root)
+    with ThreadPoolExecutor(max_workers=12) as phases:
+        def phase(kind, names, *needs):
+            def run():
+                for need in needs:
+                    need.result()
+                map_calls(_decode_one, [(kind, name, str(assets_root)) for name in names])
+            return phases.submit(run)
+        textures = phase("texture", files.declared_files(ASSETS))
+        atlases = phase("atlas", files.declared_atlases(ASSETS), textures)
+        rigs = phase("rig", declared.rigs(ASSETS))
+        rooms = phase("room", [n for n in room.declared(ASSETS) if not room.is_stage(n, ASSETS)])
+        fonts_ = phase("font", fonts.declared(ASSETS), textures, atlases)       # its images cut from the PNGs
+        done = [textures, atlases, rigs, rooms, fonts_,
+                phase("model", declared.declared(ASSETS), textures, atlases, rigs),  # bound to the PNGs, on its rig
+                phase("clip", clips.declared(ASSETS), rigs),
+                phases.submit(sounds.decode_all, ASSETS, assets_root),
+                phase("shape", shape.shaped_assets(ASSETS), fonts_),             # the credits' text is in a font
+                phase("room", [n for n in room.declared(ASSETS) if room.is_stage(n, ASSETS)], rooms)]  # the stages
+    for d in done:
+        d.result()
+
+
+def _decode_one(kind: str, name: str, assets_root: str) -> None:
+    """One declared asset's decode, in a pool worker."""
+    import room
+    import shape
+    from animation import declared as clips
+    from asset_data import ASSETS, EMBEDDED_ASSETS
+    from font import declared as fonts
+    from model import declared
+    from texture import files
+    root = Path(assets_root)
+    if kind == "texture":
+        files.decode_file(name, ASSETS, root)
+    elif kind == "atlas":
+        files.decode_atlas(name, ASSETS, root)
+    elif kind == "font":
+        fonts.decode(name, ASSETS, EMBEDDED_ASSETS, root)
+    elif kind == "rig":
+        declared.decode_rig(name, ASSETS, EMBEDDED_ASSETS, root)
+    elif kind == "model":
+        declared.decode(name, ASSETS, EMBEDDED_ASSETS, root)
+    elif kind == "clip":
+        clips.decode(name, ASSETS, EMBEDDED_ASSETS, root)
+    elif kind == "shape":
+        shape.decode(name, ASSETS, EMBEDDED_ASSETS, root)
+    elif kind == "room":
+        room.decode(name, ASSETS, EMBEDDED_ASSETS, root)
+    else:
+        raise ValueError(kind)
 
 
 if __name__ == "__main__":

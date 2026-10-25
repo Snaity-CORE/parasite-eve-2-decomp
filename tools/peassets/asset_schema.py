@@ -98,16 +98,41 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     "binding": {"payload": (), "stored": ("model", "textures", "override")},
     # A texture is one page of pixels in one or more variants, each an indexed PNG (texture/); `bpp`,
     # `width` (texels) and `height` are what the game expects, against which a supplied PNG is checked.
-    "texture": {"payload": (), "stored": ("bpp", "width", "height", "variants")},
+    "texture": {"payload": (), "stored": ("bpp", "width", "height", "variants", "palettes_from", "no_palette", "cells")},
     # A file lists its chunks in order, and what each image and palette chunk uploads where (texture/).
     "file": {"payload": (), "stored": ("contents",)},
-    # A rectangle of VRAM in halfwords that pages and palettes are placed in by name (texture/declaration.py).
-    "vram_region": {"payload": (), "stored": ("at", "size")},
+    # The layout of a texture page packed with several textures (the UI sheet): `sprites`, each a texture at a texel
+    # `at` of its own depth. A file's page names it as its `atlas` (texture/declaration.py).
+    "atlas": {"payload": (), "stored": ("sprites",)},
+    # One face of a texture and the glyph table in an executable that lays it out; decoded to `<name>.ufo`, which
+    # encodes back to the table (font/declared.py), and the texture's cells come from it.
+    "font": {"payload": (), "stored": ("texture", "textures", "table", "start", "count", "layout", "first", "v",
+                                       "kerning", "encoding", "family", "style", "em")},
+    # A rectangle of VRAM in halfwords that pages and palettes are placed in by name, `within` another region where
+    # it is part of it (texture/declaration.py).
+    "vram_region": {"payload": (), "stored": ("within", "shares", "at", "size")},
+    # Data of a declared shape (tools/peassets/shape/): its `shape`, and in `outputs` the stored asset each of the
+    # shape's outputs is. Its instance, `<group>/<local name>.toml`, is decoded from them and encodes back exactly.
+    "shaped": {"payload": (), "stored": ("shape", "outputs", "include")},
+    # A row of gameplay's item descriptor table (`ItemDesc`), and the tables themselves: outputs of the item shapes
+    # and their catalog (tools/peassets/shape/item.toml), located in gameplay by address.
+    "item_descriptor": {"payload": (), "stored": ()},
+    "item_descriptor_table": {"payload": (), "stored": ()},
+    # Bytes an object stores that nothing reads, kept as stored: the item catalog object's junk last byte.
+    "junk": {"payload": (), "stored": ()},
     # `package_name` is the overlay's name - its overlays.toml key, its symbol map, its decoded copy in pe2pkg/ -
     # where the asset's own name differs from it (a package filed in a room's group is `<room>_package`).
     # `embedded` lists the EMBEDDED_ASSETS located inside the package, by address: a package is a container, as a
     # bundle or a bank is.
     "pe2pkg": {"payload": (), "stored": ("parent", "package_name", "embedded")},
+    # A room's package, stored as a package is: the room's entry points besides those the stage's per-area tables and
+    # gameplay's area table give, by module (`entries`); its instance, `<group>/room.toml`, is decoded from the
+    # package (tools/peassets/room/).
+    "room": {"payload": (), "stored": ("parent", "package_name", "embedded", "entries")},
+    # A stage overlay's package, decoded the same way (tools/peassets/room/): its own data - the placement lists, area
+    # objects, map, image memory, music and rewards - from gameplay's per-stage tables, its rooms' variants and its
+    # `entries`; its per-area tables follow from its rooms. Its instance is `<group>/stage.toml`.
+    "stage": {"payload": (), "stored": ("parent", "package_name", "embedded", "entries")},
     "bs": {"payload": (), "stored": ()},
     # A bank is a container: `samples` names the sample in each slot, in slot order.
     "spk": {"payload": ("samples",), "stored": ("sounds",)},
@@ -116,7 +141,7 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # A bank declared in full, in place of its `spk` record (the same name and sha1): `samples` names the `sound` at
     # each position of its pool, in pool order (None where the pool holds bytes that are not a sample). Decoded to
     # `<name>.sfz` and `<name>.sfx`, and built back from them (sound/declared.py).
-    "sound_bank": {"payload": ("samples",), "stored": ()},
+    "sound_bank": {"payload": ("samples",), "stored": ("sounds",)},
     # A sound of a declared bank, known by the SHA-1 of its stored body; decoded to a WAV that Sony's encoder turns
     # back into that body in `mode` (ENCVAG's conversion mode: `high`, `low` or `4bit`, stated only where normal
     # mode cannot reproduce the body; absent, `normal`).
@@ -148,7 +173,7 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # SkelAnimation in its group's directory and encoded from it; the rig gives the joint paths and the rest pose the
     # decoded file shows. Placed (with its address: it holds pointers) by every package that carries it; a clip
     # several packages carry belongs to a shared group (characters/aya).
-    "clip": {"payload": (), "stored": ("rig",)},
+    "clip": {"payload": (), "stored": ("rig", "symbol")},
     # The slots a table of clips is indexed by, as the code indexes it: `slots` names each index ("" where none is
     # used). The player's schema serves every weapon and companion.
     "animation_schema": {"payload": (), "stored": ("slots",)},
@@ -160,7 +185,8 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     "animation_bank": {"payload": (), "stored": ("schema", "base", "clips", "symbol")},
     # A dialogue's glyph atlas: an on-disc image chunk, stored and decoded as a pe2img, but not drawn by anyone - the
     # tool that built the dialogue laid it out from its text and the font (doc/CAP_FORMAT.md §9). `generated_by` names
-    # that dialogue; the dialogue and the shared font (tools/peassets/cap_font.py) rebuild it.
+    # that dialogue, or one per page where the image holds several pages side by side (the shooting gallery's two);
+    # the dialogue and the shared font (tools/peassets/cap_font.py) rebuild it.
     "font_atlas": {"payload": ("x", "y", "w", "h"), "stored": ("bpp", "generated_by")},
     "demo": {"payload": (), "stored": ()},
 }
@@ -171,8 +197,8 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
 EMBEDDED_FIELDS = ("source", "vram", "offset", "address", "size", "ext", "type", "include", "layout", "deps", "notes",
                    "group")
 # Types with no bytes of their own: declared by hand, carried over unchanged by dump_asset_db.py.
-DECLARED_TYPES = frozenset({"binding", "texture", "file", "vram_region", "rig", "clip", "animation_schema",
-                            "animation_bank", "sound_bank", "sound"})
+DECLARED_TYPES = frozenset({"binding", "texture", "file", "atlas", "font", "vram_region", "rig", "clip", "animation_schema",
+                            "animation_bank", "sound_bank", "sound", "shaped", "room", "stage"})
 
 # Embedded types the code reaches by their address in memory - a model through pointers in the code, an image or a
 # CLUT through its upload record - so a placement of one states its `address`.
@@ -312,7 +338,7 @@ def package_name(key: str, rec: dict[str, Any] | None = None) -> str:
 
 def package_names(assets: dict) -> dict[str, str]:
     """Every package asset -> its overlay name."""
-    return {k: r.get("package_name", k) for k, r in assets.items() if r.get("type") == "pe2pkg"}
+    return {k: r.get("package_name", k) for k, r in assets.items() if r.get("type") in ("pe2pkg", "room", "stage")}
 
 
 def package_asset(name: str, assets: dict | None = None) -> str:
@@ -320,7 +346,7 @@ def package_asset(name: str, assets: dict | None = None) -> str:
     if assets is None:
         assets = load()[0]
     for key, rec in assets.items():
-        if rec.get("type") == "pe2pkg" and rec.get("package_name") == name:
+        if rec.get("type") in ("pe2pkg", "room", "stage") and rec.get("package_name") == name:
             return key
     return name
 
@@ -328,7 +354,7 @@ def package_asset(name: str, assets: dict | None = None) -> str:
 def implied_deps(key: str, assets: dict, embedded: dict) -> list[str]:
     """Dependencies the manifest states in another form."""
     rec = assets.get(key)
-    if not rec or rec.get("type") != "pe2pkg":
+    if not rec or rec.get("type") not in ("pe2pkg", "room", "stage"):
         return []
     source = package_name(key, rec) + ".pe2pkg"
     return sorted(k for k, e in embedded.items() if e.get("source") == source)
@@ -364,7 +390,7 @@ def parents_of(key: str, assets: dict, tree: dict) -> list[str]:
     stated = assets.get(key, {}).get("parent")
     if stated:
         return [stated] if isinstance(stated, str) else list(stated)
-    if key in ("title", "gameplay"):
+    if package_name(key, assets.get(key)) in ("title", "gameplay"):   # the title package is filed as title/package
         return [ROOT_OVERLAY]
     for stage, body in tree.items():
         if not stage:
@@ -373,7 +399,7 @@ def parents_of(key: str, assets: dict, tree: dict) -> list[str]:
             if any(key in (n.get("chunks") or {}).values() for n in fnode["files"].values()):
                 for node in tree[0]["files"].values():
                     if int(node["id"]) == 900000 + stage:
-                        return [c for c in node["chunks"].values() if assets.get(c, {}).get("type") == "pe2pkg"][:1] or ["gameplay"]
+                        return [c for c in node["chunks"].values() if assets.get(c, {}).get("type") in ("pe2pkg", "room", "stage")][:1] or ["gameplay"]
     return ["gameplay"]
 
 
@@ -417,7 +443,7 @@ TYPE_DIR_BY_EXT: dict[str, str] = {
     ".wav": "sample",
 }
 # The extension of the stored bytes of each manifest type that does not state one (`ext`, on an embedded asset).
-EXT_BY_TYPE: dict[str, str] = {"pe2pkg": ".pe2pkg", "pe2img": ".pe2img", "pe2clut": ".pe2clut", "pe2bundle": ".pe2bundle",
+EXT_BY_TYPE: dict[str, str] = {"pe2pkg": ".pe2pkg", "room": ".pe2pkg", "stage": ".pe2pkg", "pe2img": ".pe2img", "pe2clut": ".pe2clut", "pe2bundle": ".pe2bundle",
                                "cap": ".cap", "stf": ".stf", "demo": ".demo", "font_atlas": ".pe2img", "collision": ".collision", "bs": ".bs",
                                # embedded types: a placement's extension follows from its type
                                "animation": ".anim", "camera_path": ".path", "movie_path": ".path", "clut": ".clut",
@@ -495,7 +521,7 @@ def record_of(key: str, type_dir: str | None = None, tables: tuple[dict, dict] |
 def decoded_model(rec: dict[str, Any] | None) -> bool:
     """A model that declares its texture `slots` (model/ decodes it), or a clip (animation/): unlike the other
     models and animations, a decoded form outside raw/."""
-    return bool(rec) and (rec.get("type") == "model" and bool(rec.get("slots")) or rec.get("type") == "clip")
+    return bool(rec) and (rec.get("type") == "model" and "slots" in rec or rec.get("type") == "clip")
 
 
 def file_name(key: str) -> str:
@@ -563,10 +589,44 @@ def asset_dir(key: str, rec: dict[str, Any] | None = None, *, type_dir: str | No
     return group_of(key, rec) or type_dir
 
 
+def canonical_names(assets: dict[str, dict[str, Any]]) -> dict[str, str]:
+    """Stored bytes' SHA-1 -> the name their raw file is kept under.
+
+    Raw bytes are stored once per content; the names are the places that hold them. Several assets may share one
+    content - a placeholder preview file holding another item's picture - and each keeps its own name, record and
+    decoded form; the raw file is named for one of them: the asset outside the groups if there is one (at most one
+    may be), else the first name in sorted order. A sound is known by its body inside banks, as a raw sample may be,
+    so it has no raw file of its own and is not in it."""
+    names: dict[str, list[str]] = {}
+    for aid, rec in assets.items():
+        sha1 = rec.get("sha1")
+        if isinstance(sha1, str) and rec.get("type") != "sound":
+            names.setdefault(sha1, []).append(aid)
+    return {sha1: min(group, key=lambda n: ("group" in assets[n], n)) for sha1, group in names.items()}
+
+
+_CANONICAL: dict[int, tuple[dict, dict[str, str]]] = {}
+
+
+def stored_name(key: str, rec: dict[str, Any] | None, tables: tuple[dict, dict] | None = None) -> str:
+    """The name an asset's raw file is kept under: its own, or that of the asset whose bytes it shares."""
+    assets = (tables if tables is not None else load())[0]
+    rec = assets.get(key, rec) if rec is None or "sha1" not in rec else rec
+    sha1 = (rec or {}).get("sha1")
+    if not isinstance(sha1, str) or (rec or {}).get("type") == "sound":
+        return key
+    cached = _CANONICAL.get(id(assets))
+    if cached is None or cached[0] is not assets or sha1 not in cached[1]:
+        cached = (assets, canonical_names(assets))
+        _CANONICAL[id(assets)] = cached
+    return cached[1].get(sha1, key)
+
+
 def raw_rel(key: str, rec: dict[str, Any] | None = None, *, type_dir: str | None = None, ext: str | None = None,
             tables: tuple[dict, dict] | None = None) -> str | None:
     """Where an asset's stored bytes are, `raw/<type>/<name><ext>`: never under a group. None for a sample,
-    which is stored only inside its banks."""
+    which is stored only inside its banks. An asset sharing its bytes with others answers the one raw file they are
+    kept in (`stored_name`)."""
     if rec is None:
         rec = record_of(key, type_dir, tables)
     if rec is not None:
@@ -574,6 +634,7 @@ def raw_rel(key: str, rec: dict[str, Any] | None = None, *, type_dir: str | None
             return None
         ext = stored_ext(rec)
         type_dir = type_dir_of(rec)
+        key = stored_name(key, rec, tables)
     if ext is None or type_dir is None:
         raise KeyError(f"{key} is not in the asset table, and no type was given for it")
     return f"{RAW_ROOT}/{type_dir}/{key}{ext}"
@@ -838,6 +899,13 @@ def validate(assets: dict, embedded: dict) -> list[str]:
                 problems.append(f"{key}: x, y and bpp do not describe the same columns")
         if "deps" in rec:
             check_deps(key, kind, rec["deps"], key)
+        if kind == "sound_bank" and "sounds" in rec:     # {name: slot}; that the slot is filled is checked on decoding
+            names = rec["sounds"]
+            if not (isinstance(names, dict) and all(isinstance(n, str) and n.isidentifier() and n == n.lower()
+                                                    and isinstance(s, int) and 0 <= s < 256 for n, s in names.items())):
+                problems.append(f"{key}: sounds maps lower-case names to slots 0..255")
+            elif len(set(names.values())) != len(names):
+                problems.append(f"{key}: sounds names a slot twice")
         if kind == "binding":
             model = assets.get(rec.get("model"), {})
             if model.get("type") != "model":
@@ -896,10 +964,20 @@ def validate(assets: dict, embedded: dict) -> list[str]:
             problems += texture_declaration.check_texture(key, rec)
         if kind == "file":
             problems += texture_declaration.check_file(key, rec, assets)
+        if kind == "atlas":
+            problems += texture_declaration.check_atlas(key, rec, assets)
+        if kind == "font":
+            import text_encoding
+            problems += texture_declaration.check_font(key, rec, assets, embedded, frozenset(text_encoding.ENCODINGS))
         if kind == "vram_region":
             problems += texture_declaration.check_region(key, rec, assets)
-        if kind == "font_atlas" and assets.get(rec.get("generated_by"), {}).get("type") != "cap":
-            problems.append(f"{key}: generated_by must name a dialogue (a cap)")
+        if kind == "shaped":
+            import shape
+            problems += shape.check_asset(key, rec, assets, shape.declarations())
+        if kind == "font_atlas":
+            by = rec.get("generated_by")
+            if not all(assets.get(d, {}).get("type") == "cap" for d in (by if isinstance(by, list) else [by])):
+                problems.append(f"{key}: generated_by names a dialogue (a cap), or one per page in page order")
         variants = rec.get("variants")
         if variants is None or kind == "texture":       # a texture's variants are its palettes (texture/)
             continue

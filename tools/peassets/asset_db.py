@@ -45,7 +45,7 @@ if str(_DIR) not in sys.path:
 from asset_data import ASSETS, EMBEDDED_ASSETS, TREE  # noqa: E402
 
 def embedded_for_source(source: str) -> list[tuple[str, dict[str, Any]]]:
-    """Catalogued embedded assets carried by one binary, in address order."""
+    """Cataloged embedded assets carried by one binary, in address order."""
     items = [(k, v) for k, v in EMBEDDED_ASSETS.items() if v.get("source") == source]
     return sorted(items, key=lambda kv: kv[1].get("offset", kv[1].get("vram", 0)))
 
@@ -95,14 +95,10 @@ def _is_generated_id(aid: str) -> bool:
 
 
 def _sha1_index() -> dict[str, str]:
-    """Stored bytes' SHA-1 -> the asset that names them. A declared bank's sound is known by its body inside banks,
-    as a raw sample may be too, so it is not in it."""
-    idx: dict[str, str] = {}
-    for aid, rec in ASSETS.items():
-        sha1 = rec.get("sha1")
-        if isinstance(sha1, str) and rec.get("type") != "sound":
-            idx[sha1] = aid
-    return idx
+    """Stored bytes' SHA-1 -> the asset their raw file is named for (asset_schema.canonical_names): several assets
+    may hold one content, each under its own name."""
+    import asset_schema
+    return asset_schema.canonical_names(ASSETS)
 
 
 _SHA1_TO_ID: dict[str, str] = _sha1_index()
@@ -111,7 +107,7 @@ _FILE_INDEX: dict[tuple[int, int | None], dict[int, tuple[str, dict[str, Any]]]]
 
 
 def asset_id_for_sha1(digest: str) -> str | None:
-    """Return the asset id for a raw SHA-1, or None if unknown."""
+    """Return the asset a raw SHA-1's file is named for, or None if unknown."""
     return _SHA1_TO_ID.get(digest)
 
 
@@ -434,7 +430,11 @@ def reverse_chunk_idx(
     node = _tree_file(stage, file_id, folder_id)
     if node is None:
         return None
-    for idx, (_name, aid) in enumerate(file_chunks(node)):
+    chunks = file_chunks(node)
+    for idx, (name, _aid) in enumerate(chunks):            # by the chunk's own name in its file
+        if name == stem:
+            return idx
+    for idx, (_name, aid) in enumerate(chunks):
         if aid == stem or aid.rsplit("/", 1)[-1] == stem:      # a grouped asset's chunk by its local name
             return idx
     return None
@@ -458,8 +458,12 @@ def chunk_stem(
     chunk_idx: int,
     folder_id: int | None = None,
 ) -> str:
-    """On-disk chunk basename without extension (default: decimal index): the asset's name, a grouped asset's
-    local name."""
+    """On-disk chunk basename without extension (default: decimal index): the name the TREE gives the chunk in its
+    file, which is unique there - two groups' assets of one local name can sit in one file (`ui/font/image` and
+    `ui/sheet/image`) - else the asset's name, a grouped asset's local name."""
+    name = tree_chunk_name(stage, file_id, chunk_idx, folder_id)
+    if name and not _is_generated_id(name):
+        return _check_component(name, key=chunk_key(stage, file_id, chunk_idx, folder_id))
     aid = tree_chunk_asset(stage, file_id, chunk_idx, folder_id)
     if aid and not _is_generated_id(aid):
         return _check_component(aid.rsplit("/", 1)[-1], key=chunk_key(stage, file_id, chunk_idx, folder_id))
@@ -588,19 +592,22 @@ def validate_asset_db() -> None:
         _check_asset_name(aid, key=f"ASSETS[{aid!r}]")
         if not isinstance(rec, dict):
             raise ValueError(f"ASSETS[{aid!r}] must be a dict")
-        if rec.get("type") in ("binding", "texture", "file", "vram_region", "rig", "clip", "animation_schema",
-                               "animation_bank"):     # declared, no hash of its own (asset_schema.DECLARED_TYPES)
+        if rec.get("type") in ("binding", "texture", "file", "atlas", "font", "vram_region", "rig", "clip", "animation_schema",
+                               "animation_bank", "shaped"):     # declared, no hash of its own (asset_schema.DECLARED_TYPES)
             continue
         sha1 = rec.get("sha1")
         if not isinstance(sha1, str) or len(sha1) != 40:
             raise ValueError(f"ASSETS[{aid!r}].sha1 must be 40 hex chars")
+        # Several assets may hold one content, each its own (a placeholder file's copy of another item's picture):
+        # only the raw store is shared. Outside the groups a content has one name, which its raw file is kept under.
         seen = seen_sound if rec.get("type") == "sound" else seen_sha1
         prev = seen.get(sha1)
-        if prev is not None and prev != aid:
+        if prev is not None and prev != aid and "group" not in rec:
             raise ValueError(
-                f"duplicate sha1 {sha1} on {prev!r} and {aid!r}"
+                f"duplicate sha1 {sha1} on {prev!r} and {aid!r}: outside the groups a content has one name"
             )
-        seen[sha1] = aid
+        if "group" not in rec:
+            seen[sha1] = aid
         bpp = rec.get("bpp")
         if bpp is not None:
             try:

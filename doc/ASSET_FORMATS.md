@@ -40,9 +40,9 @@ USA PE2 is two discs. Stage content lives in ISO files such as:
 Tooling layout after extract (`assets/USA/`):
 
 ```text
-raw/pe2pkg/ pe2img/ …   deduplicated **on-disc** clean payloads
-                         name = ASSETS id (sha1), else {type}_{n}
-pe2pkg/ pe2img/ …        **inflated** edit forms (one per unique raw)
+raw/pe2pkg/ pe2img/ …   deduplicated **on-disc** clean payloads, one per content
+                         name = an ASSETS id holding it (sha1), else {type}_{n}
+pe2pkg/ pe2img/ …        **inflated** edit forms, one per asset name
                          pe2pkg = LZSS-decoded; pe2img/pe2clut/bs = PNG
 weapons/m4a1/ …          the inflated forms of the assets whose `group` is
                          `weapons/m4a1`, in place of their type directory (§13)
@@ -359,7 +359,6 @@ BPP is **not stored** on disc. Extract and the viewer default to `guess_bpp()`
 (one depth, or one per column record):
 
 ```python
-ASSETS["pe2img_2"]["bpp"] = 8
 ASSETS["pe2img_455"]["bpp"] = [4, 8]  # font column + 8-bit bitmap column
 ```
 
@@ -370,9 +369,8 @@ image keeps is its `bpp` in the asset table.
 When a neighbouring `.pe2clut` exists (`N±1` by chunk index), the PNG exporter
 applies it for 4/8 bpp (see §7.4 for multi-row selection). Examples:
 
-- `stage0/title/1.pe2img` (`pe2img_0`) → 4 bpp font page at `(960, 256)`
-- `stage0/file2/2.pe2img` + `1.pe2clut` → title chrome (`pe2img_2` is 8 bpp,
-  two columns at x=768; clut at `(0, 255)`)
+- the title chrome (`title/chrome_image`, 8 bpp, two columns at x=768,
+  palette at `(0, 255)`), now declared by `title/screen_file`
 - `stage0/file30500/1.pe2img` + `0.pe2clut` → NEO ARK map (needs CLUT **row 1**,
   not row 0 — row 0 is a green monochrome palette)
 
@@ -475,25 +473,29 @@ the highest-scoring row recovers the real map.
 ### 7.5 Title STAGE0 occupancy
 
 HED file order (`stages.json` TREE names): **gameplay** (file 0), **title**
-(file 1), **file2** (still + chrome). Boot brings in the title overlay from
-file 1; `_titleInitializeScreenTask` then queues the category-2 display resource 20100 with
-`cdCmdEnqueueDisplayResource(1, 0, CD_COMMAND_DISPLAY_LOAD_MENU)` and calls
-`textUploadPalettes`. Chrome/still are file 2.
+(file 1), **title_screen** (file 2, still + chrome), and **ui** (file 20162,
+the two UI textures alone). Boot brings in the title overlay from file 1;
+`_titleInitializeScreenTask` then queues the category-2 display resource 20100
+with `cdCmdEnqueueDisplayResource(1, 0, CD_COMMAND_DISPLAY_LOAD_MENU)` and
+calls `textUploadPalettes`.
 
-| Path | Payload | VRAM (halfwords) | BPP |
+| Chunk | Asset | VRAM (halfwords) | Declared as |
 |---|---|---|---|
-| `title/1.pe2img` (`pe2img_0`) | UI font page | `(960, 256)` 64×256 | **4** |
-| `title/2.pe2clut` (`pe2clut_0`) | Font TIM clut | `(256, 243)` 64×6 | — |
-| `title/3.pe2img` (`pe2img_1`) | Extra title sheet | `(896, 256)` 64×256 | **8** |
-| `title/4.pe2clut` (`pe2clut_1`) | Img1 clut | `(0, 240)` 256×3 | — |
-| `title/title.pe2pkg` | Title overlay | RAM `0x80093800` | — |
-| `file2/0.bs` (`bs_0`) | Title still | draw band 320×240 | 16-bit BS v2 |
-| `file2/1.pe2clut` (`pe2clut_2`) | Chrome clut | `(0, 255)` 256×6 | — |
-| `file2/2.pe2img` (`pe2img_2`) | Menu chrome | `(768, 256)` 128×256 | **8** (two columns) |
+| `title/sounds` | `sounds/common/bank` | SPU | `sound_bank`, its sounds named by entry |
+| `title/font_image` | `ui/font/image` | `(960, 256)` 64×256 | `ui/font/texture`, 4 bpp; its palettes are main's `ui/font/glyph_palettes` (`palettes_from`) |
+| `title/dialogue_palette` | `dialogue/palette` | `(256, 243)` 64×6 | raw: the dialogue's glyph and plate colors, for the dialogue font page at `(384, 0)`, not yet declared |
+| `title/sheet_image` | `ui/sheet/image` | `(896, 256)` 64×256 | an atlas of 51 sprites, `ui/sheet/atlas` |
+| `title/sheet_palette` | `ui/sheet/palette` | `(0, 240)` 256×3 | rows 240 and 242: the sprites' palettes; row 241: the portrait's |
+| `title/package` | `title/package` | RAM `0x80093800` | the title overlay |
+| `title_screen/background` | `title/background` | draw band 320×240 | `bs` |
+| `title_screen/chrome_palette` | `title/chrome_palette` | `(0, 255)` 256×6 | uploads six rows, fills row 0 |
+| `title_screen/chrome_image` | `title/chrome_image` | `(768, 256)` 128×256 | `title/chrome_left`, `chrome_right`, 8 bpp |
 
-`pe2clut_0` **row 0 is all zero**. `textUploadPalettes` installs resident colors
-at `(256, 243)` and the glyph-fill/outline palettes at `(0x3D0, 0x1FF)`.
-The UI glyph drawers select the latter row's fill palette, `0x7FFD`. See §7.6.
+The UI font is never drawn from the block stored after it: its glyphs use
+the fill and two outline palettes `textUploadPalettes` writes at
+`(976, 511)`. `textUploadPalettes` also writes row 243 of the dialogue block
+(`text_clut0`), which nothing draws with; row 247 holds colors nothing draws
+with either. See §7.6.
 
 Chrome clut `(0, 255)` `h=6` sits on the last draw-band line and the 32-line
 CLUT gutter (`y=240…271`). Do not `isbg` a 256-high env at `y=240`.
@@ -583,7 +585,7 @@ box per glyph); `0x7FFD` keys it out.
 
 A few things are baked into `SLUS_010.42` rather than shipped as CDF chunks.
 Nothing on disc references them, so the chunk walker cannot reach them - they
-are catalogued by **address** in `asset_db.EMBEDDED_ASSETS` (source binary,
+are cataloged by **address** in `asset_db.EMBEDDED_ASSETS` (source binary,
 load-time VA, exact size, extension) and then go through the normal store like
 any other asset:
 
@@ -603,7 +605,7 @@ them, minimal included; the decoded form is produced by the usual
 
 Separately, the *build* gets the same bytes through a splat `databin` segment
 writing to `asm/USA/incbin/` — a per-worktree build input regenerated by every
-split, not a catalogue asset. Both trees are gitignored, so game data stays out of git
+split, not a catalog asset. Both trees are gitignored, so game data stays out of git
 either way.
 
 #### Memory-card save header (`main.exe` `0x0516FC`, VA `0x80060EFC`)
@@ -662,6 +664,100 @@ refuses a record whose padding bytes are not zero. The layout reaches the
 generator on the `asset-inc` rule's command line, so changing it rebuilds the
 include.
 
+A shaped asset (below) can instead write C itself: one with `include =
+true` has its codec's `c_source` generated as `assets/<name>.inc`
+(`tools/buildsteps/gen_shape_inc.py`), which a source includes whole, outside
+any definition.
+
+#### Shaped assets
+
+Data that has structure is declared by its **shape**, as a class declares an
+object: `tools/peassets/shape/<family>.toml` lists each shape's fields (type,
+default, doc), the shape it extends (`base`) and the stored places it is
+written to (`outputs`); `shape/<family>.py` is its codec, which decodes an
+instance from those places and encodes it back exactly. An asset of type
+`shaped` names its `shape` and, per output, the stored asset it is:
+
+```toml
+[item]
+type = "shaped"
+shape = "effect_item"
+outputs = { catalog = "catalog", info = "text" }
+```
+
+An output names its own group's asset by local name, and another group's or
+an ungrouped one by path, `{ asset = "items/battery/catalog" }`, as a
+file's entries do.
+
+Its instance, `<group>/<local name>.toml`, is the decoded form, the one that
+is edited. It states its `shape` first, which must be its asset's, then only
+the fields that differ from their defaults. The
+extractor writes it from the outputs, which a group owns and so are not
+decoded on their own, and fails when it does not encode back to them;
+`python3 tools/peassets/shape check` compares every instance with the disc.
+An output a C object holds is built from the instance.
+
+The item family (`shape/item.toml`) is the first: `item`, with an item's name,
+description and unidentified form, its price and restrictions, and
+six shapes extending it, one per kind of information panel - `effect_item`
+(ids 0x01..0x5F, an effect sheet of USE/ATTACHMENT headings and effects),
+`parasite_energy` (0x0F..0x32, a level of an energy: `pe/<energy>`'s
+`level<n>_item`, whose shop-row panel is blank and whose PE menu description
+is a fourth output, `menu`, the text of its PE menu preview file), `armor`
+(0x60..0x7F, its special features), `weapon` (0x80..0x9F, the stat sheet and
+the rounds and modes it fires), `ammunition` (0xA0..0xBF, the weapons that
+load it) and `key_item` (the long description). Each writes three outputs:
+
+- `catalog`: its name and description fields in gameplay, an embedded
+  `txt` located by address;
+- `info`: the information text of its preview file, where it has one (the two
+  rescue bonuses, key items 0x12F and 0x130, have none);
+- `descriptor`: its row of gameplay's descriptor table (`ItemDesc`), whose
+  classification is the shape's `category` (0, 2, 3 or 4) over a nibble
+  each shape names - an ammunition's `caliber`, an effect item's
+  `medicine`, a weapon's `weapon_class` (which, like flag 0x08, no code
+  reads in any release) - and whose text pointer is its catalog text. An unused id that
+  still has a preview file states `blank_row`: its row is the empty one.
+
+The sheet's line offsets (`\U`/`\D`) are not stored: every sheet on the disc
+follows four fixed advances, which the codec applies (`shape/item.py`); nor is
+an ammunition list's column spacing, but for one row of the 9mm P.B.
+(`column_gaps`). A weapon lives in its own group (`weapons/m93r/item`, a
+variant's `weapons/p08/snail_item`), with its preview file, texture and text
+beside its package. Every item group owns all it holds, under local names,
+even where the bytes equal another's (the four batteries' catalog texts, the
+placeholder files' copies of the 5.56 Rifle's picture, the blank panels the
+Parasite Energies' files hold too): only the raw store is shared.
+
+The catalog, `inventory/catalog` (shape `item_catalog`), lists every
+item by id and writes both descriptor tables, `gItemDescriptors` (0x00..0xBF)
+and `gItemKeyDescriptors` (0x100..0x17F), each an embedded
+`item_descriptor_table` in the `inventory` group, and owns the empty catalog
+text the rows without an item point at (`empty`). With `include = true` it
+writes all of it as C, `assets/inventory/catalog.inc`, which
+`src/gameplay/item_catalog.c` includes whole: every catalog text, in address
+order, then both tables. That is an object of its own and data only, as in the
+original build, whose `.rodata` ends in one byte past the last text (`junk`):
+a different value in every release (0x97 US, 0xDF Europe, 0xA6 Japan) where
+every other alignment gap is zero, so the catalog looks generated by a tool
+that wrote its object from an uncleared buffer. The link starts each object's
+sections on a word (`SUBALIGN(4)`), so the byte is the object's own, written
+as a `u8` scalar - an array would be word-aligned. The texts stay separate arrays, named by gameplay's
+symbol map, rather than string literals in the rows: GCC merges identical
+literals (the four batteries' texts are four objects), places them after the
+table in reverse order, and gives each a terminator the Soldier Rescue
+Bonus's object does not have.
+Its instance lists the ids by kind, not by table - `items` (0x01..0x0E and
+0x33..0x5F), `parasite_energy` (0x0F..0x32), `armor`, `weapons`,
+`ammunition`, `key_items` - and the codec places each section's ids in their
+table, refusing an id outside its section. An id maps to its item, whose
+instance gives the row; an id not listed is the empty row (an inline row,
+`{ price, classification, flags, text }`, is still read, for an id whose item
+has no group). A
+codec may read other instances through its context (`shape.Context`): the
+catalog's tables are assembled from the items', so its instance is decoded
+after theirs and every shape include depends on every instance.
+
 A new record needs a re-extraction (`python3 ninja_config.py -iso_min`) before
 the build can read its `raw/` file.
 
@@ -669,7 +765,7 @@ Adding another embedded asset means one `EMBEDDED_ASSETS` entry plus, if it is
 a new format, an extension in `TYPE_DIR_BY_EXT` and a branch in the materialize
 dispatch. `exe_assets.scan_for_save_headers` is the signature scan that found
 this block and can find it again if a version moves it; extraction itself
-trusts the catalogue rather than scanning.
+trusts the catalog rather than scanning.
 
 ---
 
@@ -910,7 +1006,7 @@ form and nothing implies a decoder that does not exist. Drop the extension from
 that set once a materialize branch lands.
 
 **Models are named by content, in `asset_data.MODELS`.** A stream is deduped by
-SHA-1, so without a catalogue the first package scanned names the mesh — and
+SHA-1, so without a catalog the first package scanned names the mesh — and
 that is alphabetical order, not meaning: Kyle's body would be stored as
 `actor_120400_model_015D8` because that package sorts before his. `MODELS` maps
 the stream's SHA-1 to a name, so the name follows the mesh into every package
@@ -1062,11 +1158,20 @@ sha1 = "6307ddb049b24f1f320226769d5a19a662fd376b"
 
 - `samples` names the sound at each position of the pool, in pool order: unreferenced samples included, `None`
   where the pool holds bytes that are not a sample (only `spk_217`, a slot its tool reserved and filled with its own
-  memory). A sound states the sha1 of its stored body, and `mode` where normal mode does not reproduce it.
+  memory). A sound states the sha1 of its stored body, and `mode` where normal mode does not reproduce it. The
+  record's `sounds` names the bank's slots, the sound ids the game plays (`{ shot = 4 }`): a sample is a recording
+  and a slot a sound made from it, so one sample can stand under several slots at different pitches (329 of the
+  1244 samples the scripts play are played at more than one; 141 only by different slots, such as a footstep bank's
+  walk and run steps a semitone apart). The `.sfx` shows each name on its slot line (`slot 0x04 = 3 shot`).
 - Decoded (`decode_declared`) to `<dir>/<name>.sfz` - programs as SFZ `<group>`s, layers as `<region>`s, what a
   sampler plays plus the exact values as `psx_*` opcodes - and `<dir>/<name>.sfx` - the bank id, the effect scripts
   as indented text (`entry`, `voice`, `loop`, `wait`, `end`, `adsr`, `envelope`, `slot`) and any raw pool bytes - and
-  each sound as `<dir>/<name>.wav`: 16-bit mono at 44 100 Hz (the SPU's unity pitch), its loop a `smpl` loop.
+  each sound as `<dir>/<name>.wav`: 16-bit mono, its loop a `smpl` loop, at the rate the game plays it. A bank
+  stores no recording rate - the SPU plays a sample at 44 100 Hz on the layer's root key - so the decoder picks the
+  octave of 44 100 Hz nearest the median pitch every bank's script voices play the sample at (`sound/pitch.py`:
+  22 050 Hz for 987 of the 1244 samples the scripts play, 11 025 Hz for 192, 44 100 Hz for 46). The region's
+  `pitch_keycenter` moves by the same octaves, so a sampler plays it as the game does; the stored root key is
+  `psx_root_key`, and a region without it takes the root key from `pitch_keycenter` and its WAV's rate.
 - Sony's encoder (ENCVAG `EncVag`, identical to AIFF2VAG 3.2 and 3.3; `sound/adpcm.py`) turns each WAV back into
   the stored body in its mode. Decoding finds such input: with Y = clamped input + quantization error, the
   encoder's arithmetic gives the decoder's recursion, so each input lies in an interval fixed by the codes and the
@@ -1180,9 +1285,9 @@ outside git, in `local/asset_journal.sqlite` (`tools/peassets/asset_journal.py`)
 
 ```text
 ASSETS["gameplay"] = {sha1, type: pe2pkg, required: True}
-ASSETS["pe2img_2"] = {sha1, type: pe2img, bpp: [8, 8], x: 768, y: 256, w: 128, h: 256}
+ASSETS["pe2img_455"] = {sha1, type: pe2img, bpp: [4, 8], x: [...], y: ..., w: 64, h: 256}
 
-TREE[0]["files"]["gameplay"] = {id: 0, chunks: {"spk_0": "spk_0", "package": "gameplay"}}
+TREE[0]["files"]["gameplay"] = {id: 0, chunks: {"sounds": "sounds/common/bank", "package": "gameplay"}}
 TREE[2]["folders"]["dryfield_garage"]["files"]["file0"]["chunks"]["package"] = "dryfield_garage"
 ```
 
@@ -1297,8 +1402,8 @@ Example:
   "stage0": {
     "files": {
       "gameplay": {
-        "0.spk": {
-          "path": "spk/spk_0/meta.json",
+        "sounds.spk": {
+          "path": "sounds/common/bank.sfz",
           "type": "music"
         },
         "gameplay.pe2pkg": {
@@ -1332,7 +1437,16 @@ Example:
 ### Type directories
 
 Every chunk type has directories under `raw/` (on-disc) and at the assets
-root (inflated). Dedup is by SHA-1 of the **raw** clean payload:
+root (inflated). Dedup is by SHA-1 of the **raw** clean payload, and only
+there. A name belongs to a place - a chunk slot of a disc file (its TREE
+entry) or an embedded object's address - so several assets may hold one
+content: a placeholder preview file's copy of another item's picture is the
+placeholder item's own asset, with its own record and decoded form. Their
+bytes are stored once, under the canonical name for that content
+(`asset_schema.canonical_names`: the asset outside the groups if there is
+one, of which there may be at most one, else the first name in sorted order),
+and `asset_schema.raw_rel` answers that file for any of them.
+`dump_asset_db.py` keeps every name a content has.
 
 | Type | `raw/{type}/` | inflated `{type}/` |
 |---|---|---|
@@ -1342,8 +1456,10 @@ root (inflated). Dedup is by SHA-1 of the **raw** clean payload:
 | movie | STR 2048-byte sector blob (`.str`) | PNG frames + WebP + meta (§10.4) |
 | other | clean on-disc payload | hardlink/copy of raw |
 
-Pack sees them via `stages.json` content entries (same path for every
-duplicate reference). See §12 for the full schema.
+Pack sees them via `stages.json` content entries, each with its own name's
+decoded path, and reads raw bytes through the stored name. A text a shaped
+asset is written to has no decoded file: pack encodes it from the instance.
+See §12 for the full schema.
 
 ### Groups
 
@@ -1415,13 +1531,126 @@ are `<variant>_package`, `<variant>_file` and `<variant>_sounds`, and its
 clips are generated to `<group>/<variant>_clips.inc`.
 
 A file names its chunks by local name, or another group's by path (`asset =
-"weapons/m4a1/palette"` in place of `chunk`). A chunk several files hold is
+"weapons/m4a1/palette"` in place of `chunk`). In the extraction a chunk is
+emitted under the name the TREE gives it in its file (`asset_db.chunk_stem`),
+which is unique there: file 1 holds the UI font's and the UI sheet's `image`,
+as its `font_image` and `sheet_image`. A chunk several files hold is
 declared by each of them where it uploads for that file's own texture (the
 Bayonet's file declares the M4A1's palette again, for the Bayonet's texture),
 and the declarations agree; a file that only carries another group's chunks
 lists them as plain entries. Each texture a file uploads pages of has its
 palettes uploaded with it, by the file itself or by the declaration of a
 chunk it names.
+
+A region may be `within` another, as part of it: its `at` is then relative to
+the other's corner, it must fit inside it, and only regions of the same parent
+must not overlap - unless one `shares` the other: the same VRAM used at other
+times (`engine/vram/screen_palettes`, the six rows a full-screen file uploads,
+shares the row the item previews' palettes use). An image chunk stores the rows of its page's outermost
+region, from the page down; the texture is the part of them it occupies, the
+rest zero, as the texels right of its width are (`declaration.stored_rows`).
+The item previews upload 128 rows (`engine/vram/preview_sheet`), of which the
+menu draws the top 96 (`preview_picture`, `itemMenuDrawPreview`): their pages
+are placed in `preview_picture`, so their textures are 128×96. A page whose
+chunk uploads less than its outermost region names the region it does upload,
+`upload`: the PE menu pictures store just the 96 rows of `preview_picture`,
+and are 80×64 within them (`energy_picture`, of which the PE panels' small
+mode samples the top 60). A palette entry may name its `upload` too: the
+chunk then stores that region's whole rectangle, zero where no palette is
+placed - the title chrome's palette chunk clears six rows and fills one.
+
+A page holds one texture or one `atlas`. An atlas is the layout of a page
+packed with several textures: its record lists `sprites`, each a texture at
+a texel `at` of its own depth, inside one page and overlapping no other.
+
+```toml
+# groups/ui/sheet.toml
+[atlas]
+type = "atlas"
+sprites = [{ texture = "cursor", at = [0xE8, 0x30] }, { texture = "portrait", at = [0, 0x80] }, ...]
+
+# groups/ui.toml: the file uploads it and places the sprites' palettes
+pages = [{ atlas = "ui/sheet/atlas", region = "engine/vram/ui_sheet" }]
+```
+
+A texture's `cells` name the parts its code samples one at a time - the
+cursor's six frames, the lock-on reticle's eight, each status icon, each
+P.E. icon, the frame's corners, edges and separators: a `grid` of [w, h]
+read row by row, with `names` or numbered, or named `[x, y, w, h]`
+rectangles in the texture's texels. They are layout only; the bytes and the
+PNGs do not change.
+
+A font is a `font` record: one face of a texture and the glyph table in an
+executable that lays it out. It names the `texture`, the embedded `table`, its
+record `layout` (`font_glyph`, the 12-byte `_FontGlyph`, or `glyph_cell`, the
+4-byte `TextGlyphCell`), the code of its first record (`first`), the rows the
+face is shifted by on the page (`v`, the code's `TEXT_GLYPH_V_BIAS_*`), the
+pixels kerning tightens a pair by (`kerning`, 1 for the small face), its text
+`encoding` and the `family` and `style` it is named by. The UI font is the
+faces `ui/font/small`, `medium` and `large`; the load-screen caption font is
+`ui/caption_font/face`. The texture's cells come from its fonts: each record
+is the cell `<face>_<code>`, one of no size none.
+
+A font is decoded to UFO 3 (`ui/font/medium.ufo`), which encodes back to the
+table's exact bytes and is what the build's include is generated from
+(`tools/buildsteps/gen_font_inc.py`). Each record is a glyph named for its
+character in the font's encoding (`text_encoding.py`: Windows-1252 with the
+controller's buttons at 0x7B-0x7E for the UI font; an index per glyph for the
+caption font), its code and cell in the glyph's lib. What UFO states natively
+is the source of the rest: the advance width is the pen's advance
+(`xOffset + widthMinusOne + advanceExtraX`), the image's offset
+`(xOffset, -yOffset)` places the glyph where the code draws it, and the
+kerning groups are the classes (`public.kern1.*` by right class,
+`public.kern2.*` by left), with `kerning.plist` the pairs they tighten. The
+images are the glyphs' cells cut from the texture's first variant, there to
+show the face in a font editor; they are never read back, as the texture's
+PNGs are the pixels. `python3 tools/peassets/font decode|check` writes the
+UFOs and compares their bytes with the tables.
+
+The small face draws lowercase as small caps: its `a`-`z` records point at
+its capitals. Seventeen records point at fragments of other glyphs or empty
+space - small `" # ' + - : ; < > @ _`, medium `$ * ; < > @` - leftovers for
+characters no text uses; their glyphs keep them. Every release has the same
+small face and caption table, and Europe the same medium and large; Japan's
+medium and large are 91 records (0x20-0x7A), the Western releases adding the
+133 accented and symbol records after them, real glyphs for `#` and `%`
+(strays in Japan) and parenthesis aliases for `[` and `]`. The texture check
+verifies every cell lies inside its texture. The extraction writes the cells
+of a texture outside any atlas to `<texture>.cells.toml` where they are
+stated by hand; a font's texture has none, its cells being in the UFO's
+glyphs.
+
+The dialogue's font has no page: each dialogue packs the glyphs it uses into
+an atlas of its own (`font_atlas`, doc/CAP_FORMAT.md §9), so its two `font`
+records state `layout = "images"` and their UFOs (`dialogue/font.ufo`,
+`dialogue/speakers.ufo`) are the pixels too, read back by the CAP encoder.
+
+The page stays the pixel source because it is a drawn sheet the cells were
+measured onto, not glyphs packed by a tool: around them it is index 5, the
+transparent padding, but for zero rows between the faces (33-37, 126-127),
+and 63 texels of strokes run up to two pixels past a cell, which the game
+never draws. A glyph whose cell cuts strokes off says so in its UFO note
+(`font/declared.py`, `clipped`): large `3 8 y Œ œ`, medium `3 8 C G &`,
+small `?`.
+
+The extraction writes each atlas's layout beside its sprites' PNGs
+(`ui/sheet/atlas.toml`: each sprite's texture, position, depth, size,
+variants and cells), so the decoded folder describes its page; the asset table's
+record is what the tools read.
+
+The resident UI sheet is one: 51 sprites in subgroups (`ui/sheet/panel`, `buttons`, `menu`, `icons`, `hud`, `radar`, `unused`) - cursor, frame,
+gauges, radar, icons, captions, 4-bit, and the 8-bit portrait at `(0, 128)` -
+each with the palettes its draw code selects. An atlas's page stores zero
+outside its sprites, so decoding fails on texels no sprite holds; art nothing
+draws is a sprite that states `no_palette` (written with a gray ramp), and
+colors no declared texture is drawn with are a palette entry with a `name` and
+its `entries` instead of a texture, written as `<chunk>.<name>.png`: the
+dialogue's text and plate palettes (`dialogue/palette`, and the translucent
+copy the game-over and ending files restore), the palettes gameplay draws with
+at (256, 240), and the one only dead code selects (`ui/sheet/palette.row_inactive`). A texture whose palettes an executable uploads names that embedded
+palette as `palettes_from`, one variant per palette in order: the UI font's
+`fill`, `translucent_outline` and `opaque_outline` are main's
+`ui/font/glyph_palettes`, and the check compares each variant's PNG palette with those bytes.
 
 ```text
 weapons/m4a1/texture.png                a declared texture (its image and palette chunks)

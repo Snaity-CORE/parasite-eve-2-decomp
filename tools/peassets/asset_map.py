@@ -13,6 +13,11 @@ room, video memory under a chosen view and enemy set. An asset shows itself
 with a renderer for its type, the ways it is used, the files it sits in and
 the loads that bring those in.
 
+An image is paired with its palette first by its declaration - a declared file's record names the texture and
+variant each of its image and palette chunks uploads (`declared_pairs`) - and otherwise by inference: a model's
+faces, page and palette constants, views' sprite tables, and the draw-code lines of image_palettes.tsv, a line
+naming one image applying to every image of the same bytes (`same_bytes`).
+
 The page is written under local/ and refers to the local extraction for
 pictures and sound; the raw words of images and palettes are written beside
 it as `<page>_pix/<asset>.js`, because a page opened from disk can run a
@@ -382,7 +387,7 @@ def view_sprite_pairs(db: sqlite3.Connection, assets: dict, tree: dict, extracte
                             continue
                         image = images[0]
                         if image[7] and image[7] != bpp:
-                            miss(room, f"{image[0]} column {image[6]} is catalogued as {image[7]}-bit, and the sprites of view file {view['file']} read it {bpp}-bit")
+                            miss(room, f"{image[0]} column {image[6]} is cataloged as {image[7]}-bit, and the sprites of view file {view['file']} read it {bpp}-bit")
                         if bpp == 16:
                             key = (16, "", 0, 0, image[6])
                         else:
@@ -401,7 +406,7 @@ def stated_pairs(assets: dict, embedded: dict, path: Path = STATED):
 
     The file records what was read out of draw code: image, column, depth, palette asset (empty for direct
     colour), row, palette index, user, evidence. Nothing is taken on trust: the image and the palette must be
-    catalogued, the column must be one the image has, and the row and index must lie inside the palette.
+    cataloged, the column must be one the image has, and the row and index must lie inside the palette.
     """
     out, problems = [], []
     if not path.is_file():
@@ -421,21 +426,75 @@ def stated_pairs(assets: dict, embedded: dict, path: Path = STATED):
             problems.append(f"line {n}: column, depth, row and palette index are numbers")
             continue
         if rec is None or rec.get("type") not in (*asset_schema.IMAGE_TYPES, "image"):
-            problems.append(f"line {n}: {image} is not a catalogued image")
+            problems.append(f"line {n}: {image} is not a cataloged image")
         elif rec.get("type") in asset_schema.IMAGE_TYPES and not 0 <= column < len(asset_schema.image_columns(rec)):
             problems.append(f"line {n}: {image} has no column {column}")
         elif depth not in (4, 8, 16) or (depth == 16) != (not palette):
             problems.append(f"line {n}: a palette goes with 4 or 8 bits, none with 16")
         elif palette and (assets.get(palette) or embedded.get(palette) or {}).get("type") not in ("pe2clut", "clut"):
-            problems.append(f"line {n}: {palette} is not a catalogued palette")
+            problems.append(f"line {n}: {palette} is not a cataloged palette")
         elif palette and not (0 <= row < (assets.get(palette) or embedded[palette])["h"]
                               and 0 <= index * 16 + (256 if depth == 8 else 16) <= (assets.get(palette) or embedded[palette])["w"]):
             problems.append(f"line {n}: row {row}, palette {index} is outside {palette}")
         elif not evidence:
             problems.append(f"line {n}: no evidence")
         else:
-            out.append((image, (depth, palette, row, index, column), user, ("direct colour, " if not palette else "") + f"draw code: {evidence}"))
+            how = ("direct colour, " if not palette else "") + f"draw code: {evidence}"
+            # Every image holding the same bytes is drawn the same way: a line names one of them (the canonical
+            # name, asset_schema.canonical_names), and each other takes its own group's copy of the palette.
+            for name in same_bytes(image):
+                own = next((n for n in same_bytes(palette) if (assets.get(n) or {}).get("group") == (assets.get(name) or {}).get("group")),
+                           palette) if palette else palette
+                out.append((name, (depth, own, row, index, column), user, how))
     return out, problems
+
+
+def declared_pairs(assets: dict):
+    """(image, (bpp, palette, row, palette index, column), user, how known) of every declared texture variant: the
+    image chunk whose page uploads it, at that page's column, and the palette chunk that uploads the variant's
+    palette, at the row and the palette index it is placed at."""
+    from texture import files
+    from texture.declaration import place_at
+    out = []
+    for name, rec in sorted(assets.items()):
+        if rec.get("type") != "file":
+            continue
+        # An atlas's sprites are textures of its page (the UI sheet's), each drawn with its own palettes.
+        pages = [(e["chunk"], n, placed) for e in rec["contents"] for n, p in enumerate(e.get("pages", ()))
+                 for placed in ([p] if "texture" in p else assets[p["atlas"]]["sprites"] if "atlas" in p else [])]
+        palettes = [(e["chunk"], p) for e in rec["contents"] for p in e.get("palettes", ())]
+        for image, column, page in pages:
+            texture = assets[page["texture"]]
+            for variant in texture["variants"]:
+                found = [(chunk, p) for chunk, p in palettes if p.get("texture") == page["texture"] and p.get("variant") == variant]
+                if not found:
+                    continue
+                chunk, palette = found[0]
+                x, y = place_at(palette, assets)
+                clut = assets[chunk]
+                at = (texture["bpp"], chunk, y - clut["y"], (x - clut["x"]) // 16, column)
+                out.append((image, at, f"declared texture {page['texture']}" + ("" if variant == "default" else f".{variant}"),
+                            f"declared: the file record {name} uploads this page and palette for one texture",
+                            files.variant_path(Path(), assets, page["texture"], variant).as_posix()))
+    return out
+
+
+_SAME_BYTES: dict[int, dict[str, list[str]]] = {}
+
+
+def same_bytes(name: str, assets: dict | None = None) -> list[str]:
+    """An asset and every other asset holding the same stored bytes, the asset first."""
+    if assets is None:
+        assets = asset_schema.load()[0]
+    index = _SAME_BYTES.get(id(assets))
+    if index is None:
+        index = {}
+        for key, rec in assets.items():
+            if isinstance(rec.get("sha1"), str):
+                index.setdefault(rec["sha1"], []).append(key)
+        _SAME_BYTES[id(assets)] = index
+    sha1 = (assets.get(name) or {}).get("sha1")
+    return [name] + [n for n in index.get(sha1, []) if n != name] if sha1 else [name]
 
 
 RAW_DIR = {"motion_curve": ("motion", ".motion"), "sprite_schedule": ("motion", ".motion"), "camera_path": ("path", ".path"),
@@ -464,7 +523,7 @@ def write_side_data(folder: Path, assets: dict, embedded: dict) -> dict:
         for offset in sorted(sources):
             try:
                 src = tmd.read_source(data, load, offset)
-                key = tmd.catalogue_name(data, load, offset)    # by the whole model's sha1, else the stream's
+                key = tmd.catalog_name(data, load, offset)    # by the whole model's sha1, else the stream's
                 if key is not None and key not in have["holds"][package]:
                     have["holds"][package].append(key)       # a mesh shared with another package is this one's too
                 if key is None or key in have["mesh"]:
@@ -486,7 +545,8 @@ def write_side_data(folder: Path, assets: dict, embedded: dict) -> dict:
             if not faces:
                 continue
             flat = [round(c) for v in verts for c in v]
-            target = folder / f"{key}.js"
+            target = folder / f"{key}.js"               # a grouped asset's name is a path
+            target.parent.mkdir(parents=True, exist_ok=True)
             packed = lambda value: json.dumps(value, separators=(",", ":"))  # noqa: E731
             target.write_text(f"MESH({json.dumps(key)},{packed(flat)},{packed(faces)},{packed(textures)},{packed(named)},{packed(parts)},{packed(bones)});\n", encoding="utf-8")
             have["mesh"].append(key)
@@ -494,9 +554,15 @@ def write_side_data(folder: Path, assets: dict, embedded: dict) -> dict:
     for key, rec in embedded.items():
         where = RAW_DIR.get(rec.get("type"))
         source = raw / where[0] / f"{key}{where[1]}" if where else None
+        if source is not None and not source.is_file():
+            try:                                    # a name sharing its bytes is stored under another (raw_rel)
+                source = raw.parent / asset_schema.raw_rel(key, rec)
+            except KeyError:
+                pass
         if source is None or not source.is_file():
             continue
         unit = UNIT.get(rec.get("include") if isinstance(rec.get("include"), str) else "", 2)
+        (folder / f"{key}.js").parent.mkdir(parents=True, exist_ok=True)
         (folder / f"{key}.js").write_text(f"TRACK({json.dumps(key)},{unit},{json.dumps(base64.b64encode(source.read_bytes()).decode())});\n", encoding="utf-8")
         have["track"][key] = unit
     return have
@@ -632,6 +698,10 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
     supply = Supply(db, assets, tree)
     bindings = spawn_bindings(assets)
     files = [r["path"] for r in db.execute("SELECT path FROM file ORDER BY path")]
+    # The files view lists folders and files by their disc ids, the order the disc has them in.
+    file_ids = {r["path"]: r["id"] for r in db.execute("SELECT path, id FROM file")}
+    folder_ids = {f"{stage}/{key}": int(node["id"]) for stage, body in tree.items()
+                  for key, node in (body.get("folders") or {}).items()}
     index = {path: n for n, path in enumerate(files)}
     packages = asset_schema.package_names(assets)      # package asset -> overlay name
 
@@ -751,15 +821,27 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
         pairs[image][at].add(user)
         known[image][at].add(how)
     # What a draw call reads, as read out of the code (tools/peassets/image_palettes.tsv).
+    # A declared file states its pairings outright: each image chunk's pages and each palette chunk's palettes name
+    # the texture and variant they upload for (texture/declaration.py). They take precedence over every inference.
+    declared_images = set()
+    texture_pictures: dict[str, str] = {}      # "<image>|<bpp>|<palette>|<row>|<index>|<column>" -> its decoded PNG
+    for image, at, user, how, png in declared_pairs(assets):
+        pairs[image][at].add(user)
+        known[image][at].add(how)
+        declared_images.add(image)
+        texture_pictures["|".join(map(str, (image, *at)))] = png
     stated, stated_problems = stated_pairs(assets, embedded)
     for image, at, user, how in stated:
+        if image in declared_images:
+            continue
         pairs[image][at].add(user)
         known[image][at].add(how)
     for line in stated_problems:
         print(f"image_palettes.tsv: {line}", file=sys.stderr)
     paired = {k for k in pairs if assets.get(k, {}).get("type") in asset_schema.IMAGE_TYPES}
     print(f"images shown as used: {len(paired)} of {sum(1 for r in assets.values() if r['type'] in asset_schema.IMAGE_TYPES)} "
-          f"({sprite_counts.get('columns paired', 0)} columns from {sprite_counts.get('views', 0)} views' sprite tables, {len(stated)} lines from image_palettes.tsv)", file=sys.stderr)
+          f"({len(declared_images)} declared by their files, {sprite_counts.get('columns paired', 0)} columns from "
+          f"{sprite_counts.get('views', 0)} views' sprite tables, {len(stated)} lines from image_palettes.tsv)", file=sys.stderr)
 
     # Region violations, per loader.
     table = residency.region_table()
@@ -830,14 +912,14 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
             sample_ids[key] = rec["samples"]
             for n, name in enumerate(rec["samples"]):
                 sample_homes.setdefault(name, []).append([key, n])
-    catalogue = {}
+    catalog = {}
     for key, rec in assets.items():
-        catalogue[key] = [rec["type"], {k: rec[k] for k in SHOWN if k in rec}]
+        catalog[key] = [rec["type"], {k: rec[k] for k in SHOWN if k in rec}]
     for key, rec in embedded.items():
-        if key not in catalogue:
-            catalogue[key] = [rec["type"], {k: rec[k] for k in SHOWN if k in rec}]
+        if key not in catalog:
+            catalog[key] = [rec["type"], {k: rec[k] for k in SHOWN if k in rec}]
         else:
-            catalogue[key][1].update({k: rec[k] for k in ("source", "vram", "size") if k in rec})
+            catalog[key][1].update({k: rec[k] for k in ("source", "vram", "size") if k in rec})
     # A room's caption bundle holds a palette per view, in the slot before that view's number, besides the dialogue.
     import base64
     import bundle as bundles
@@ -863,7 +945,7 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
                     of_view = (slot["x"], slot["y"]) == (0, 255)
                     note = (f"the palette of the view mapped to file {slot['slot'] + 1} of {room}" if of_view
                             else f"a palette in the bundle {room} loads, for ({slot['x']}, {slot['y']}); not a view's, so some code uploads it")
-                    catalogue[name] = ["clut", {"source": key, "x": slot["x"], "y": slot["y"], "w": slot["w"], "h": slot["h"], "notes": note}]
+                    catalog[name] = ["clut", {"source": key, "x": slot["x"], "y": slot["y"], "w": slot["w"], "h": slot["h"], "notes": note}]
                     files.append(f"bundle:{name}")
                     footprint[len(files) - 1].append([name, "c", "", slot["x"], slot["y"], slot["w"], slot["h"], 0])
                     # The slot is the mapped view less one (src/gameplay/view_image.c).
@@ -873,7 +955,7 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
                         (out.with_name(pixels) / f"{name}.js").write_text(
                             f"PIX({json.dumps(name)},{json.dumps([[slot['x'], slot['y'], slot['w'], slot['h'], base64.b64encode(bundles.palette_words(data, slot)).decode()]])});\n", encoding="utf-8")
                 else:
-                    catalogue[name] = [slot["what"], {"source": key, "size": slot["length"], "vram": slot["dest"], "notes": f"slot {slot['slot']} of the bundle {room} loads"}]
+                    catalog[name] = [slot["what"], {"source": key, "size": slot["length"], "vram": slot["dest"], "notes": f"slot {slot['slot']} of the bundle {room} loads"}]
                     if slot["what"] == "dialogue":
                         found = cap_dialogue.commands(data[slot["offset"]:slot["offset"] + slot["length"]])
                         dialogue[name] = [line for command in found for line in cap_dialogue.describe(command)]
@@ -883,7 +965,7 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
     import trace_replay
     for stem, image, chunk in trace_replay.all_scene_palettes():
         name = trace_replay.scene_palette_name(stem, image, chunk)
-        catalogue[name] = ["clut", {"source": stem, "x": chunk["x"], "y": chunk["y"], "w": chunk["w"], "h": chunk["h"],
+        catalog[name] = ["clut", {"source": stem, "x": chunk["x"], "y": chunk["y"], "w": chunk["w"], "h": chunk["h"],
                                     "notes": f"image chunk {chunk['k']} of the scene image for view {image['view']} in the stream {stem} (sector {image['sector']}): uploaded by the scene image decoder when that view arrives"
                                              + (", relocated: three rows up and one down" if chunk["relocated"] else "")}]
         files.append(f"scene:{name}")
@@ -895,14 +977,14 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
     import tomllib as _toml
     from gen_overlay_configs import declared_collisions
     for grid in declared_collisions(_toml.loads((ROOT / "configs/USA/overlays.toml").read_text(encoding="utf-8"))):
-        catalogue[f"{grid['package']}_collision_{grid['grid']:05X}"] = ["collision", {
+        catalog[f"{grid['package']}_collision_{grid['grid']:05X}"] = ["collision", {
             "source": grid["package"] + ".pe2pkg", "vram": grid["load"] + grid["grid"],
             "notes": "the room's collision grid: normals, vertices, faces and per-cell face lists; its header follows at "
                      f"0x{grid['load'] + grid['source']:08X}"}]
     # A collision patch has no header: its pieces are arrays some code copies into a room's live grid.
     from gen_overlay_configs import declared_collision_patches
     for patch in declared_collision_patches(_toml.loads((ROOT / "configs/USA/overlays.toml").read_text(encoding="utf-8"))):
-        catalogue[f"{patch['package']}_collision_{patch['offset']:05X}"] = ["collision", {
+        catalog[f"{patch['package']}_collision_{patch['offset']:05X}"] = ["collision", {
             "source": patch["package"] + ".pe2pkg", "vram": patch["load"] + patch["offset"],
             "notes": "a collision patch (" + ", ".join(patch["pieces"]) + "): arrays the overlay's code copies into a room's live grid"}]
     scripts = {key: [found["bank"], [[list(n) for n in notes] if notes is not None else None for notes in found["entries"]]] for key, found in spk_scripts.all_banks().items()}
@@ -949,7 +1031,7 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
                 a, b = re.fullmatch(r"(.*?)(\d+)(\D*)", first), re.fullmatch(r"(.*?)(\d+)(\D*)", last) if last else None
                 same = a and b and a[1] == b[1] and a[3] == b[3] and 0 <= int(b[2]) - int(a[2]) < 500
                 span = [f"{a[1]}{n}{a[3]}" for n in range(int(a[2]), int(b[2]) + 1)] if same else [first]
-                named += [k for k in span if k in catalogue and k not in named]
+                named += [k for k in span if k in catalog and k not in named]
             for key in named or [cells[0]]:
                 usage[key].append([path.stem] + cells[1:8])
             by_overlay[path.stem][0 if cells[6] == "established" else 1] += 1
@@ -958,14 +1040,14 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
     movies = extracted / "movie" / "movies.json"
     if movies.is_file():
         for m in json.loads(movies.read_text(encoding="utf-8")):
-            catalogue[m["stem"]] = ["movie", {"w": m.get("width"), "h": m.get("height"), "frames": m.get("frame_count"), "fps": m.get("fps"),
+            catalog[m["stem"]] = ["movie", {"w": m.get("width"), "h": m.get("height"), "frames": m.get("frame_count"), "fps": m.get("fps"),
                                               "seconds": m.get("audio_duration_sec"), "container": m.get("container"), "disk": m.get("disk")}]
             streams[m["stem"]] = m.get("mp4", "")
     if (extracted / "audio").is_dir():
         for meta in sorted((extracted / "audio").glob("*.json")):
             info = json.loads(meta.read_text(encoding="utf-8"))
             if meta.with_suffix(".wav").is_file():
-                catalogue[meta.stem] = ["stream", {"seconds": info.get("duration_sec"), "rate": info.get("sample_rate"), "channels": info.get("channels")}]
+                catalog[meta.stem] = ["stream", {"seconds": info.get("duration_sec"), "rate": info.get("sample_rate"), "channels": info.get("channels")}]
                 streams[meta.stem] = f"audio/{meta.stem}.wav"
     save_dir = extracted / dirs.get("mc_save_header", "mcsave") / "mc_save_header"
     saves = sorted(p.name for p in save_dir.glob("*.png")) if save_dir.is_dir() else []
@@ -973,8 +1055,8 @@ def build_data(db: sqlite3.Connection, out: Path, pixels: str) -> dict:
         "traces": write_traces(out.with_name(out.stem + "_data")) if pixels else [], "observed": observed_residency(),
         "holds": side["holds"], "viewpal": viewpal, "scripts": scripts, "scenes": scenes, "names": names, "usage": usage, "swept": by_overlay, "remarks": remarks, "notes": notes, "dialogue": dialogue,
         "mesh": side["mesh"], "track": side["track"], "banks": banks, "streams": streams, "saves": saves, "side": out.stem + "_data" if pixels else "",
-        "files": files, "chunks": chunks, "fp": footprint, "loads": loads, "overlays": overlays, "requests": requests,
-        "consts": constants, "findings": findings, "assets": catalogue, "sounds": sounds, "sampleIds": sample_ids, "sampleHomes": sample_homes,
+        "texturePictures": texture_pictures, "files": files, "fileIds": [file_ids.get(f) for f in files], "folderIds": folder_ids, "chunks": chunks, "fp": footprint, "loads": loads, "overlays": overlays, "requests": requests,
+        "consts": constants, "findings": findings, "assets": catalog, "sounds": sounds, "sampleIds": sample_ids, "sampleHomes": sample_homes,
         "pairs": {image: [[bpp, clut, row, pal, column, sorted(users)[:8], sorted(known[image][bpp, clut, row, pal, column])]
                           for (bpp, clut, row, pal, column), users in sorted(found.items(), key=str)] for image, found in pairs.items()},
         "regions": [[r["kind"][0], r["name"], r["x"], r["y"], r["w"], r["h"], r["note"]] for r in table], "layers": residency.LAYERS,
@@ -1011,7 +1093,7 @@ def main() -> int:
             lines, seen = [], set()
             def add(key, where):
                 kind = data["assets"].get(key, ["?"])[0]
-                if kind != "pe2pkg" and key not in seen:
+                if kind not in ("pe2pkg", "room", "stage") and key not in seen:
                     seen.add(key)
                     lines.append(f"{key}\t{kind}\t{where}")
             for f in o["own"]:

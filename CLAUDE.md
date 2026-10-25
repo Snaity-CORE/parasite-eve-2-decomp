@@ -136,8 +136,11 @@ each commit's attempt count.
 **Recover data in a TU that contains code.** Place `.rodata`, `.data` and
 `.bss` definitions as late as possible, normally in the first TU that uses them
 (including references through other tables). Do not introduce data-only C files
-to preserve a disconnected run. Existing `_work` files are provisional layout
-workarounds, not a pattern to extend. With hand-written configs,
+to preserve a disconnected run. A data-only TU is right only where the bytes
+show the original object's boundaries - `src/gameplay/item_catalog.c`, whose
+sections begin exactly where its neighbour's did and whose `.rodata` ends in a
+junk byte that differs in every release. Existing `_work` files are
+provisional layout workarounds, not a pattern to extend. With hand-written configs,
 `auto_link_sections: []` lets explicit dotted subsegments place each source
 object's sections independently of where its code first appears. A source
 object still contributes each of its sections only once; disconnected runs
@@ -329,6 +332,13 @@ overlay.
   about the overlays it skipped, which for a header change is the thing you
   have to check, so finish unscoped. `--clean` wipes `asm/`, `linkers/` and
   `build/` and splits everything, as every run used to.
+- `python3 tools/check/suite.py [--jobs N] [--skip STEP ...]` the full check suite
+  over the current extraction (it never extracts): asset-table stability, the
+  repack of both discs, every declared texture, model, clip, shape, font and
+  room encoding back (one task an asset), the build with the room order check,
+  residency, declarations and the asset map with its smoke test - a work graph
+  on one pool of workers, about 2.5 minutes. Re-extract (`ninja_config.py
+  -iso_e`) only after changing the asset table's schema or a decoder.
 - `PE2_JOBS=N` caps the parallelism of the build (`ninja_config.py`'s split
   pool and `ninja`) and of the libclang refactor tools, which otherwise use
   every CPU. Set it when several trees build at once: the naming pass sets it
@@ -655,7 +665,36 @@ list-start pointer, with one argument evaluation. Headerless geometry
 that code copies into a live grid is a `collisionPatch`, declared by its
 `pieces`.
 Camera views are not assets: a view is a matrix and a position, data like any
-placement.
+placement. Like placements, they are a **room's data** (below), not C.
+
+**A room's data is its room asset, not C.** What a stage editor would have
+authored - the per-state collision, view maps, view counts and lighting, the
+warps, cameras, sprite views, triggers, occluders, lights and ambient levels,
+surfaces, placements and actor resources, area updates, vibration scripts, and
+the world points (`markers`), view masks and sample curves effect code reads -
+is decoded from the binary into `assets/USA/<room group>/room.toml` and
+written back to C by the build, one include per module
+(`assets/<group>/<module>.inc`, plus `declarations.inc`;
+`tools/buildsteps/gen_room_inc.py`). The room package's record has
+`type = "room"` and states only the entry points the stage overlay's per-area
+tables and gameplay's area table do not give, by role (`entries`;
+`tools/peassets/room/`); every other object is reached through pointers, and
+every object's type follows from its role or the field that reaches it. A
+room's C keeps its code, its code tables, its one-off globals and the tables
+its code reads as tuning parameters (item ids, radii, a mosaic's tiles), and
+includes the module files where their blocks sit. Never hand-write room data
+back into C; extend the room's entries or the room layouts. After changing a
+room's entries or layouts, `python3 tools/peassets/room decode`, then
+`python3 tools/peassets/room sync-c` puts each module include before the next
+datum that stays (in address order; idempotent), and after the build
+`python3 tools/peassets/room check-order` names the first object a misplaced
+include put out of order - before the checksum only says the room differs. Converted so far:
+stage 1 (Akropolis and the MIST). A room's event scripts and the payloads they
+send (animation requests, actor transforms and commands, bank copies, scene keys)
+are room data too, written as text in `<room group>/events.evs`
+(`tools/peassets/room/events.py`: one statement per command, payloads by name,
+message recipients and ids named from `event_vocabulary.py`); they build into
+the `events` module include like any other module.
 
 **Morph targets and baked tracks are assets too.** A morph target is the second
 shape of a mesh, vertex for vertex (`dryfield_toilet`'s deltas and normals). A
@@ -666,8 +705,9 @@ samples describing movement over time: a per-movie-frame player path
 (`actor_303600`'s 570 view keys). That last one is the distinction from the
 sentence above: a room's fixed views, selected by id, are data; a per-frame
 camera track is an asset. What stays in C is what a programmer would type and
-tune by hand - a placement, a small offset table, a tuning constant, a table
-of rules such as `actor_548100`'s circuit graph. Classify by how the code uses
+tune by hand - a small offset table, a tuning constant, a table of rules such
+as `actor_548100`'s circuit graph (a room's placements are its room data,
+above). Classify by how the code uses
 the array, not by its shape. The known embedded ones:
 
 | Asset | Where | Note |
@@ -682,8 +722,24 @@ choice is not only C versus assembly: data that can exist in several versions,
 such as text in several translations, may be better produced by a build step
 from an extracted source than hard-coded in C.
 
-**Not assets, so eligible for C:** program tables such as the item and balance
-tables (`gItemDescriptors`, `gAttachmentLevelTable`), function-pointer dispatch tables
+**The item catalog is decided: an asset.** Each item's and key item's name
+and description fields (`_gItem<Item>TextFields`) belong to the item's group
+as `catalog`, a `txt` located in `gameplay.pe2pkg` by address. So are the
+descriptor tables, `gItemDescriptors` and `gItemKeyDescriptors`: each item's
+price, classification and flags are fields of its instance, and
+`inventory/catalog` lists the items by id and writes, as one include
+(`assets/inventory/catalog.inc`, `gen_shape_inc.py`), every catalog text and
+both tables, which `src/gameplay/item_catalog.c` includes whole. See
+`doc/ASSET_FORMATS.md` 7.7.
+
+**Structured data is a shaped asset.** A shape (`tools/peassets/shape/`)
+declares fields and the stored places they are written to, with a codec that
+round-trips them exactly; the group's instance (`<group>/<name>.toml`) is the
+edited form. Give data with structure a shape rather than a text format of its
+own; the item family is the worked example.
+
+**Not assets, so eligible for C:** program tables such as the balance
+tables (`gAttachmentLevelTable`), function-pointer dispatch tables
 (`_gStageModeControllerStates`, `_gMcLoadDialogStates`, `gItemMenuCaptionStates`), index
 tables such as `gWorldCollisionFaceEdges`, constants, UI strings and zero-initialised
 state. Declaring one in C means placing it in the unit that owns it, at the
@@ -699,7 +755,7 @@ asset sits inside a unit whose data is in C, the unit defines it itself: mark
 its `EMBEDDED_ASSETS` record `"include": True`, and the build turns the
 extracted file into `build/include/assets/<id>.inc` (`tools/buildsteps/gen_asset_inc.py`),
 which the definition includes as its initializer (`_gFontGlyphsMedium` in
-`src/main/textdraw.c`). For **inspection**, catalogue it by address in
+`src/main/textdraw.c`). For **inspection**, catalog it by address in
 `asset_db.EMBEDDED_ASSETS` and it flows through the normal extract pipeline
 into `raw/{type}/` and the type directory, like any on-disc asset. See
 `doc/ASSET_FORMATS.md` 7.7.

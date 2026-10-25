@@ -226,10 +226,13 @@ GEN_MODEL_SOURCE = TOOLS_DIR / "buildsteps" / "gen_model_source.py"
 GEN_ANIMATION_SOURCE = TOOLS_DIR / "buildsteps" / "gen_animation_source.py"
 GEN_ANIMATION_INC = TOOLS_DIR / "buildsteps" / "gen_animation_inc.py"
 GEN_COLLISION_INC = TOOLS_DIR / "buildsteps" / "gen_collision_inc.py"
+GEN_SHAPE_INC = TOOLS_DIR / "buildsteps" / "gen_shape_inc.py"
+GEN_ROOM_INC = TOOLS_DIR / "buildsteps" / "gen_room_inc.py"
+GEN_FONT_INC = TOOLS_DIR / "buildsteps" / "gen_font_inc.py"
 
 
 def asset_includes(version: str) -> list[tuple[Path, Path, int | str]]:
-    """(extracted file, generated initializer) for every catalogued embedded
+    """(extracted file, generated initializer) for every cataloged embedded
     asset marked `include`: an asset a unit defines in its own C data, whose
     bytes come from the user's extraction rather than from git."""
     import importlib.util
@@ -243,8 +246,9 @@ def asset_includes(version: str) -> list[tuple[Path, Path, int | str]]:
     schema = importlib.util.module_from_spec(schema_spec)
     schema_spec.loader.exec_module(schema)
     out = []
+    font_tables = {r["table"] for r in mod.ASSETS.values() if r.get("type") == "font" and "table" in r}   # font_includes
     for aid, rec in mod.EMBEDDED_ASSETS.items():
-        if rec.get("include"):
+        if rec.get("include") and aid not in font_tables:
             # The store files a raw asset by extension; the extension follows from the type.
             ext = schema.stored_ext(rec)
             raw = ASSETS_DIR / version / "raw" / schema.type_dir_for_ext(ext) / f"{aid}{ext}"
@@ -254,6 +258,56 @@ def asset_includes(version: str) -> list[tuple[Path, Path, int | str]]:
                      {True: 1, "u8": 1, "u16": 2, "u32": 4, "TmdBone": "TmdBone"}[rec["include"]])
             out.append((raw, BUILD_DIR / "include" / "assets" / f"{aid}.inc", width))
     return out
+
+
+def font_includes(version: str) -> list[tuple[str, list[Path], Path]]:
+    """(font, the files of its UFO, generated include) for every font whose glyph table a unit includes: the
+    table's initializer is encoded from the font's UFO, `assets/<table>.inc` (gen_font_inc.py)."""
+    data, schema = asset_tables()
+    out = []
+    for key, rec in data.ASSETS.items():
+        if rec.get("type") == "font" and "table" in rec and data.EMBEDDED_ASSETS.get(rec["table"], {}).get("include"):
+            ufo = ASSETS_DIR / version / schema.asset_dir(key, rec) / f"{schema.file_name(key)}.ufo"
+            files = sorted(p for p in ufo.rglob("*") if p.is_file() and p.suffix != ".png")
+            out.append((key, files, BUILD_DIR / "include" / "assets" / f"{rec['table']}.inc"))
+    return out
+
+
+def shape_includes(version: str) -> list[tuple[str, Path, Path]]:
+    """(shaped asset, its instance, generated include) for every shaped asset with `include = true`: its codec
+    writes C (`c_source`) that a source includes whole, `assets/<name>.inc` (gen_shape_inc.py)."""
+    data, schema = asset_tables()
+    out = []
+    for key, rec in data.ASSETS.items():
+        if rec.get("type") == "shaped" and rec.get("include"):
+            instance = ASSETS_DIR / version / schema.asset_dir(key, rec) / f"{schema.file_name(key)}.toml"
+            out.append((key, instance, BUILD_DIR / "include" / "assets" / f"{key}.inc"))
+    return out
+
+
+def room_includes(version: str) -> list[tuple[str, Path, list[Path]]]:
+    """(room, its instance, its includes) for every room and stage overlay (asset types `room`, `stage`):
+    gen_room_inc.py writes one include per module the instance holds, `assets/<group>/<module>.inc`, and
+    `assets/<group>/declarations.inc`."""
+    data, _schema = asset_tables()
+    out = []
+    for key, rec in data.ASSETS.items():
+        if rec.get("type") not in ("room", "stage"):
+            continue
+        instance = ASSETS_DIR / version / rec["group"] / ("stage.toml" if rec["type"] == "stage" else "room.toml")
+        if not instance.exists():
+            continue
+        modules = [k for k, v in tomllib.loads(instance.read_text()).items() if isinstance(v, dict) and k != "entry"]
+        outdir = BUILD_DIR / "include" / "assets" / rec["group"]
+        out.append((key, instance, [outdir / f"{m}.inc" for m in modules] + [outdir / "declarations.inc"]))
+    return out
+
+
+def shape_instances(version: str) -> set[str]:
+    """Every shaped asset's instance (tools/peassets/shape/)."""
+    data, schema = asset_tables()
+    return {str(ASSETS_DIR / version / schema.asset_dir(k, r) / f"{schema.file_name(k)}.toml")
+            for k, r in data.ASSETS.items() if r.get("type") == "shaped"}
 
 
 _ASSET_TABLES: list = []
@@ -285,7 +339,7 @@ def declared_model_placements() -> dict[tuple[str, int], tuple[str, str, str]]:
     data, schema = asset_tables()
     out = {}
     for name, rec in data.ASSETS.items():
-        if rec.get("type") == "model" and rec.get("slots"):
+        if rec.get("type") == "model" and "slots" in rec:      # an untextured model declares none
             for package, offset in asset_placements(name):
                 out[(package, offset)] = (
                     name, schema.asset_dir(name, rec, tables=(data.ASSETS, data.EMBEDDED_ASSETS)), include_path(name, rec))
@@ -301,7 +355,7 @@ def asset_placements(name: str) -> list[tuple[str, int]]:
         place = data.EMBEDDED_ASSETS[name]
         out.append((place["source"].removesuffix(".pe2pkg"), schema.embedded_offset(place)))
     for key, rec in data.ASSETS.items():
-        if rec.get("type") == "pe2pkg":
+        if rec.get("type") in ("pe2pkg", "room", "stage"):
             package = rec.get("package_name", key)
             out += [(package, p["offset"]) for p in rec.get("embedded", ())
                     if isinstance(p, dict) and p["name"] == name and (package, p["offset"]) not in out]
@@ -350,6 +404,12 @@ def model_includes(version: str) -> list[tuple[Path, list[Path], int, int, str]]
         if package not in cache:
             cache[package] = raw_of(package).read_bytes()
         return cache[package]
+    # Another copy of a declared model (a relocated package, another source carrying it) is that model: its source
+    # includes the model's generated definition, not these arrays.
+    from tools.peassets.model.tmd import catalog_name
+    data, _schema = asset_tables()
+    models = [m for m in models if data.ASSETS.get(catalog_name(read(m["package"]), m["load"], m["source"]) or "",
+                                                   {}).get("type") != "model"]
     # The include set is named by the asset manifest, so a model carried by
     # several packages is one set of files under one name.
     names = include_names(models, read)
@@ -375,15 +435,21 @@ def declared_animation_sources(version: str) -> tuple[list, list]:
     tables = (data.ASSETS, data.EMBEDDED_ASSETS)
     clips, banks = [], []
     for key, rec in data.ASSETS.items():
-        if rec.get("type") == "pe2pkg":
+        if rec.get("type") in ("pe2pkg", "room", "stage"):
             placed = [p["name"] for p in rec.get("embedded", ()) if isinstance(p, dict)
                       and data.ASSETS[p["name"]]["type"] == "clip"]
             if placed:
-                usd = [ASSETS_DIR / version / schema.asset_dir(n, data.ASSETS[n], tables=tables) / f"{schema.file_name(n)}.usda"
-                       for n in placed]
+                from tools.buildsteps.gen_animation_source import clip_runs
+                runs = clip_runs(rec, data.ASSETS)
                 local = key.rsplit("/", 1)[-1]
-                inc = "clips.inc" if local == "package" else f"{local.removesuffix('_package')}_clips.inc"
-                clips.append((rec.get("package_name", key), usd, BUILD_DIR / "include" / "assets" / rec["group"] / inc))
+                stem = "clips" if local == "package" else f"{local.removesuffix('_package')}_clips"
+                # One include per run of back-to-back clips: `clips.inc`, or `clips_1.inc`, `clips_2.inc`, ...
+                for k, run in enumerate(runs, 1):
+                    usd = [ASSETS_DIR / version / schema.asset_dir(n, data.ASSETS[n], tables=tables) / f"{schema.file_name(n)}.usda"
+                           for n in run]
+                    name = rec.get("package_name", key) + (f":{k}" if len(runs) > 1 else "")
+                    inc = f"{stem}.inc" if len(runs) == 1 else f"{stem}_{k}.inc"
+                    clips.append((name, usd, BUILD_DIR / "include" / "assets" / rec["group"] / inc))
         elif rec.get("type") == "animation_bank" and key in data.EMBEDDED_ASSETS:      # a layer is not a table
             banks.append((key, BUILD_DIR / "include" / "assets" / include_path(key, rec)))
     return clips, banks
@@ -395,7 +461,7 @@ def animation_includes(version: str) -> list[tuple[Path, list[Path], int, int]]:
     from tools.buildsteps.gen_overlay_configs import declared_animations
 
     manifest = tomllib.loads((CONFIG_DIR / version / "overlays.toml").read_text())
-    declared = {package for package, _usd, _inc in declared_animation_sources(version)[0]}
+    declared = {package.partition(":")[0] for package, _usd, _inc in declared_animation_sources(version)[0]}
     out = []
     for resource in declared_animations(manifest):
         if not resource["in_c"] or resource["package"] in declared:
@@ -1143,6 +1209,21 @@ def ninja_build(
         command=f"{PYTHON} {GEN_ASSET_INC} $in $out $width",
     )
     ninja_rules_file.rule(
+        "shape-inc",
+        description="shape-inc $name",
+        command=f"{PYTHON} {GEN_SHAPE_INC} $name $out --assets {ASSETS_DIR / 'USA'}",
+    )
+    ninja_rules_file.rule(
+        "room-inc",
+        description="room-inc $name",
+        command=f"{PYTHON} {GEN_ROOM_INC} $name $outdir --assets {ASSETS_DIR / 'USA'}",
+    )
+    ninja_rules_file.rule(
+        "font-inc",
+        description="font-inc $name",
+        command=f"{PYTHON} {GEN_FONT_INC} $name $out --assets {ASSETS_DIR / 'USA'}",
+    )
+    ninja_rules_file.rule(
         "model-inc",
         description="model-inc $in $source",
         command=f"{PYTHON} {GEN_MODEL_INC} $in $load $source {BUILD_DIR / 'include' / 'assets'} $name",
@@ -1195,6 +1276,36 @@ def ninja_build(
                 implicit=[str(GEN_ASSET_INC)] + ([str(GEN_MODEL_INC)] if width == "TmdBone" else []),
                 variables={"width": quote(str(width))},
             )
+        ASSET_INC_OUTPUTS.append(str(inc))
+    peassets = TOOLS_DIR / "peassets"
+    shape_deps = [str(GEN_SHAPE_INC), str(peassets / "asset_data.py"), str(peassets / "asset_schema.py"),
+                  *sorted(str(p) for p in (peassets / "shape").glob("*.py")),
+                  *sorted(str(p) for p in (peassets / "shape").glob("*.toml")),
+                  *sorted(str(p) for p in (peassets / "groups").rglob("*.toml"))]
+    shaped = shape_includes(version)
+    # The catalog's C is assembled from the items' instances, so an include reads every instance.
+    instances = sorted({str(instance) for _name, instance, _inc in shaped} | shape_instances(version))
+    for name, instance, inc in shaped:
+        for writer in asset_writers:
+            writer.build(outputs=str(inc), rule="shape-inc", inputs=str(instance), implicit=shape_deps + instances,
+                         variables={"name": name})
+        ASSET_INC_OUTPUTS.append(str(inc))
+    room_deps = [str(GEN_ROOM_INC), str(peassets / "asset_data.py"), str(peassets / "asset_schema.py"),
+                 *sorted(str(p) for p in (peassets / "room").glob("*.py")), str(peassets / "shape" / "__init__.py"),
+                 str(CONFIG_DIR / version / "overlays.toml"),
+                 *sorted(str(p) for p in (peassets / "groups").rglob("*.toml"))]
+    for name, instance, incs in room_includes(version):
+        for writer in asset_writers:
+            writer.build(outputs=[str(i) for i in incs], rule="room-inc", inputs=str(instance), implicit=room_deps,
+                         variables={"name": name, "outdir": str(incs[0].parent)})
+        ASSET_INC_OUTPUTS.extend(str(i) for i in incs)
+    font_deps = [str(GEN_FONT_INC), str(peassets / "asset_data.py"), str(peassets / "asset_schema.py"),
+                 str(peassets / "text_encoding.py"), *sorted(str(p) for p in (peassets / "font").glob("*.py")),
+                 *sorted(str(p) for p in (peassets / "groups").rglob("*.toml"))]
+    for name, files, inc in font_includes(version):
+        for writer in asset_writers:
+            writer.build(outputs=str(inc), rule="font-inc", inputs=[str(f) for f in files], implicit=font_deps,
+                         variables={"name": name})
         ASSET_INC_OUTPUTS.append(str(inc))
     for raw, outputs, load, source, name in model_includes(version):
         for writer in asset_writers:

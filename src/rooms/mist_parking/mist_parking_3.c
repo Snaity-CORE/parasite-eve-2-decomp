@@ -30,6 +30,9 @@
 #include "main/tmd_types.h"
 #include "../../shared/actor/actor_messages.h"
 
+#define ROOM_PART declarations_mist_parking_3
+#include "assets/rooms/mist/parking/declarations.inc"
+
 static void _mistParkingPlayDepartureMovieTask(Task* task);
 static void _mistParkingStartDepartureMovieTask(Task* task);
 
@@ -40,14 +43,8 @@ TaskDesc gMistParkingDepartureMovieTaskDescs[2] = {
     { { { TASK_BODY_NONE, MIST_PARKING_DEPARTURE_MOVIE_TASK_PRIORITY } }, _mistParkingPlayDepartureMovieTask, { .value = 0 } },
 };
 
-/// Retained parent-frame placement of the arrival conversation's pitched model.
-///
-/// Position uses world-coordinate units; Euler angles use 4096 per turn.
-/// Setup uses the retained pitch, initially 20. Each positive update copies
-/// the complete placement before storing its next pitch, applying the preceding
-/// value. Shared by all instances, so only one model-pitch task may run at a time.
-static ActorTransform _gMistParkingCutsceneModelPlacement = { { 2105, -910, -3460, 0 }, { 20, 1081, 0, 0 } };
-
+#define ROOM_PART _gMistParkingCutsceneModelPlacement
+#include "assets/rooms/mist/parking/events.inc"
 static SVECTOR _gMistParkingPierceCollisionPatchNormals[2] = {
 #include "assets/mist_parking_collision_126F8_normals.inc"
 };
@@ -92,71 +89,7 @@ WorldCollisionGrid gMistParkingPierceCollisionPatch = {
     .faceCount   = ARRAY_SIZE(_gMistParkingPierceCollisionPatchFaces)
 };
 
-static AnimationPackedPose _gMistParkingAnimation129F8Bank1[6] = {
-#include "assets/mist_parking_animation_129F8_bank1.inc"
-};
-
-static AnimationPackedRotation _gMistParkingAnimation129F8Bank4[46] = {
-#include "assets/mist_parking_animation_129F8_bank4.inc"
-};
-
-static AnimationRecord _gMistParkingAnimation129F8Records[109] = {
-#include "assets/mist_parking_animation_129F8_records.inc"
-};
-
-static u16 _gMistParkingAnimation129F8Indices[20] = {
-#include "assets/mist_parking_animation_129F8_indices.inc"
-};
-
-AnimationSet gMistParkingAnimation129F8 = {
-    _gMistParkingAnimation129F8Records,
-    _gMistParkingAnimation129F8Indices,
-    { NULL, _gMistParkingAnimation129F8Bank1, NULL, NULL, _gMistParkingAnimation129F8Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gMistParkingAnimation12DCCBank1[8] = {
-#include "assets/mist_parking_animation_12DCC_bank1.inc"
-};
-
-static AnimationPackedRotation _gMistParkingAnimation12DCCBank4[84] = {
-#include "assets/mist_parking_animation_12DCC_bank4.inc"
-};
-
-static AnimationRecord _gMistParkingAnimation12DCCRecords[117] = {
-#include "assets/mist_parking_animation_12DCC_records.inc"
-};
-
-static u16 _gMistParkingAnimation12DCCIndices[20] = {
-#include "assets/mist_parking_animation_12DCC_indices.inc"
-};
-
-AnimationSet gMistParkingAnimation12DCC = {
-    _gMistParkingAnimation12DCCRecords,
-    _gMistParkingAnimation12DCCIndices,
-    { NULL, _gMistParkingAnimation12DCCBank1, NULL, NULL, _gMistParkingAnimation12DCCBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gMistParkingAnimation1323CBank1[5] = {
-#include "assets/mist_parking_animation_1323C_bank1.inc"
-};
-
-static AnimationPackedRotation _gMistParkingAnimation1323CBank4[99] = {
-#include "assets/mist_parking_animation_1323C_bank4.inc"
-};
-
-static AnimationRecord _gMistParkingAnimation1323CRecords[150] = {
-#include "assets/mist_parking_animation_1323C_records.inc"
-};
-
-static u16 _gMistParkingAnimation1323CIndices[20] = {
-#include "assets/mist_parking_animation_1323C_indices.inc"
-};
-
-AnimationSet gMistParkingAnimation1323C = {
-    _gMistParkingAnimation1323CRecords,
-    _gMistParkingAnimation1323CIndices,
-    { NULL, _gMistParkingAnimation1323CBank1, NULL, NULL, _gMistParkingAnimation1323CBank4, NULL, NULL, NULL },
-};
+#include "assets/rooms/mist/parking/clips_3.inc"
 
 static void _mistParkingInitCutsceneModelPitch(Task* task);
 static void _mistParkingAdvanceCutsceneModelPitch(Task* task);

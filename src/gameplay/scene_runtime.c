@@ -53,8 +53,8 @@
 
 #include "actors/actor_361100.h"
 
-#include "aya/aya_20900.h"
-#include "aya/replay_bonus.h"
+#include "aya/game_over.h"
+#include "aya/ending.h"
 
 #include "mapui/map_akropolis.h"
 
@@ -1465,10 +1465,10 @@ static void _loadingAwaitRestartResources(Task* task)
         gDisplayState.control.flags.imageSource = DISPLAY_IMAGE_STRIPS;
         if (gGameSession->restartMode == GAME_SESSION_RESTART_ENDING) {
             // Replay bonus takes over without a child for this loader to poll.
-            taskSpawnFromTable(gReplayBonusCreditsTaskDescriptors, REPLAY_BONUS_CREDITS_CONTROLLER_TASK_INDEX, 0, 0);
+            taskSpawnFromTable(gEndingCreditsTaskDescriptors, ENDING_CREDITS_CONTROLLER_TASK_INDEX, 0, 0);
             taskKill(task);
         } else {
-            task->spawnArg2.pointer = taskSpawnFromTable(gAya20900TaskDescriptors, AYA_20900_TASK_GAME_OVER, 0, 0);
+            task->spawnArg2.pointer = taskSpawnFromTable(gGameOverTaskDescriptors, GAME_OVER_TASK_SCREEN, 0, 0);
             sndEvtRequestMidiStart(LOADING_RESTART_MIDI_SEQUENCE, 0);
         }
         task->state++;
@@ -2327,7 +2327,7 @@ void fadePulseTask(Task* task)
 
 Task* endingSpawnReplayAwardScreen(void)
 {
-    return taskSpawnFromTable(&gReplayBonusAwardScreenTaskDescriptor, 0, 0, 0);
+    return taskSpawnFromTable(&gEndingAwardScreenTaskDescriptor, 0, 0, 0);
 }
 
 /// Blends one part's decoded rotations into its local matrix or an unpacked pose.

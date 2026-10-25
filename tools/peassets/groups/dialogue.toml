@@ -1,0 +1,14 @@
+# The assets of the group dialogue, each named dialogue/<table name>.
+# Written by tools/peassets/dump_asset_db.py; hand-written fields are kept, matched by sha1.
+
+[font]
+type = "font"
+family = "Parasite Eve II Dialogue"
+layout = "images"
+style = "Regular"
+
+[speakers]
+type = "font"
+family = "Parasite Eve II Dialogue"
+layout = "images"
+style = "Speakers"

@@ -60,6 +60,9 @@ RAW_TYPE_DIRS = (
     "bs",
     "spk",
     "txt",
+    "item_descriptor",          # a descriptor row and the tables, outputs of the item shapes (shape/item.toml)
+    "item_descriptor_table",
+    "junk",
 )
 
 
@@ -297,11 +300,12 @@ def _old_folder_name(
 
 
 def collect_assets(assets_root: Path, old_assets: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    by_sha1_old = {
-        rec["sha1"]: (aid, rec)
-        for aid, rec in old_assets.items()
-        if isinstance(rec, dict) and rec.get("sha1")
-    }
+    # Several assets may hold one content (asset_schema.canonical_names), each keeping its own name and record;
+    # a sound is known by its body in banks, not by a raw file.
+    by_sha1_old: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for aid, rec in old_assets.items():
+        if isinstance(rec, dict) and rec.get("sha1") and rec.get("type") != "sound":
+            by_sha1_old.setdefault(rec["sha1"], []).append((aid, rec))
     used_ids: set[str] = set()
     out: dict[str, dict[str, Any]] = {}
 
@@ -317,41 +321,42 @@ def collect_assets(assets_root: Path, old_assets: dict[str, dict[str, Any]]) -> 
         for path in files:
             digest = _sha1_file(path)
             stem = asset_schema.raw_key(path.relative_to(d).as_posix())
-            prev = by_sha1_old.get(digest)
-            if prev is not None:
-                aid, old_rec = prev
-            else:
-                aid = stem
-                old_rec = {}
-            if aid in used_ids:
-                n = 2
-                base = aid
-                while f"{base}_{n}" in used_ids:
-                    n += 1
-                aid = f"{base}_{n}"
-            used_ids.add(aid)
-            # A type set by hand over the same stored form (a glyph atlas is a pe2img) is kept.
-            kind = old_rec.get("type")
-            if kind is None or asset_schema.EXT_BY_TYPE.get(kind) != asset_schema.EXT_BY_TYPE.get(type_dir):
-                kind = type_dir
-            rec: dict[str, Any] = {
-                "sha1": digest,
-                "type": kind,
-            }
-            # Preserve extra fields (bpp, required, notes, …).
-            for k, v in old_rec.items():
-                if k in ("sha1", "type"):
-                    continue
-                rec[k] = v
-            if aid in REQUIRED_OVERLAY_STEMS:
-                rec["required"] = True
-            if type_dir == "pe2img":
-                rec["bpp"] = _pe2img_bpp_field(path, rec.get("bpp"))
-                rec.update(_pe2img_geometry(path))
-            elif type_dir == "pe2clut":
-                rec.update(_pe2clut_geometry(path))
-            out[aid] = rec
+            for aid, old_rec in by_sha1_old.get(digest) or [(stem, {})]:
+                _collect_one(out, used_ids, path, type_dir, digest, aid, old_rec)
     return out
+
+
+def _collect_one(out: dict[str, dict[str, Any]], used_ids: set[str], path: Path, type_dir: str, digest: str,
+                 aid: str, old_rec: dict[str, Any]) -> None:
+    """One asset holding a raw file's bytes, its fields carried over from its old record."""
+    if aid in used_ids:
+        n = 2
+        base = aid
+        while f"{base}_{n}" in used_ids:
+            n += 1
+        aid = f"{base}_{n}"
+    used_ids.add(aid)
+    # A type set by hand over the same stored form (a glyph atlas is a pe2img) is kept.
+    kind = old_rec.get("type")
+    if kind is None or asset_schema.EXT_BY_TYPE.get(kind) != asset_schema.EXT_BY_TYPE.get(type_dir):
+        kind = type_dir
+    rec: dict[str, Any] = {
+        "sha1": digest,
+        "type": kind,
+    }
+    # Preserve extra fields (bpp, required, notes, …).
+    for k, v in old_rec.items():
+        if k in ("sha1", "type"):
+            continue
+        rec[k] = v
+    if aid in REQUIRED_OVERLAY_STEMS:
+        rec["required"] = True
+    if type_dir == "pe2img":
+        rec["bpp"] = _pe2img_bpp_field(path, rec.get("bpp"))
+        rec.update(_pe2img_geometry(path))
+    elif type_dir == "pe2clut":
+        rec.update(_pe2clut_geometry(path))
+    out[aid] = rec
 
 
 def _keyed(by_id: dict[int, dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -407,7 +412,7 @@ def collect_tree(
                 aid = _asset_id_from_stages_path(ent.get("path") or "")
                 if aid and str(ent.get("path") or "").startswith("pe2pkg/"):
                     # pe2pkg/ holds a package under its overlay name (`package_name`).
-                    aid = next((k for k, r in assets.items() if r.get("type") == "pe2pkg" and r.get("package_name") == aid), aid)
+                    aid = next((k for k, r in assets.items() if r.get("type") in ("pe2pkg", "room", "stage") and r.get("package_name") == aid), aid)
                 if idx is None or not aid:
                     continue
                 chunk_map[idx] = aid
@@ -541,7 +546,7 @@ def collect_models(
     # A model a group declares is placed by its package, whole - arrays, stream and record - and named there.
     declared: dict[tuple[str, int], str] = {}
     for rec in old.values():
-        if rec.get("type") != "pe2pkg":
+        if rec.get("type") not in ("pe2pkg", "room", "stage"):
             continue
         for place in rec.get("embedded", ()):
             if isinstance(place, dict) and old.get(place["name"], {}).get("type") == "model":
@@ -549,6 +554,15 @@ def collect_models(
     out: dict[str, dict[str, Any]] = {}
     placed: dict[str, dict[str, Any]] = {}
     seen: set[str] = set()
+    # The stream of a declared model is that model wherever else it appears (a relocated copy of its package):
+    # placed once, by its declaring package, so the other copies are not meshes of their own.
+    for pkg in sorted(pkg_dir.glob("*.pe2pkg")):
+        if pkg.stem in records and any(p == pkg.stem for p, _o in declared):
+            base, sources = records[pkg.stem]
+            data = pkg.read_bytes()
+            for src in (tmd.read_source(data, base, o) for o in sources):
+                if (pkg.stem, src["head"]) in declared:
+                    seen.add(hashlib.sha1(data[src["stream_offset"]:src["end"]]).hexdigest())
     for pkg in sorted(pkg_dir.glob("*.pe2pkg")):
         if pkg.stem not in records:
             continue
@@ -604,12 +618,15 @@ def collect_samples(assets_root: Path, old: dict[str, dict[str, Any]], assets: d
 
     Names are preserved across regeneration by SHA-1, as for models: a new
     sample is named after the first bank holding it, `<bank>_sample_<slot>`, and
-    keeps whatever name it is given afterwards.
+    keeps whatever name it is given afterwards. A sample a declared bank holds is
+    its `sound`, and a raw bank carrying it names that sound.
     """
     import spk_codec
 
     raw = assets_root / "raw" / "spk"
     known = {rec["sha1"]: aid for aid, rec in old.items() if rec.get("type") == "sample"}
+    # A declared sound is the sample's name wherever it sits, in a raw bank too (the common bank's noise burst).
+    sounds = {rec["sha1"]: aid for aid, rec in old.items() if rec.get("type") == "sound"}
     # A declared bank (`sound_bank`) lists its own sounds; its samples are not the raw bank's.
     declared = {rec["sha1"] for rec in old.values() if rec.get("type") == "sound_bank"}
     by_file = {rec["sha1"]: aid for aid, rec in assets.items() if rec.get("type") == "spk" and rec["sha1"] not in declared}
@@ -624,7 +641,7 @@ def collect_samples(assets_root: Path, old: dict[str, dict[str, Any]], assets: d
         slots = []
         for slot, stream in enumerate(spk_codec.sample_streams(path.read_bytes())):
             digest = hashlib.sha1(stream).hexdigest()
-            aid = named.get(digest)
+            aid = named.get(digest) or sounds.get(digest)
             if aid is None:
                 aid = known.get(digest) or f"{bank}_sample_{slot:02d}"
                 named[digest] = aid
@@ -667,7 +684,7 @@ def collect_embedded_lists(assets: dict[str, dict[str, Any]], embedded: dict[str
     """Each package's `embedded`: the embedded assets whose source is the package, by address. A package is a
     container, as a bundle or a bank is; its overlay name (`package_name`) is what a source names."""
     for key, rec in assets.items():
-        if rec.get("type") != "pe2pkg":
+        if rec.get("type") not in ("pe2pkg", "room", "stage"):
             continue
         if any(isinstance(p, dict) for p in rec.get("embedded", ())):
             continue                    # a group's package places its embedded assets itself
@@ -704,7 +721,7 @@ def collect_animations(assets_root: Path, old: dict[str, dict[str, Any]],
     # A package whose group places its clips one by one (type clip) has no block of its own any more. A clip
     # several packages carry has its record from one of them, so each package's own placements say.
     declared = {f"{rec.get('package_name', key)}.pe2pkg" for key, rec in old_assets.items()
-                if rec.get("type") == "pe2pkg" and any(isinstance(p, dict) and old_assets.get(p["name"], {}).get("type") == "clip"
+                if rec.get("type") in ("pe2pkg", "room", "stage") and any(isinstance(p, dict) and old_assets.get(p["name"], {}).get("type") == "clip"
                                                       for p in rec.get("embedded", ()))}
     for row in declared_animations(manifest):
         source = row["package"] + ".pe2pkg"
@@ -744,19 +761,27 @@ def _fmt_embedded(rec: dict[str, Any]) -> str:
 GROUP_ROOT = _SCRIPT_DIR / "groups"
 
 
+# Keys whose numbers are offsets into a package, written in hex: an embedded asset's, and a room's entry points.
+from room.walk import STAGE_ROLES, STATED_ROLES  # noqa: E402
+
+# Keys whose numbers are package offsets, written in hex: a room's or stage's entry points by role, and the offsets
+# its vibrations and single entries state.
+OFFSET_KEYS = frozenset({"offset", "at", "commands", "segments", *STATED_ROLES, *STAGE_ROLES})
+
+
 def _toml_scalar(value: Any, key: str = "") -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
-        return f"0x{value:05X}" if key == "offset" else f"0x{value:X}" if key in ("size", "address") else str(value)
+        return f"0x{value:05X}" if key in OFFSET_KEYS else f"0x{value:X}" if key in ("size", "address") else str(value)
     if value is None:
         return '""'                     # TOML has no null: an empty slot of a list
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)
     if isinstance(value, dict):
         return "{ " + ", ".join(f"{k} = {_toml_scalar(v, k)}" for k, v in value.items()) + " }"
-    if isinstance(value, (list, tuple)):
-        return "[" + ", ".join(_toml_scalar(v) for v in value) + "]"
+    if isinstance(value, (list, tuple)):                 # a list of offsets (a room's entry points) stays in hex
+        return "[" + ", ".join(_toml_scalar(v, key if key in OFFSET_KEYS else "") for v in value) + "]"
     raise TypeError(f"no TOML for {value!r}")
 
 
@@ -817,11 +842,21 @@ def write_groups(assets: dict[str, dict[str, Any]]) -> None:
                                for p in rec["embedded"]]
         if aid in texture_chunks:
             continue                    # declared, with its sha1, in its file's entry
+        if rec.get("type") == "atlas":
+            rec["sprites"] = [{**sp, "texture": local(sp["texture"]) if sp["texture"].startswith(group + "/")
+                               and "/" not in local(sp["texture"]) else sp["texture"]} for sp in rec["sprites"]]
+        if rec.get("type") == "shaped":
+            rec["outputs"] = {k: local(v) if v.startswith(group + "/") else {"asset": v} for k, v in rec["outputs"].items()}
         if rec.get("type") == "file":
-            rec["contents"] = [{**({"chunk": local(e["chunk"])} if e["chunk"].startswith(group + "/") else {"asset": e["chunk"]}),
+            # Its own group's chunks and textures by local name, another group's by path.
+            mine = lambda name: local(name) if name.startswith(group + "/") and "/" not in local(name) else name
+
+            def placed(p: dict) -> dict:
+                return {**p, **{k: mine(p[k]) for k in ("texture", "atlas") if k in p}}
+            rec["contents"] = [{**({"chunk": local(e["chunk"])} if mine(e["chunk"]) != e["chunk"] else {"asset": e["chunk"]}),
                                 **{k: v for k, v in e.items() if k != "chunk"},
                                 **({"sha1": assets[e["chunk"]]["sha1"]} if e["chunk"] in texture_chunks else {}),
-                                **{part: [{**p, "texture": local(p["texture"])} for p in e[part]]
+                                **{part: [placed(p) for p in e[part]]
                                    for part in ("pages", "palettes") if part in e}} for e in rec["contents"]]
         groups.setdefault(group, {})[local(aid)] = rec
     written = set()

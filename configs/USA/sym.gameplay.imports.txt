@@ -274,9 +274,9 @@ gLoadUiDiskSwapState = 0x8007A394; // absolute:True
 gMidiMusicVolume = 0x8007A396; // absolute:True
 gStageMusicParams = 0x8007A39C; // absolute:True
 gCdAudioProgress = 0x80082798; // absolute:True
-gAya20900TaskDescriptors = 0x80115D9C; // absolute:True owner=aya_20900
-gReplayBonusAwardScreenTaskDescriptor = 0x80119218; // absolute:True owner=replay_bonus
-gReplayBonusCreditsTaskDescriptors = 0x8011922C; // absolute:True owner=replay_bonus
+gGameOverTaskDescriptors = 0x80115D9C; // absolute:True owner=game_over
+gEndingAwardScreenTaskDescriptor = 0x80119218; // absolute:True owner=ending
+gEndingCreditsTaskDescriptors = 0x8011922C; // absolute:True owner=ending
 gActor361100StreamWaterTaskDesc = 0x801637C8; // absolute:True owner=actor_361100
 actor800100EnterReload = 0x80166E94; // type:func absolute:True owner=actor_800100
 gActor800100WeaponIdsByResourceVariant = 0x80167218; // absolute:True owner=actor_800100
@@ -326,7 +326,7 @@ m4a1HammerAttackState = 0x8011E710; // type:func absolute:True owner=m4a1_hammer
 m4a1JavelinAttackState = 0x8011F5D4; // type:func absolute:True owner=m4a1_javelin
 hypervelocityAttackState = 0x8011F724; // type:func absolute:True owner=hypervelocity
 gShelterB6NurseryModel07BAC = 0x801852D0; // absolute:True owner=shelter_b6_nursery
-gAcropolisCafeteriaModel077D8 = 0x80184E5C; // absolute:True owner=acropolis_cafeteria
+gAkropolisCafeteriaAcropolisCafeteriaModel077D8 = 0x80184E5C; // absolute:True owner=acropolis_cafeteria
 
 // Map UI tables selected by the resident gameplay map screen.
 gMapAkropolisAreaNames = 0x8017A3BC; // absolute:True owner=map_akropolis
@@ -2061,7 +2061,7 @@ actor510900ExplosionTask185 = 0x801346D4; // type:func absolute:True owner=actor
 
 gunbladeTrailTask = 0x8011D1E4; // type:func absolute:True owner=gunblade shared=weapons
 
-flareSparkTask = 0x8012F0B8; // type:func absolute:True owner=flare
+pepperSpraySparkTask = 0x8012F0B8; // type:func absolute:True owner=pepper_spray
 
 combustionCastTask = 0x801308E0; // type:func absolute:True owner=combustion
 
@@ -2083,11 +2083,11 @@ energyshotCastTask = 0x8012EF34; // type:func absolute:True owner=energyshot sha
 
 energyballCastTask = 0x8012EF48; // type:func absolute:True owner=energyball shared=pe
 
-pepperSprayEffectTask = 0x8012EF34; // type:func absolute:True owner=pepper_spray shared=pe
-
-ofudaEffectTask = 0x8012EF34; // type:func absolute:True owner=ofuda shared=pe
+combatLightEffectTask = 0x8012EF34; // type:func absolute:True owner=combat_light shared=pe
 
 flareEffectTask = 0x8012EF34; // type:func absolute:True owner=flare shared=pe
+
+pepperSprayEffectTask = 0x8012EF34; // type:func absolute:True owner=pepper_spray shared=pe
 
 m4a1HammerGlowTask = 0x8011D1E0; // type:func absolute:True owner=m4a1_hammer shared=weapons
 

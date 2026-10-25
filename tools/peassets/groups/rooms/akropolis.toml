@@ -1,0 +1,44 @@
+# The assets of the group rooms/akropolis, each named rooms/akropolis/<table name>.
+# Written by tools/peassets/dump_asset_db.py; hand-written fields are kept, matched by sha1.
+
+[flare]
+type = "texture"
+bpp = 4
+cells = { flare_0 = [0, 0, 40, 40], flare_1 = [40, 0, 40, 40], flare_2 = [80, 0, 40, 40] }
+height = 256
+variants = ["flare_0", "flare_1", "flare_2"]
+width = 256
+
+[stage]
+type = "stage"
+package_name = "map_akropolis"
+required = true
+sha1 = "abf6f6196ba05d45f48b59d4981cab5a01dc7d98"
+
+[stage.entries]
+image_slots = [0x006F8]
+map_areas = [0x00804]
+map_icons = [0x00A3C]
+map_markers = [0x009E0]
+map_names = [0x00A6C]
+map_shapes = [0x00938]
+marker_flags = [0x010BC]
+movie_workspaces = [0x007A8]
+music = [0x02864, 0x029B4]
+page_flags = [0x007FC]
+rewards = [0x0278C, 0x0281C]
+
+[story_calls]
+type = "cap"
+glyphs = { 52 = "I", 57 = "l" }
+sha1 = "496c4c23e92b612542126dcf54099315cf88a6f7"
+
+[story_calls_atlas]
+type = "font_atlas"
+bpp = 4
+generated_by = "rooms/akropolis/story_calls"
+h = 256
+w = 64
+x = 960
+y = 0
+sha1 = "c0887787c2a7c396b2b5b43f16828d518216aa75"
