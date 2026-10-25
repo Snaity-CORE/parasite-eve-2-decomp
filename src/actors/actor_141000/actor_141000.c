@@ -231,7 +231,7 @@ static SVECTOR _gActor141000FlightRotations[90] = {
 ///
 /// Paired with `_gActor141000FlightRotations`; applying a frame subtracts 40
 /// from its X. The fourth halfword is unused.
-static const SVECTOR _gActor141000FlightPositions[ARRAY_SIZE(_gActor141000FlightRotations)] SECTION(".data") = {
+static DATA_CONST SVECTOR _gActor141000FlightPositions[ARRAY_SIZE(_gActor141000FlightRotations)] SECTION(".data") = {
 #include "assets/rooms/shelter/b1_pod_access_tunnel/flame_position_track.inc"
 };
 

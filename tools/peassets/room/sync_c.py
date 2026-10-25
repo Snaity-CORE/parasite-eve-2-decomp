@@ -26,10 +26,10 @@ from pathlib import Path
 from . import _units, c_files, images, read
 
 ROOT = Path(__file__).resolve().parents[3]
-DEF = re.compile(r"^((?:static\s+)?(?:const\s+)?[\w]+[\s*]+(\w+)\s*((?:\[[^\]]*\])*)\s*"
+DEF = re.compile(r"^((?:static\s+)?(?:const\s+|DATA_CONST\s+)?[\w]+[\s*]+(\w+)\s*((?:\[[^\]]*\])*)\s*"
                  r"(?:(?:SECTION\([^)]*\)|__attribute__\(\(\w+\([^)]*\)\)\))\s*)?=\s*)", re.M)
-FORWARD = re.compile(r"^(?:static|extern)\s+(?:const\s+)?\w+[\s*]+(\w+)\s*(?:\[[^\]]*\])*\s*;[^\n]*\n", re.M)
-GENERATED_DEF = re.compile(r"^(?:static )?(?:const )?[\w*]+ (\w+)(?:\[\d+\])*(?: SECTION\([^)]*\))? =", re.M)
+FORWARD = re.compile(r"^(?:static|extern)\s+(?:const\s+|DATA_CONST\s+)?\w+[\s*]+(\w+)\s*(?:\[[^\]]*\])*\s*;[^\n]*\n", re.M)
+GENERATED_DEF = re.compile(r"^(?:static )?(?:const |DATA_CONST )?[\w*]+ (\w+)(?:\[\d+\])*(?: SECTION\([^)]*\))? =", re.M)
 
 
 def _statement_end(s: str, i: int) -> int:

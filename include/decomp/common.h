@@ -97,6 +97,16 @@ extern int pc_trace_enabled(const char* name);
 #define SOFT_USE_REG(x)   __asm__("" :: "r"(x))
 #endif
 
+/// Game data the original keeps constant: `const` in the PSX build, which
+/// places it in .rodata. The PC port reads every game datum from PSX RAM,
+/// loaded from the disc, so there it is not `const`: the compiler must not
+/// fold its values into the code.
+#ifdef PC_PORT
+#define DATA_CONST
+#else
+#define DATA_CONST const
+#endif
+
 /// Exports `orig`, defined in this file, under a second name `alias`: one more
 /// global symbol at the same address, adding no bytes. The compiler has no
 /// alias attribute for this target, so the assembler makes it, and it has to be

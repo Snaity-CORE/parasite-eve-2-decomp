@@ -433,7 +433,7 @@ def c_files(name: str, assets: dict, embedded: dict, assets_root: Path) -> dict[
 
     def declarator(s: str) -> str:
         r = objects[s][1]
-        storage = ("static " if s.startswith("_") else "") + ("const " if s in rodata else "")
+        storage = ("static " if s.startswith("_") else "") + ("DATA_CONST " if s in rodata else "")
         if "value" in r:
             dims = ""
         elif _is_rows(r):
