@@ -16,6 +16,11 @@ from typing import Any, Callable, Iterator
 _SHARED: ProcessPoolExecutor | None = None
 
 
+def _context() -> mp.context.BaseContext:
+    """fork where there is one; spawn on Windows, which has no fork (workers then import their functions)."""
+    return mp.get_context("fork" if "fork" in mp.get_all_start_methods() else "spawn")
+
+
 def default_jobs(cap: int = 16) -> int:
     n = os.cpu_count() or 4
     return max(1, min(n, cap))
@@ -27,8 +32,8 @@ def shared_pool(jobs: int | None = None) -> Iterator[ProcessPoolExecutor]:
     has a single thread: forking once phases run in threads could copy a lock some thread holds."""
     global _SHARED
     n_jobs = default_jobs() if jobs is None else max(1, jobs)
-    with ProcessPoolExecutor(max_workers=n_jobs, mp_context=mp.get_context("fork")) as pool:
-        pool.submit(int).result()                   # a fork pool starts all its workers at the first submit
+    with ProcessPoolExecutor(max_workers=n_jobs, mp_context=_context()) as pool:
+        pool.submit(int).result()                   # a pool starts all its workers at the first submit
         _SHARED = pool
         try:
             yield pool
@@ -65,7 +70,7 @@ def run_jobs(
 
     if _SHARED is not None:
         return _collect(_SHARED, worker, work, label_key)
-    with ProcessPoolExecutor(max_workers=n_jobs, mp_context=mp.get_context("fork")) as pool:
+    with ProcessPoolExecutor(max_workers=n_jobs, mp_context=_context()) as pool:
         return _collect(pool, worker, work, label_key)
 
 
