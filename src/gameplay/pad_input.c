@@ -266,7 +266,7 @@ static void pcViewGroundAxis(s32 row, s32* x, s32* z)
 static u16 pc_movement(const PadState* pad, GameActor* actor, u16 held)
 {
     u32 options = pc_input_options();
-    u16 run     = gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.buttonLayout == PAD_INPUT_LAYOUT_B ? PAD_BUTTON_SQUARE
+    u16 run     = gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.buttonLayout == MEMORY_CARD_OPTION_BUTTON_LAYOUT_B ? PAD_BUTTON_SQUARE
                                                                                             : PAD_BUTTON_CIRCLE;
     s32 sx = 0, sy = 0, analog = 0;
     s32 rx, rz, fx, fz, dx, dz, yaw, diff, step, magnitude, stickYaw;
@@ -352,7 +352,7 @@ static u16 pc_movement(const PadState* pad, GameActor* actor, u16 held)
      * original's analog handling does, outside battle. */
     if (analog && actor->state == 0) {
         magnitude = SquareRoot0(sx * sx + sy * sy);
-        if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.moveMode == PAD_INPUT_MOVEMENT_WALK) {
+        if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.moveMode == MEMORY_CARD_OPTION_MOVEMENT_WALK) {
             if (magnitude > PAD_INPUT_STICK_RUN_THRESHOLD) {
                 out |= run;
             }
