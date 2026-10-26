@@ -11,7 +11,9 @@
 
 #include "mine_secret_passage_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_400600.h"
+#include "actors/actor_405800.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -69,10 +71,8 @@ TaskMessageEntry gMineSecretPassageRoomMessages[6] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { MINE_SECRET_PASSAGE_DEPARTURE_TASK_PRIORITY = 32 };
-
 TaskDesc gMineSecretPassageDepartureTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, MINE_SECRET_PASSAGE_DEPARTURE_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = mineSecretPassageDepartureTask,
     .data     = { .value = 0 },
 };

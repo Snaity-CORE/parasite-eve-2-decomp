@@ -21,10 +21,11 @@
 #include "gameplay/model_objects.h"
 #include "gameplay/scene_runtime.h"
 
-#include "main/coord.h"
 #include "main/areas.h"
+#include "main/coord.h"
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/gameflag.h"
 #include "main/gfx.h"
 #include "main/mc.h"
@@ -188,10 +189,8 @@ static s32 _shelterB1ControlRoomIgnoreRoomAction(Task* task, s32 messageId, cons
 
 static void _shelterB1ControlRoomMirrorTask(Task* task);
 
-enum { SHELTER_B1_CONTROL_ROOM_MIRROR_TASK_PRIORITY = 112 };
-
 TaskDesc gShelterB1ControlRoomMirrorTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B1_CONTROL_ROOM_MIRROR_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } },
     .callback = _shelterB1ControlRoomMirrorTask,
     .data     = { .value = 0 },
 };
@@ -416,20 +415,17 @@ static inline void _shelterB1ControlRoomBuildMirrorPlaneFrame(_ShelterB1ControlR
 static void _shelterB1ControlRoomMirrorTask(Task* task)
 {
     enum {
-        SHELTER_B1_CONTROL_ROOM_MIRROR_INITIALIZE         = 0,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_CACHE_UNSET        = -1,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_MODEL_OT_OFFSET    = 22,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_OVERLAY_OT_BIAS    = -15,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_WIDTH        = 320,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HEIGHT       = 240,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_DRAW_BUFFER_STRIDE = 272,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_STRIP_Y            = 256,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_OT_SLOT       = 1023,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_TEXTURE_16BIT      = 2,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_SPRITE_CODE   = 0x65,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_CLEAR_TILE_CODE    = 0x60,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_CLEAR_SHADE        = 2,
-        SHELTER_B1_CONTROL_ROOM_MIRROR_TEXTURE_SHADE_ONE  = 128,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_INITIALIZE        = 0,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_CACHE_UNSET       = -1,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_MODEL_OT_OFFSET   = 22,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_OVERLAY_OT_BIAS   = -15,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_STRIP_Y           = 256,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_OT_SLOT      = 1023,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_TEXTURE_16BIT     = 2,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_SPRITE_CODE  = 0x65,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_CLEAR_TILE_CODE   = 0x60,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_CLEAR_SHADE       = 2,
+        SHELTER_B1_CONTROL_ROOM_MIRROR_TEXTURE_SHADE_ONE = 128,
     };
     _ShelterB1ControlRoomMirrorWork*    work;
     _ShelterB1ControlRoomMirrorConfig*  config;
@@ -527,9 +523,9 @@ static void _shelterB1ControlRoomMirrorTask(Task* task)
         drawArea       = gGpuPrimCursor;
         gGpuPrimCursor = (u8*)gGpuPrimCursor + sizeof(DR_AREA);
         rect.x         = 0;
-        rect.y         = gDisplayState.drawBuffer * SHELTER_B1_CONTROL_ROOM_MIRROR_DRAW_BUFFER_STRIDE;
-        rect.w         = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_WIDTH;
-        rect.h         = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HEIGHT;
+        rect.y         = gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
+        rect.w         = DISPLAY_SCREEN_WIDTH;
+        rect.h         = DISPLAY_SCREEN_HEIGHT;
         SetDrawArea(drawArea, &rect);
         addPrim(&gGpuCurrentOt[SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_OT_SLOT], drawArea);
 
@@ -541,7 +537,7 @@ static void _shelterB1ControlRoomMirrorTask(Task* task)
         drawOffset     = gGpuPrimCursor;
         gGpuPrimCursor = (u8*)gGpuPrimCursor + sizeof(DR_OFFSET);
         drawOrigin[0]  = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_WIDTH;
-        drawOrigin[1]  = gDisplayState.drawBuffer * SHELTER_B1_CONTROL_ROOM_MIRROR_DRAW_BUFFER_STRIDE + SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_HEIGHT;
+        drawOrigin[1]  = gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS + SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_HEIGHT;
         SetDrawOffset(drawOffset, drawOrigin);
         addPrim(&gGpuCurrentOt[SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_OT_SLOT], drawOffset);
 
@@ -550,7 +546,7 @@ static void _shelterB1ControlRoomMirrorTask(Task* task)
         copySprite->x0 = -SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_WIDTH;
         copySprite->y0 = -SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_HEIGHT;
         copySprite->w  = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_WIDTH;
-        copySprite->h  = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HEIGHT;
+        copySprite->h  = DISPLAY_SCREEN_HEIGHT;
         copySprite->u0 = 0;
         copySprite->v0 = gDisplayState.drawBuffer << 4;
         setlen(copySprite, sizeof(*copySprite) / sizeof(copySprite->tag) - 1);
@@ -567,7 +563,7 @@ static void _shelterB1ControlRoomMirrorTask(Task* task)
         copySprite->x0 = 0;
         copySprite->y0 = -SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_HEIGHT;
         copySprite->w  = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_WIDTH;
-        copySprite->h  = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HEIGHT;
+        copySprite->h  = DISPLAY_SCREEN_HEIGHT;
         copySprite->u0 = 0x20;
         copySprite->v0 = gDisplayState.drawBuffer << 4;
         setlen(copySprite, sizeof(*copySprite) / sizeof(copySprite->tag) - 1);
@@ -587,8 +583,8 @@ static void _shelterB1ControlRoomMirrorTask(Task* task)
         stripClear->y0 = -SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HALF_HEIGHT;
         stripClear->r0 = stripClear->g0 = SHELTER_B1_CONTROL_ROOM_MIRROR_CLEAR_SHADE;
         stripClear->b0                  = SHELTER_B1_CONTROL_ROOM_MIRROR_CLEAR_SHADE;
-        stripClear->w                   = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_WIDTH;
-        stripClear->h                   = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HEIGHT;
+        stripClear->w                   = DISPLAY_SCREEN_WIDTH;
+        stripClear->h                   = DISPLAY_SCREEN_HEIGHT;
         addPrim(&gGpuCurrentOt[SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_OT_SLOT], stripClear);
 
         drawMask       = gGpuPrimCursor;
@@ -607,8 +603,8 @@ static void _shelterB1ControlRoomMirrorTask(Task* task)
         gGpuPrimCursor = (u8*)gGpuPrimCursor + sizeof(DR_AREA);
         rect.x         = config->stripX;
         rect.y         = SHELTER_B1_CONTROL_ROOM_MIRROR_STRIP_Y;
-        rect.w         = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_WIDTH;
-        rect.h         = SHELTER_B1_CONTROL_ROOM_MIRROR_FRAME_HEIGHT;
+        rect.w         = DISPLAY_SCREEN_WIDTH;
+        rect.h         = DISPLAY_SCREEN_HEIGHT;
         SetDrawArea(drawArea, &rect);
         addPrim(&gGpuCurrentOt[SHELTER_B1_CONTROL_ROOM_MIRROR_COPY_OT_SLOT], drawArea);
 
@@ -825,7 +821,7 @@ static s32 _shelterB1ControlRoomHandleCapCommand(Task* task, s32 messageId, s32 
             }
             break;
         case SHELTER_B1_CONTROL_ROOM_CHAPTER_SIX_CAP:
-            if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) == SHELTER_B1_CONTROL_ROOM_CAP_CHAPTER) {
+            if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) == SHELTER_B1_CONTROL_ROOM_CAP_CHAPTER) {
                 capRunCommandWithTransition(SHELTER_B1_CONTROL_ROOM_CHAPTER_SIX_CAP);
             }
             break;

@@ -6,7 +6,7 @@
 #include "common.h"
 
 #include "actors/actor.h"
-#include "actors/task_tables.h"
+#include "actors/actor_521100.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/animation.h"
@@ -195,7 +195,7 @@ static TaskMessageEntry _gActor521100AnmcWomanMessages[6] = {
 
 TaskDesc gActor521100AnmcWomanTaskDescs[2] = {
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _actor521100AnmcWomanTask, { .model = &_gAnmcWoman3Body } },
-    { { { TASK_BODY_NONE, 192 } }, _actor521100AnmcWomanEffectTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor521100AnmcWomanEffectTask, { .value = 0 } },
 };
 
 /// Scripted ANMC-woman clips: empty entry 0, then ten request-addressable sets.
@@ -489,13 +489,13 @@ static void _actor521100UpdateAnmcWomanFlattenColor(Enemy* enemy, Task* task)
     scratchPosition->vz = sampleCoord->workm.t[2];
     worldCoordUpdateActorColor(enemy, scratchPosition, 0, 0);
     // Apply independent Q12 channel weights after refreshing base lighting.
-    work                = _gActor521100AnmcWomanWork;
-    gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    scratchPosition->vx = work->st.flattenScaleY * (s32)((gRandomLcgState >> 16) + ACTOR_521100_FLATTEN_COLOR_RANDOM_BIAS) / ACTOR_521100_FLATTEN_COLOR_RANDOM_SCALE;
-    gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    scratchPosition->vy = work->st.flattenScaleY * (s32)((gRandomLcgState >> 16) + ACTOR_521100_FLATTEN_COLOR_RANDOM_BIAS) / ACTOR_521100_FLATTEN_COLOR_RANDOM_SCALE;
-    gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    scratchPosition->vz = work->st.flattenScaleY * (s32)((gRandomLcgState >> 16) + ACTOR_521100_FLATTEN_COLOR_RANDOM_BIAS) / ACTOR_521100_FLATTEN_COLOR_RANDOM_SCALE;
+    work = _gActor521100AnmcWomanWork;
+    RANDOM_LCG_ADVANCE();
+    scratchPosition->vx = work->st.flattenScaleY * (s32)(RANDOM_LCG_DRAW() + ACTOR_521100_FLATTEN_COLOR_RANDOM_BIAS) / ACTOR_521100_FLATTEN_COLOR_RANDOM_SCALE;
+    RANDOM_LCG_ADVANCE();
+    scratchPosition->vy = work->st.flattenScaleY * (s32)(RANDOM_LCG_DRAW() + ACTOR_521100_FLATTEN_COLOR_RANDOM_BIAS) / ACTOR_521100_FLATTEN_COLOR_RANDOM_SCALE;
+    RANDOM_LCG_ADVANCE();
+    scratchPosition->vz = work->st.flattenScaleY * (s32)(RANDOM_LCG_DRAW() + ACTOR_521100_FLATTEN_COLOR_RANDOM_BIAS) / ACTOR_521100_FLATTEN_COLOR_RANDOM_SCALE;
     ScaleMatrixL(&work->color, scratchPosition);
     SCRATCH_STACK_RELEASE_BLOCK(VECTOR);
 }
@@ -526,8 +526,8 @@ static void _actor521100AnmcWomanEffectTask(Task* task)
         if (task->spawnArg1.value == ACTOR_521100_ANMC_WOMAN_EFFECT_AT_WOMAN) {
             _gActor521100AnmcWomanSplatterCoord             = womanTask->extra.tmd->coords[1];
             _gActor521100AnmcWomanSplatterCoord.coord.t[2] += 0x32;
-            gRandomLcgState                                 = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            _gActor521100AnmcWomanSplatterCoord.coord.t[1] -= 0xFA + (s32)((gRandomLcgState >> 16) - ACTOR_521100_ANMC_WOMAN_EFFECT_RANDOM_CENTER) * 0xC8 / ACTOR_521100_ANMC_WOMAN_EFFECT_RANDOM_SCALE;
+            RANDOM_LCG_ADVANCE();
+            _gActor521100AnmcWomanSplatterCoord.coord.t[1] -= 0xFA + (s32)(RANDOM_LCG_DRAW() - ACTOR_521100_ANMC_WOMAN_EFFECT_RANDOM_CENTER) * 0xC8 / ACTOR_521100_ANMC_WOMAN_EFFECT_RANDOM_SCALE;
             _gActor521100AnmcWomanSplatterCoord.coord.t[0] -= 0x32;
         } else {
             _gActor521100AnmcWomanSplatterCoord             = gameGetTaskSlot(GAME_TASK_SLOT_PLAYER)->extra.tmd->coords[0];

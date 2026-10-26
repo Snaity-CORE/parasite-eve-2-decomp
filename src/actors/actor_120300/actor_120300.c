@@ -50,13 +50,12 @@
 #include "../../shared/screen/screen_fade.h"
 #include "../../shared/actor/actor_messages.h"
 
+#include "assets/engine/animation/player_schema.h"
+
 static void _screenFadeOutTask(Task* task);
 
 /// Gary Douglas's texture resource in the garage area-placement table.
 enum { ACTOR_120300_TEXTURE_RESOURCE_ENTRY_ID = 0x6A };
-
-/// Execution priority shared by all five task recipes.
-enum { ACTOR_120300_TASK_PRIORITY = 192 };
 
 /// Fade-in duration for the current area's music, in gameplay ticks.
 enum { ACTOR_120300_AREA_MUSIC_FADE_TICKS = 10 };
@@ -547,11 +546,11 @@ static EvsCommand _gActor120300RemarkScript[13] = {
 };
 
 TaskDesc gActor120300TaskDescriptors[ACTOR_120300_TASK_COUNT] = {
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_120300_TASK_PRIORITY } }, _actor120300BodyTask, { .model = &_gGaryBody } },
-    { { { TASK_BODY_NONE, ACTOR_120300_TASK_PRIORITY } }, _actor120300JunkYardRefusalTask, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_120300_TASK_PRIORITY } }, _actor120300HeadTask, { .model = &_gGaryHeadHat } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_120300_TASK_PRIORITY } }, _actor120300RifleTask, { .model = &_gGaryShotgun } },
-    { { { TASK_BODY_NONE, ACTOR_120300_TASK_PRIORITY } }, _screenFadeOutTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor120300BodyTask, { .model = &_gGaryBody } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor120300JunkYardRefusalTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor120300HeadTask, { .model = &_gGaryHeadHat } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor120300RifleTask, { .model = &_gGaryShotgun } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeOutTask, { .value = 0 } },
 };
 
 /// Borrowed live Gary body task used by this package's event-script callbacks.
@@ -851,22 +850,19 @@ static void _actor120300RunPlayerRequest(Task* task)
 /// Arguments are evaluated once in request-fill/dispatch order. Every expansion
 /// owns a separate stack request, borrowed synchronously by dispatch. Invoke
 /// within braces; captures the current saved character and equipped weapon.
-#define ACTOR_120300_PLAY_PLAYER_WEAPON_ANIMATION(target, blendChoice, frames)                                                                                                                                                                  \
-    {                                                                                                                                                                                                                                           \
-        AnimationPlayRequest request;                                                                                                                                                                                                           \
-        s32                  weaponId;                                                                                                                                                                                                          \
-        enum { ACTOR_120300_WEAPON_PRIMARY_CHARACTER   = 1,                                                                                                                                                                                     \
-               ACTOR_120300_WEAPON_PRIMARY_BANK_BASE   = 1,                                                                                                                                                                                     \
-               ACTOR_120300_WEAPON_ALTERNATE_BANK_BASE = 34,                                                                                                                                                                                    \
-               ACTOR_120300_WEAPON_ANIMATION           = 1 };                                                                                                                                                                                             \
-                                                                                                                                                                                                                                                \
-        weaponId                     = gPlayerStatus.weapon;                                                                                                                                                                                    \
-        request.source.index         = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_120300_WEAPON_PRIMARY_CHARACTER) ? weaponId + ACTOR_120300_WEAPON_PRIMARY_BANK_BASE : weaponId + ACTOR_120300_WEAPON_ALTERNATE_BANK_BASE; \
-        request.animationId          = ACTOR_120300_WEAPON_ANIMATION;                                                                                                                                                                           \
-        request.blend                = (blendChoice);                                                                                                                                                                                           \
-        request.blendFrames          = (frames);                                                                                                                                                                                                \
-        request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;                                                                                                                                                                       \
-        TASK_MESSAGE_DISPATCH_POINTER((target), ANIMATION_MESSAGE_PLAY, &request, 0);                                                                                                                                                           \
+#define ACTOR_120300_PLAY_PLAYER_WEAPON_ANIMATION(target, blendChoice, frames)        \
+    {                                                                                 \
+        AnimationPlayRequest request;                                                 \
+        s32                  weaponId;                                                \
+        enum { ACTOR_120300_WEAPON_ANIMATION = 1 };                                   \
+                                                                                      \
+        weaponId                     = gPlayerStatus.weapon;                          \
+        request.source.index         = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);      \
+        request.animationId          = PLAYER_ANIMATION_IDLE;                         \
+        request.blend                = (blendChoice);                                 \
+        request.blendFrames          = (frames);                                      \
+        request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;             \
+        TASK_MESSAGE_DISPATCH_POINTER((target), ANIMATION_MESSAGE_PLAY, &request, 0); \
     }
 
     enum {
@@ -916,7 +912,7 @@ static void _actor120300RunPlayerRequest(Task* task)
             _actor120300BlendPlayerAnimation(task, 2);
             break;
         case 5:
-            taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, 1, 0);
+            taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO, 0);
             dispatchWork = task->work;
             TASK_MESSAGE_DISPATCH_POINTER(dispatchWork->playerTask, GAME_ACTOR_MESSAGE_PLACE, &_gActor120300ScenePlacements[ACTOR_120300_PLACEMENT_PLAYER_CLIP3], 0);
             _actor120300BlendPlayerAnimation(task, 3);
@@ -1211,7 +1207,6 @@ static void _actor120300PrepareRoomPlay(s32 preservePlayer)
         ACTOR_120300_PRIMARY_CHARACTER          = 1,
         ACTOR_120300_PRIMARY_WEAPON_BANK_BASE   = 1,
         ACTOR_120300_ALTERNATE_WEAPON_BANK_BASE = 0x22,
-        ACTOR_120300_WEAPON_ANIMATION           = 1
     };
     Task*                task;
     _Actor120300Work*    work;
@@ -1232,9 +1227,9 @@ static void _actor120300PrepareRoomPlay(s32 preservePlayer)
     TASK_MESSAGE_DISPATCH_POINTER(work->rifleTask, ACTOR_MESSAGE_PLACE, &_gActor120300ScenePlacements[ACTOR_120300_PLACEMENT_RIFLE_ROOM_PLAY], 0);
     if (preservePlayer == 0) {
         weaponId                                    = gPlayerStatus.weapon;
-        weaponBank                                  = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_120300_PRIMARY_CHARACTER) ? weaponId + ACTOR_120300_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_120300_ALTERNATE_WEAPON_BANK_BASE;
+        weaponBank                                  = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
         playerAnimationRequest.source.index         = weaponBank;
-        playerAnimationRequest.animationId          = ACTOR_120300_WEAPON_ANIMATION;
+        playerAnimationRequest.animationId          = PLAYER_ANIMATION_IDLE;
         playerAnimationRequest.blend                = ANIMATION_BLEND_RESET;
         playerAnimationRequest.blendFrames          = 0;
         playerAnimationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_ENABLE;
@@ -1461,7 +1456,7 @@ static void _actor120300BodyTask(Task* task)
                     TASK_MESSAGE_DISPATCH_POINTER(gameGetTaskSlot(GAME_TASK_SLOT_PLAYER), ANIMATION_MESSAGE_PLAY, &scratch.playerAnimationRequest, 0);
                     gameFlagSetNibble(GAME_FLAG_02C, 1);
                     gameFlagSetNibble(GAME_FLAG_GARAGE_GARY_SCENE_SEEN, 1);
-                    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, 0xB);
+                    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, 0xB);
                     evsStartScriptWithSkip(_gActor120300OpeningScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gActor120300OpeningSkipScript);
                     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = 2;
                     task->state                                        += 1;
@@ -1541,13 +1536,13 @@ static void _actor120300SetModelsVisible(s32 visible)
     _Actor120300Work* work = _gActor120300BodyTask->work;
 
     if (visible == 0) {
-        taskMessageDispatch(_gActor120300BodyTask, ACTOR_MESSAGE_SET_MODEL_DRAW, 0, 0);
-        taskMessageDispatch(work->headTask, ACTOR_MESSAGE_SET_MODEL_DRAW, 0, 0);
-        taskMessageDispatch(work->rifleTask, ACTOR_MESSAGE_SET_MODEL_DRAW, 0, 0);
+        taskMessageDispatch(_gActor120300BodyTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_HIDE, 0);
+        taskMessageDispatch(work->headTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_HIDE, 0);
+        taskMessageDispatch(work->rifleTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_HIDE, 0);
     } else if (visible == 1) {
-        taskMessageDispatch(_gActor120300BodyTask, ACTOR_MESSAGE_SET_MODEL_DRAW, 1, 0);
-        taskMessageDispatch(work->headTask, ACTOR_MESSAGE_SET_MODEL_DRAW, 1, 0);
-        taskMessageDispatch(work->rifleTask, ACTOR_MESSAGE_SET_MODEL_DRAW, 1, 0);
+        taskMessageDispatch(_gActor120300BodyTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
+        taskMessageDispatch(work->headTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
+        taskMessageDispatch(work->rifleTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
     }
 }
 

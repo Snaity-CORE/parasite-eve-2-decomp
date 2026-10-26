@@ -321,12 +321,12 @@ static inline void _effectProjectGroundShadow(EffectQuadScratch* quadScratch)
 /// Changes the GTE rotation and working registers; no translation is applied.
 static inline void _effectChooseThrownModelDirection(EffectWork* work)
 {
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vx   = ((gRandomLcgState >> 16) & 0x3F) + 0x60;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x7F);
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vz   = (gRandomLcgState >> 16) & 0x7F;
+    RANDOM_LCG_ADVANCE();
+    work->move.vx = (RANDOM_LCG_DRAW() & 0x3F) + 0x60;
+    RANDOM_LCG_ADVANCE();
+    work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x7F);
+    RANDOM_LCG_ADVANCE();
+    work->move.vz = RANDOM_LCG_DRAW() & 0x7F;
     gte_SetRotMatrix(&work->parent->coord);
     gte_ldv0(&work->move);
     gte_rtv0();
@@ -485,6 +485,8 @@ const EffectUnitQuadCorner gEffectUnitQuadCorners[4] __attribute__((section(".da
     { -1, -1 },
     { 1, -1 },
 };
+/// The twelve explosion frames of the resident effect atlas (rooms/akropolis/west_elevator_hall/effect_atlas, cells
+/// `explosion_*`), each with its own palette on row 265 (its `explosion_*` variants).
 // Preserve the initialized-data placement of this shared read-only table.
 const EffectSpriteTextureFrame gEffectSpriteAtlasFrames[12] __attribute__((section(".data"))) = {
     { 0, 0, 0, 0, 112, 265 },
@@ -573,7 +575,7 @@ void effectControlTask2B(Task* task)
                 switch (task->spawnArg1.value) {
                     case EFFECT_WEAPON_FLASH_PROFILE_P08:
                     default:
-                        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                         gRandomLcgState = randomState;
                         effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_WEAPON_FLASH_SMALL_SIZE, 0);
                         weaponProfile = task->spawnArg1.value;
@@ -584,7 +586,7 @@ void effectControlTask2B(Task* task)
                         break;
                     case EFFECT_WEAPON_FLASH_PROFILE_M93R:
                     case EFFECT_WEAPON_FLASH_PROFILE_M950:
-                        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                         gRandomLcgState = randomState;
                         effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_WEAPON_FLASH_MEDIUM_SIZE, 0);
                         weaponProfile = task->spawnArg1.value;
@@ -597,7 +599,7 @@ void effectControlTask2B(Task* task)
                     case EFFECT_WEAPON_FLASH_PROFILE_MP5A5_UPGRADE_1:
                     case EFFECT_WEAPON_FLASH_PROFILE_MP5A5_UPGRADE_2:
                         task->state     = EFFECT_WEAPON_FLASH_STATE_WAIT;
-                        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                         gRandomLcgState = randomState;
                         effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_WEAPON_FLASH_MEDIUM_SIZE, 0);
                         weaponProfile = task->spawnArg1.value;
@@ -615,7 +617,7 @@ void effectControlTask2B(Task* task)
                     case EFFECT_WEAPON_FLASH_PROFILE_NPC_PISTOL:
                         work->index     = 1;
                         task->state     = EFFECT_DRAW_TASK_ACTIVE;
-                        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                         gRandomLcgState = randomState;
                         effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_WEAPON_FLASH_MEDIUM_SIZE, 0);
                         weaponProfile = task->spawnArg1.value;
@@ -629,7 +631,7 @@ void effectControlTask2B(Task* task)
                 }
                 break;
             case EFFECT_DRAW_TASK_ACTIVE:
-                randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                 gRandomLcgState = randomState;
                 effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_WEAPON_FLASH_SMALL_SIZE, 0);
                 task->state++;
@@ -686,24 +688,24 @@ void effectControlTask6A(Task* task)
                 muzzleCoord->coord.t[2]                                 = _gEffectWeaponMuzzleOffsets[task->spawnArg1.value].vz;
                 muzzleCoord->composeStamp                               = GRAPHICS_COORD_DIRTY;
                 actorRenderComposeCoord(muzzleCoord);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->scale     = (gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
-                work->move.vx   = 0;
-                work->move.vy   = 0;
-                work->move.vz   = -(work->scale >> 1);
+                RANDOM_LCG_ADVANCE();
+                work->scale   = RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
+                work->move.vx = 0;
+                work->move.vy = 0;
+                work->move.vz = -(work->scale >> 1);
                 effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, work->scale + EFFECT_ACTOR_FLASH_SIZE, &work->move);
                 task->state                    = EFFECT_DRAW_TASK_ACTIVE;
                 gRoomEffectState->burstRequest = true;
                 break;
             case EFFECT_DRAW_TASK_ACTIVE:
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_ACTOR_FLASH_SHORT_SPARK_ARG,
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_ACTOR_FLASH_SHORT_SPARK_ARG,
                             &work->move);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_ACTOR_FLASH_MEDIUM_SPARK_ARG,
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_ACTOR_FLASH_MEDIUM_SPARK_ARG,
                             &work->move);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_ACTOR_FLASH_LONG_SPARK_ARG,
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_ACTOR_FLASH_LONG_SPARK_ARG,
                             &work->move);
                 task->state++;
                 break;
@@ -762,14 +764,14 @@ void effectControlTask6B(Task* task)
             muzzleCoord->coord.t[2]                                 = _gEffectWeaponMuzzleOffsets[task->spawnArg1.value].vz;
             muzzleCoord->composeStamp                               = GRAPHICS_COORD_DIRTY;
             actorRenderComposeCoord(muzzleCoord);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = (gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
-            work->move.vx   = 0;
-            work->move.vy   = 0;
-            work->move.vz   = -(work->scale >> 1);
+            RANDOM_LCG_ADVANCE();
+            work->scale   = RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
+            work->move.vx = 0;
+            work->move.vy = 0;
+            work->move.vz = -(work->scale >> 1);
             effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, work->scale + EFFECT_RIFLE_FLASH_SIZE, &work->move);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
+            RANDOM_LCG_ADVANCE();
+            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
             weaponProfile = task->spawnArg1.value;
             task->state   = EFFECT_DRAW_TASK_ACTIVE;
             effectSpawn(EFFECT_RIFLE_MUZZLE_FLASH_MODEL, muzzleCoord, weaponProfile, &_gEffectWeaponEmissionOffsets[weaponProfile]);
@@ -858,8 +860,8 @@ void effectControlTaskA1(Task* task)
                 switch (task->spawnArg1.value) {
                     case EFFECT_WEAPON_FLASH_PROFILE_P08:
                     default:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->scale     = (gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
+                        RANDOM_LCG_ADVANCE();
+                        work->scale = RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
                         if (work->index == SHOTGUN_ROUND_BUCKSHOT) {
                             work->move.vx = 0;
                             work->move.vy = 0;
@@ -873,26 +875,26 @@ void effectControlTaskA1(Task* task)
                             work->move.vy = 0;
                             work->move.vz = -((s32)((u16)work->scale << 16) >> 17);
                             effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, work->scale + EFFECT_RIFLE_FLASH_SIZE, &work->move);
-                            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
+                            RANDOM_LCG_ADVANCE();
+                            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
                             if (work->index == SHOTGUN_ROUND_RIFLED_SLUG) {
-                                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                                RANDOM_LCG_ADVANCE();
                                 _effectDrawMuzzleFlash(muzzleCoord, (s16)(work->scale + EFFECT_SHOTGUN_FLASH_SLUG_SIZE),
-                                                       (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK);
+                                                       RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK);
                             }
                             work->scale = EFFECT_WEAPON_FLASH_LAST_AGE;
                         }
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_SHOTGUN_FLASH_SPARK_ARG, 0);
+                        RANDOM_LCG_ADVANCE();
+                        effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_SHOTGUN_FLASH_SPARK_ARG, 0);
                         for (sparkIndex = 0; sparkIndex < EFFECT_SHOTGUN_FLASH_THROWN_SPARK_COUNT; sparkIndex++) {
-                            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                            effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_SHOTGUN_FLASH_BUCKSHOT_SIZE, 0);
+                            RANDOM_LCG_ADVANCE();
+                            effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_SHOTGUN_FLASH_BUCKSHOT_SIZE, 0);
                         }
                         task->state = EFFECT_DRAW_TASK_ACTIVE;
                         break;
                     case EFFECT_SHOTGUN_FLASH_PROFILE_AS12:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->scale     = (gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
+                        RANDOM_LCG_ADVANCE();
+                        work->scale = RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
                         if (work->index == SHOTGUN_ROUND_BUCKSHOT) {
                             work->move.vx = 0;
                             work->move.vy = 0;
@@ -905,27 +907,27 @@ void effectControlTaskA1(Task* task)
                             work->move.vy = 0;
                             work->move.vz = -((s32)((u16)work->scale << 16) >> 17);
                             effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, work->scale + EFFECT_RIFLE_FLASH_SIZE, &work->move);
-                            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
+                            RANDOM_LCG_ADVANCE();
+                            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
                             if (work->index == SHOTGUN_ROUND_RIFLED_SLUG) {
-                                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                                RANDOM_LCG_ADVANCE();
                                 _effectDrawMuzzleFlash(muzzleCoord, (s16)(work->scale + EFFECT_SHOTGUN_FLASH_SLUG_SIZE),
-                                                       (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK);
+                                                       RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK);
                             }
                         }
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_SHOTGUN_FLASH_SPARK_ARG, 0);
+                        RANDOM_LCG_ADVANCE();
+                        effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_SHOTGUN_FLASH_SPARK_ARG, 0);
                         for (sparkIndex = 0; sparkIndex < EFFECT_SHOTGUN_FLASH_THROWN_SPARK_COUNT; sparkIndex++) {
-                            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                            effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_SHOTGUN_FLASH_BUCKSHOT_SIZE, 0);
+                            RANDOM_LCG_ADVANCE();
+                            effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_SHOTGUN_FLASH_BUCKSHOT_SIZE, 0);
                         }
                         effectSpawn(EFFECT_SHOTGUN_SHELL_CASING, muzzleCoord, task->spawnArg1.value, &_gEffectWeaponEmissionOffsets[task->spawnArg1.value]);
                         task->state = EFFECT_SHOTGUN_FLASH_STATE_EJECTED;
                         work->scale = EFFECT_WEAPON_FLASH_LAST_AGE;
                         break;
                     case EFFECT_SHOTGUN_FLASH_PROFILE_GUNBLADE:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->scale     = (gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
+                        RANDOM_LCG_ADVANCE();
+                        work->scale = RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
                         if (work->index == SHOTGUN_ROUND_BUCKSHOT) {
                             work->move.vx = 0;
                             work->move.vy = 0;
@@ -952,21 +954,21 @@ void effectControlTaskA1(Task* task)
                             gte_rtv0();
                             gte_stsv(flareOffset);
                             effectSpawn(EFFECT_MUZZLE_FLARE, muzzleCoord, work->scale + EFFECT_RIFLE_FLASH_SIZE, flareOffset);
-                            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
+                            RANDOM_LCG_ADVANCE();
+                            effectSpawn(EFFECT_MUZZLE_FLARE_ADDITIVE, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
                             if (work->index == SHOTGUN_ROUND_RIFLED_SLUG) {
-                                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                                RANDOM_LCG_ADVANCE();
                                 _effectDrawMuzzleFlash(muzzleCoord, (s16)(work->scale + EFFECT_SHOTGUN_FLASH_SLUG_SIZE),
-                                                       (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK);
+                                                       RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK);
                             }
                             gfxRotMatrixX(&muzzleCoord->coord, EFFECT_DRAW_QUARTER_TURN, GRAPHICS_ROTATION_COMPOSE);
                             muzzleCoord->composeStamp = GRAPHICS_COORD_DIRTY;
                         }
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_SHOTGUN_FLASH_SPARK_ARG, 0);
+                        RANDOM_LCG_ADVANCE();
+                        effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_SHOTGUN_FLASH_SPARK_ARG, 0);
                         for (sparkIndex = 0; sparkIndex < EFFECT_SHOTGUN_FLASH_THROWN_SPARK_COUNT; sparkIndex++) {
-                            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                            effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_SHOTGUN_FLASH_BUCKSHOT_SIZE, 0);
+                            RANDOM_LCG_ADVANCE();
+                            effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_SHOTGUN_FLASH_BUCKSHOT_SIZE, 0);
                         }
                         effectSpawn(EFFECT_SHOTGUN_SHELL_CASING, work->parent, task->spawnArg1.value, &_gEffectWeaponEmissionOffsets[task->spawnArg1.value]);
                         task->state = EFFECT_SHOTGUN_FLASH_STATE_EJECTED;
@@ -1051,18 +1053,18 @@ void effectControlTask6C(Task* task)
                 muzzleCoord->coord.t[2]                                 = _gEffectGrenadeMuzzleOffsets[task->spawnArg1.value].vz;
                 muzzleCoord->composeStamp                               = GRAPHICS_COORD_DIRTY;
                 actorRenderComposeCoord(muzzleCoord);
-                randomState      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                randomState      = RANDOM_LCG_NEXT(gRandomLcgState);
                 flareSizeJitter  = ((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK;
-                angleRandomState = randomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                angleRandomState = RANDOM_LCG_NEXT(randomState);
                 gRandomLcgState  = randomState;
                 work->scale      = flareSizeJitter;
                 gRandomLcgState  = angleRandomState;
                 _effectDrawMuzzleFlash(muzzleCoord, flareSizeJitter | EFFECT_GRENADE_FLASH_SIZE, ((u32)angleRandomState >> 16) & EFFECT_DRAW_ANGLE_MASK);
                 for (sparkIndex = 0; sparkIndex < EFFECT_GRENADE_FLASH_SPARK_PAIR_COUNT; sparkIndex++) {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_GRENADE_FLASH_INITIAL_SPARK_ARG, 0);
+                    RANDOM_LCG_ADVANCE();
+                    effectSpawn(EFFECT_MUZZLE_SPARK_THROWN, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_RIFLE_FLASH_SIZE, 0);
+                    RANDOM_LCG_ADVANCE();
+                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) + EFFECT_GRENADE_FLASH_INITIAL_SPARK_ARG, 0);
                 }
                 switch (task->spawnArg1.value) {
                     case EFFECT_WEAPON_FLASH_PROFILE_P08:
@@ -1087,14 +1089,14 @@ void effectControlTask6C(Task* task)
                 break;
             case EFFECT_DRAW_TASK_ACTIVE:
                 if (work->age == work->scale) {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & 0xFF) + EFFECT_GRENADE_FLASH_SHORT_SPARK_ARG,
+                    RANDOM_LCG_ADVANCE();
+                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & 0xFF) + EFFECT_GRENADE_FLASH_SHORT_SPARK_ARG,
                                 &_gEffectGrenadeEmissionOffsets[task->spawnArg1.value]);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & 0xFF) + EFFECT_GRENADE_FLASH_MEDIUM_SPARK_ARG,
+                    RANDOM_LCG_ADVANCE();
+                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & 0xFF) + EFFECT_GRENADE_FLASH_MEDIUM_SPARK_ARG,
                                 &_gEffectGrenadeEmissionOffsets[task->spawnArg1.value]);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, ((gRandomLcgState >> 16) & 0xFF) + EFFECT_GRENADE_FLASH_LONG_SPARK_ARG,
+                    RANDOM_LCG_ADVANCE();
+                    effectSpawn(EFFECT_MUZZLE_SPARK, muzzleCoord, (RANDOM_LCG_DRAW() & 0xFF) + EFFECT_GRENADE_FLASH_LONG_SPARK_ARG,
                                 &_gEffectGrenadeEmissionOffsets[task->spawnArg1.value]);
                     effectSpawn(EFFECT_091, muzzleCoord, task->spawnArg1.value + work->angle,
                                 &_gEffectGrenadeEmissionOffsets[task->spawnArg1.value]);
@@ -1128,7 +1130,7 @@ void effectSpriteTask34(Task* task)
     if (effectControl < ROOM_EFFECT_CONTROL_HIDDEN) {
         actorRenderComposeCoord(coord);
         if (work->age == 0) {
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             work->scale     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
             gRandomLcgState = randomState;
             work->angle     = task->spawnArg1.halves.low;
@@ -1173,7 +1175,7 @@ void effectSpriteTask34(Task* task)
             quad->x2               = block->screenX - (u16)block->extent.corner.x;
             quad->y1               = block->screenY - (u16)block->extent.corner.y;
             quad->y2               = block->screenY + (u16)block->extent.corner.y;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -1205,7 +1207,7 @@ void effectSpriteTask72(Task* task)
     if (effectControl < ROOM_EFFECT_CONTROL_HIDDEN) {
         actorRenderComposeCoord(coord);
         if (task->state == EFFECT_DRAW_TASK_NEW) {
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             work->scale     = (((u32)randomState >> 16) & 0x800) - 0x200;
             gRandomLcgState = randomState;
             work->angle     = task->spawnArg1.halves.low;
@@ -1251,7 +1253,7 @@ void effectSpriteTask72(Task* task)
             quad->x2               = block->screenX - (u16)block->extent.corner.x;
             quad->y1               = block->screenY - (u16)block->extent.corner.y;
             quad->y2               = block->screenY + (u16)block->extent.corner.y;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -1283,15 +1285,15 @@ void effectLineTaskA3(Task* task)
     if (effectControl < ROOM_EFFECT_CONTROL_HIDDEN) {
         actorRenderComposeCoord(coord);
         if (task->state == EFFECT_DRAW_TASK_NEW) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = (gRandomLcgState >> 16) % 3 + 1;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vy   = ((gRandomLcgState >> 16) & 0x1FF) + 0x200;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-            task->state     = EFFECT_DRAW_TASK_ACTIVE;
+            RANDOM_LCG_ADVANCE();
+            work->scale = RANDOM_LCG_DRAW() % 3 + 1;
+            RANDOM_LCG_ADVANCE();
+            work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+            RANDOM_LCG_ADVANCE();
+            work->move.vy = (RANDOM_LCG_DRAW() & 0x1FF) + 0x200;
+            RANDOM_LCG_ADVANCE();
+            work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+            task->state   = EFFECT_DRAW_TASK_ACTIVE;
         }
         block                  = SCRATCH_STACK_RESERVE_BLOCK(EffectLineScratch);
         block->endpoints[0].vx = coord->workm.t[0];
@@ -1341,7 +1343,7 @@ void effectLineTaskA3(Task* task)
                 line->y0   = block->screenEndpoints[0].vy;
                 line->x1   = block->screenEndpoints[1].vx;
                 line->y1   = block->screenEndpoints[1].vy;
-                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                         line);
                 gpuSetPrimitiveBlendMode(line, GPU_BLEND_ADD, block->depth);
             }
@@ -1404,7 +1406,7 @@ static void _effectDrawMuzzleFlash(const GfxCoord* coord, s32 size, s32 angle)
         quad->x2               = block->screenX - (u16)block->extent.corner.x;
         quad->y1               = block->screenY - (u16)block->extent.corner.y;
         quad->y2               = block->screenY + (u16)block->extent.corner.y;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -1431,7 +1433,7 @@ void effectSpriteTask35(Task* task)
         }
     } else {
         if (task->state == EFFECT_DRAW_TASK_NEW) {
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             work->scale     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
             gRandomLcgState = randomState;
             work->angle     = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
@@ -1442,12 +1444,12 @@ void effectSpriteTask35(Task* task)
             }
             work->period = framePeriod;
             if (task->spawnArg1.value & EFFECT_MUZZLE_SPARK_RANDOM_DRIFT) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
             }
             task->state = EFFECT_DRAW_TASK_ACTIVE;
         }
@@ -1495,7 +1497,7 @@ void effectSpriteTask35(Task* task)
             quad->x2               = block->screenX - (u16)block->extent.corner.x;
             quad->y1               = block->screenY - (u16)block->extent.corner.y;
             quad->y2               = block->screenY + (u16)block->extent.corner.y;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -1535,17 +1537,17 @@ void effectSpriteTask6F(Task* task)
     } else {
         actorRenderComposeCoord(coord);
         if (task->state == EFFECT_DRAW_TASK_NEW) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
-            work->angle     = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->period    = ((gRandomLcgState >> 16) & 1) + 1;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vy   = (gRandomLcgState >> 14) & 0x7C;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vz   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
+            RANDOM_LCG_ADVANCE();
+            work->scale = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
+            work->angle = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->period = (RANDOM_LCG_DRAW() & 1) + 1;
+            RANDOM_LCG_ADVANCE();
+            work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+            RANDOM_LCG_ADVANCE();
+            work->move.vy = (gRandomLcgState >> 14) & 0x7C;
+            RANDOM_LCG_ADVANCE();
+            work->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
             // Carry the random launch displacement into the effect's view-relative frame.
             gte_SetRotMatrix(&work->parent->coord);
             gte_ldv0(&work->move);
@@ -1595,7 +1597,7 @@ void effectSpriteTask6F(Task* task)
             quad->x2               = block->screenX - (u16)block->extent.corner.x;
             quad->y1               = block->screenY - (u16)block->extent.corner.y;
             quad->y2               = block->screenY + (u16)block->extent.corner.y;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -1706,15 +1708,15 @@ void effectThrownModelTask(Task* task)
                 _effectChooseThrownModelDirection(work);
                 break;
             case EFFECT_THROWN_MODEL_PROFILE_MONGOOSE:
-                work->angle     = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = ((gRandomLcgState >> 16) & 0x3F) + 0x40;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->scale     = ((gRandomLcgState >> 16) & 0x3F) + 0x40;
+                work->angle = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = (RANDOM_LCG_DRAW() & 0x3F) + 0x40;
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->scale = (RANDOM_LCG_DRAW() & 0x3F) + 0x40;
                 gte_SetRotMatrix(&work->parent->coord);
                 gte_ldv0(&work->move);
                 gte_rtv0();
@@ -1733,14 +1735,14 @@ void effectThrownModelTask(Task* task)
                 _effectChooseThrownModelDirection(work);
                 break;
             case EFFECT_THROWN_MODEL_PROFILE_M249:
-                work->scale     = 0x114;
-                work->angle     = EFFECT_THROWN_MODEL_MIN_BLINK_AGE;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = ((gRandomLcgState >> 16) & 0x3F) + 0x40;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = 0xFF80 - ((gRandomLcgState >> 16) & 0x3F);
+                work->scale = 0x114;
+                work->angle = EFFECT_THROWN_MODEL_MIN_BLINK_AGE;
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = (RANDOM_LCG_DRAW() & 0x3F) + 0x40;
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = 0xFF80 - (RANDOM_LCG_DRAW() & 0x3F);
                 gte_SetRotMatrix(&work->parent->coord);
                 gte_ldv0(&work->move);
                 gte_rtv0();
@@ -1754,14 +1756,14 @@ void effectThrownModelTask(Task* task)
                 _effectChooseThrownModelDirection(work);
                 break;
             case EFFECT_THROWN_MODEL_PROFILE_GUNBLADE:
-                work->scale     = 0xBF;
-                work->angle     = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0xFFA0 - ((gRandomLcgState >> 16) & 0x3F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x7F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = -((gRandomLcgState >> 16) & 0x7F);
+                work->scale = 0xBF;
+                work->angle = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0xFFA0 - (RANDOM_LCG_DRAW() & 0x3F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x7F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = -(RANDOM_LCG_DRAW() & 0x7F);
                 memset(&launchVector, 0, sizeof(launchVector));
                 launchVector.vx     = work->move.vx;
                 launchVector.vy     = work->move.vy;
@@ -1773,42 +1775,42 @@ void effectThrownModelTask(Task* task)
                 work->move.vz = rotatedLaunchVector.vz;
                 break;
             case EFFECT_THROWN_MODEL_PROFILE_GRENADE_PISTOL:
-                work->scale     = 0x60;
-                work->angle     = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = (((gRandomLcgState >> 16) & 0x1F) + 0x10);
+                work->scale = 0x60;
+                work->angle = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = ((RANDOM_LCG_DRAW() & 0x1F) + 0x10);
                 gte_SetRotMatrix(&work->parent->coord);
                 gte_ldv0(&work->move);
                 gte_rtv0();
                 gte_stsv(&work->move);
                 break;
             case EFFECT_THROWN_MODEL_PROFILE_MM1:
-                work->scale     = 0x80;
-                work->angle     = EFFECT_THROWN_MODEL_MEDIUM_BLINK_AGE;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = 0xFFC0 - ((gRandomLcgState >> 16) & 0x3F);
+                work->scale = 0x80;
+                work->angle = EFFECT_THROWN_MODEL_MEDIUM_BLINK_AGE;
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = 0xFFC0 - (RANDOM_LCG_DRAW() & 0x3F);
                 gte_SetRotMatrix(&work->parent->coord);
                 gte_ldv0(&work->move);
                 gte_rtv0();
                 gte_stsv(&work->move);
                 break;
             case EFFECT_THROWN_MODEL_PROFILE_M4A1_GRENADE_EJECTION:
-                work->scale     = 0x60;
-                work->angle     = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = 0xFFF0 - ((gRandomLcgState >> 16) & 0x1F);
+                work->scale = 0x60;
+                work->angle = EFFECT_THROWN_MODEL_LONG_BLINK_AGE;
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = 0xFFF0 - (RANDOM_LCG_DRAW() & 0x1F);
                 gte_SetRotMatrix(&work->parent->coord);
                 gte_ldv0(&work->move);
                 gte_rtv0();
@@ -1816,12 +1818,12 @@ void effectThrownModelTask(Task* task)
                 break;
         }
         VectorNormalSS(&work->move, &work->move);
-        gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->pos.vx        = 0x100 - ((gRandomLcgState >> 16) & 0x1FF);
-        gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->pos.vy        = 0x100 - ((gRandomLcgState >> 16) & 0x1FF);
-        gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->pos.vz        = 0x100 - ((gRandomLcgState >> 16) & 0x1FF);
+        RANDOM_LCG_ADVANCE();
+        work->pos.vx = 0x100 - (RANDOM_LCG_DRAW() & 0x1FF);
+        RANDOM_LCG_ADVANCE();
+        work->pos.vy = 0x100 - (RANDOM_LCG_DRAW() & 0x1FF);
+        RANDOM_LCG_ADVANCE();
+        work->pos.vz        = 0x100 - (RANDOM_LCG_DRAW() & 0x1FF);
         coord->composeStamp = GRAPHICS_COORD_DIRTY;
         task->state         = EFFECT_DRAW_TASK_ACTIVE;
         gfxRotMatrixX(&coord->coord, EFFECT_DRAW_FULL_TURN / 2, GRAPHICS_ROTATION_COMPOSE);
@@ -1904,13 +1906,13 @@ void effectControlTask6E(Task* task)
         EFFECT_ATTACH_RELOAD_EMITTER(ejectionCoord, work, task->spawnArg1.value);
         actorRenderComposeCoord(ejectionCoord);
         task->state     = EFFECT_DRAW_TASK_ACTIVE;
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         effectSpawn(EFFECT_MUZZLE_SPARK, ejectionCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_RELOAD_SHORT_SPARK_ARG, 0);
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         effectSpawn(EFFECT_MUZZLE_SPARK, ejectionCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_RELOAD_MEDIUM_SPARK_ARG, 0);
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         effectSpawn(EFFECT_MUZZLE_SPARK, ejectionCoord, (((u32)randomState >> 16) & EFFECT_WEAPON_FLASH_SIZE_JITTER_MASK) | EFFECT_RELOAD_LONG_SPARK_ARG, 0);
     }
@@ -1964,29 +1966,29 @@ void effectTileTaskA4(Task* task)
     if (task->state == EFFECT_DRAW_TASK_NEW) {
         if (task->spawnArg1.value != 0) {
             // This mode retains the zeroed size and tint shift supplied by spawn.
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vx   = 0x20 - ((gRandomLcgState >> 16) & 0x3F);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vy   = 0x20 - ((gRandomLcgState >> 16) & 0x3F);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vz   = 0x20 - ((gRandomLcgState >> 16) & 0x3F);
+            RANDOM_LCG_ADVANCE();
+            work->move.vx = 0x20 - (RANDOM_LCG_DRAW() & 0x3F);
+            RANDOM_LCG_ADVANCE();
+            work->move.vy = 0x20 - (RANDOM_LCG_DRAW() & 0x3F);
+            RANDOM_LCG_ADVANCE();
+            work->move.vz = 0x20 - (RANDOM_LCG_DRAW() & 0x3F);
         } else {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vx   = 0x40 - ((gRandomLcgState >> 16) & 0x7F);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vy   = ((gRandomLcgState >> 16) & 0xFF) + 0x100;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vz   = 0x40 - ((gRandomLcgState >> 16) & 0x7F);
+            RANDOM_LCG_ADVANCE();
+            work->move.vx = 0x40 - (RANDOM_LCG_DRAW() & 0x7F);
+            RANDOM_LCG_ADVANCE();
+            work->move.vy = (RANDOM_LCG_DRAW() & 0xFF) + 0x100;
+            RANDOM_LCG_ADVANCE();
+            work->move.vz = 0x40 - (RANDOM_LCG_DRAW() & 0x7F);
 
             gte_SetRotMatrix(&work->parent->coord);
             gte_ldv0(&work->move);
             gte_rtv0();
             gte_stsv(&work->move);
 
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = (gRandomLcgState >> 16) % 3 + 1;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->angle     = ((gRandomLcgState >> 16) & 1) + 1;
+            RANDOM_LCG_ADVANCE();
+            work->scale = RANDOM_LCG_DRAW() % 3 + 1;
+            RANDOM_LCG_ADVANCE();
+            work->angle = (RANDOM_LCG_DRAW() & 1) + 1;
         }
         task->state = EFFECT_DRAW_TASK_ACTIVE;
     }
@@ -2018,7 +2020,7 @@ void effectTileTaskA4(Task* task)
         tile->b0   = brightness >> 3;
         tile->x0   = scratch->screenPoint.vx;
         tile->y0   = scratch->screenPoint.vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 tile);
         gpuSetPrimitiveBlendMode(tile, GPU_BLEND_ADD, scratch->depth);
     }
@@ -2049,7 +2051,7 @@ void effectControlTask3B(Task* task)
     if (effectControl < ROOM_EFFECT_CONTROL_HIDDEN) {
         actorRenderComposeCoord(impactCoord);
         if (task->state == EFFECT_DRAW_TASK_NEW) {
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             work->scale     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
             gRandomLcgState = randomState;
             if (task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK) {
@@ -2130,7 +2132,7 @@ static void _effectDrawImpactSparkFlash(const GfxCoord* coord, u16 frame, s16 si
         quad->x2               = block->screenX - (u16)block->extent.corner.x;
         quad->y1               = block->screenY - (u16)block->extent.corner.y;
         quad->y2               = block->screenY + (u16)block->extent.corner.y;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -2179,7 +2181,7 @@ void effectSpriteTask5C(Task* task)
                 size = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
             }
             work->scale     = size;
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             work->angle     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
             gRandomLcgState = randomState;
             if (task->spawnArg1.value & EFFECT_EXPLOSION_PERIOD_MASK) {
@@ -2192,12 +2194,12 @@ void effectSpriteTask5C(Task* task)
             spawnOptions = task->spawnArg1.signedBytes[3];
             work->index  = spawnOptions & EFFECT_EXPLOSION_DIRECTION_MASK;
             if (work->index != 0) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
                 gte_lddp(work->scale << 3);
                 gte_ldsv(&work->move);
                 gte_gpf12();
@@ -2248,7 +2250,7 @@ void effectSpriteTask5C(Task* task)
             _effectSetExplosionTexture(quad, textureFrame);
             // Size the rotated billboard from its growing size and biased depth.
             EFFECT_SET_PUFF_CORNERS(quad, scratch, work, EFFECT_SPRITE_ATLAS_UV_SPAN);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -2325,9 +2327,9 @@ void effectSpriteTask70(Task* task)
             if (task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK) {
                 size = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
             }
-            work->scale     = size;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->angle     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
+            work->scale = size;
+            RANDOM_LCG_ADVANCE();
+            work->angle = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
             if (task->spawnArg1.value & EFFECT_SMOKE_PUFF_PERIOD_MASK) {
                 work->period = (task->spawnArg1.value >> EFFECT_SMOKE_PUFF_PERIOD_SHIFT) & EFFECT_SMOKE_PUFF_MAX_PERIOD;
             } else {
@@ -2344,19 +2346,19 @@ void effectSpriteTask70(Task* task)
             // Nonzero modes choose a displacement in the borrowed parent basis.
             if (directionMode != 0) {
                 if (directionMode == EFFECT_SMOKE_PUFF_PARENT_RISE) {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vx   = 8 - ((gRandomLcgState >> 16) & 0xF);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vy   = ((gRandomLcgState >> 16) & 0xF) * 3;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vz   = 8 - ((gRandomLcgState >> 16) & 0xF);
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vx = 8 - (RANDOM_LCG_DRAW() & 0xF);
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vy = (RANDOM_LCG_DRAW() & 0xF) * 3;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vz = 8 - (RANDOM_LCG_DRAW() & 0xF);
                 } else {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vy   = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vz   = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vy = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vz = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
                     gte_lddp((work->scale << 3));
                     gte_ldsv(&work->move);
                     gte_gpf12();
@@ -2373,26 +2375,26 @@ void effectSpriteTask70(Task* task)
             } else {
                 switch (work->step) {
                     case EFFECT_SMOKE_PUFF_VIEW_RISE:
-                        work->move.vx   = 0;
-                        work->move.vz   = 0;
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = -((gRandomLcgState >> 16) & 0xF) - 0x20;
+                        work->move.vx = 0;
+                        work->move.vz = 0;
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = -(RANDOM_LCG_DRAW() & 0xF) - 0x20;
                         break;
                     case EFFECT_SMOKE_PUFF_VIEW_DRIFT_RISE:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = -((gRandomLcgState >> 0x10) & 0x1F) - 0x10;
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = -((gRandomLcgState >> 0x10) & 0x1F) - 0x10;
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
                         break;
                     case EFFECT_SMOKE_PUFF_VIEW_DRIFT:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x10 - ((gRandomLcgState >> 0x10) & 0x1F);
                         gte_lddp((work->scale << 2));
                         gte_ldsv(&work->move);
                         gte_gpf12();
@@ -2444,7 +2446,7 @@ void effectSpriteTask70(Task* task)
             quad->u3   = ((work->age / work->period) << EFFECT_SMOKE_PUFF_CELL_SHIFT) + EFFECT_SMOKE_PUFF_UV_SPAN;
             quad->v3   = EFFECT_SMOKE_PUFF_TEXTURE_V + EFFECT_SMOKE_PUFF_UV_SPAN;
             EFFECT_SET_ROTATED_SPRITE_CORNERS(quad, scratch, work, EFFECT_SMOKE_PUFF_UV_SPAN);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -2502,7 +2504,7 @@ void effectSpriteTask76(Task* task)
                 size = EFFECT_IMPACT_FLASH_DEFAULT_SIZE;
             }
             work->scale     = size;
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = randomState;
             work->angle     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
             task->state     = EFFECT_DRAW_TASK_ACTIVE;
@@ -2519,7 +2521,7 @@ void effectSpriteTask76(Task* task)
         quad->u3    = _gEffectImpactFlashFrames[work->age].u + uvSpan;
         quad->v3    = _gEffectImpactFlashFrames[work->age].v + uvSpan;
         EFFECT_SET_ROTATED_SPRITE_CORNERS(quad, scratch, work, uvSpan);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -2576,7 +2578,7 @@ void effectSpriteTask7C(Task* task)
             size = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
         }
         work->scale     = size;
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         work->angle     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
         gRandomLcgState = randomState;
         if (task->spawnArg1.value & EFFECT_BOUNCING_SPARK_PERIOD_MASK) {
@@ -2584,15 +2586,15 @@ void effectSpriteTask7C(Task* task)
         } else {
             ticksPerFrame = 1;
         }
-        work->period    = ticksPerFrame;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->step      = 0x100 - ((gRandomLcgState >> 16) & 0x1F0);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vx   = 0x40 - ((gRandomLcgState >> 16) & 0x7F);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vy   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vz   = 0x40 - ((gRandomLcgState >> 16) & 0x7F);
+        work->period = ticksPerFrame;
+        RANDOM_LCG_ADVANCE();
+        work->step = 0x100 - (RANDOM_LCG_DRAW() & 0x1F0);
+        RANDOM_LCG_ADVANCE();
+        work->move.vx = 0x40 - (RANDOM_LCG_DRAW() & 0x7F);
+        RANDOM_LCG_ADVANCE();
+        work->move.vy = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+        RANDOM_LCG_ADVANCE();
+        work->move.vz = 0x40 - (RANDOM_LCG_DRAW() & 0x7F);
         work->index++;
     }
     actorRenderComposeCoord(coord);
@@ -2643,7 +2645,7 @@ void effectSpriteTask7C(Task* task)
         quad->u3   = ((work->age / work->period) % EFFECT_BOUNCING_SPARK_FRAME_COUNT) * EFFECT_BOUNCING_SPARK_CELL_SIZE + (EFFECT_BOUNCING_SPARK_CELL_SIZE - 1);
         quad->v3   = EFFECT_BOUNCING_SPARK_TEXTURE_V + EFFECT_BOUNCING_SPARK_CELL_SIZE - 1;
         EFFECT_SET_ROTATED_SPRITE_CORNERS(quad, block, work, EFFECT_BOUNCING_SPARK_UV_SPAN);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -2735,16 +2737,16 @@ void effectControlTask71(Task* task)
 /// `offset` must be a side-effect-free writable `SVECTOR*` expression; it is
 /// evaluated three times. No caller locals are captured. The expansion is a
 /// braced block; invoke only within a braced caller block.
-#define EFFECT_CHOOSE_GRENADE_BURST_OFFSET(offset)                                                                           \
-    {                                                                                                                        \
-        enum { EFFECT_GRENADE_BURST_OFFSET_CENTRE = 256,                                                                     \
-               EFFECT_GRENADE_BURST_OFFSET_MASK   = 511 };                                                                     \
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                    \
-        (offset)->vx    = EFFECT_GRENADE_BURST_OFFSET_CENTRE - ((gRandomLcgState >> 16) & EFFECT_GRENADE_BURST_OFFSET_MASK); \
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                    \
-        (offset)->vy    = EFFECT_GRENADE_BURST_OFFSET_CENTRE - ((gRandomLcgState >> 16) & EFFECT_GRENADE_BURST_OFFSET_MASK); \
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                    \
-        (offset)->vz    = EFFECT_GRENADE_BURST_OFFSET_CENTRE - ((gRandomLcgState >> 16) & EFFECT_GRENADE_BURST_OFFSET_MASK); \
+#define EFFECT_CHOOSE_GRENADE_BURST_OFFSET(offset)                                                                  \
+    {                                                                                                               \
+        enum { EFFECT_GRENADE_BURST_OFFSET_CENTRE = 256,                                                            \
+               EFFECT_GRENADE_BURST_OFFSET_MASK   = 511 };                                                            \
+        RANDOM_LCG_ADVANCE();                                                                                       \
+        (offset)->vx = EFFECT_GRENADE_BURST_OFFSET_CENTRE - (RANDOM_LCG_DRAW() & EFFECT_GRENADE_BURST_OFFSET_MASK); \
+        RANDOM_LCG_ADVANCE();                                                                                       \
+        (offset)->vy = EFFECT_GRENADE_BURST_OFFSET_CENTRE - (RANDOM_LCG_DRAW() & EFFECT_GRENADE_BURST_OFFSET_MASK); \
+        RANDOM_LCG_ADVANCE();                                                                                       \
+        (offset)->vz = EFFECT_GRENADE_BURST_OFFSET_CENTRE - (RANDOM_LCG_DRAW() & EFFECT_GRENADE_BURST_OFFSET_MASK); \
     }
 
     transientLight = &gWorldCoordTransientPointLights[EFFECT_GRENADE_BURST_LIGHT_SLOT];
@@ -2770,15 +2772,15 @@ void effectControlTask71(Task* task)
                     EFFECT_CHOOSE_GRENADE_BURST_OFFSET(&work->move);
                     spawnOffset = &work->move;
                     effectSpawn(EFFECT_EXPLOSION, blastCoord, EFFECT_GRENADE_BURST_EXPLOSION_SIZE, spawnOffset);
-                    randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    randomState = RANDOM_LCG_ADVANCE();
                     effectSpawn(EFFECT_BOUNCING_SPARK, blastCoord, (((u32)randomState >> 16) & EFFECT_GRENADE_BURST_SPARK_JITTER_MASK) | EFFECT_GRENADE_BURST_SPARK_SIZE, spawnOffset);
-                    randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    randomState = RANDOM_LCG_ADVANCE();
                     effectSpawn(EFFECT_BOUNCING_SPARK, blastCoord, (((u32)randomState >> 16) & EFFECT_GRENADE_BURST_SPARK_JITTER_MASK) | EFFECT_GRENADE_BURST_SPARK_SIZE, spawnOffset);
                     task->state++;
                     break;
                 case EFFECT_GRENADE_BURST_STATE_SMOKE:
                     EFFECT_CHOOSE_GRENADE_BURST_OFFSET(&work->move);
-                    randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    randomState = RANDOM_LCG_ADVANCE();
                     effectSpawn(EFFECT_SMOKE_PUFF, blastCoord, (((u32)randomState >> 16) & EFFECT_GRENADE_BURST_SMOKE_JITTER_MASK) | EFFECT_GRENADE_BURST_FAST_SMOKE_ARG,
                                 &work->move);
                     if (work->age >= EFFECT_GRENADE_BURST_FRAGMENTATION_SMOKE_LAST_AGE) {
@@ -2787,7 +2789,7 @@ void effectControlTask71(Task* task)
                     break;
                 case EFFECT_GRENADE_BURST_STATE_LATE_SMOKE:
                     EFFECT_CHOOSE_GRENADE_BURST_OFFSET(&work->move);
-                    randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    randomState = RANDOM_LCG_ADVANCE();
                     effectSpawn(EFFECT_SMOKE_PUFF, blastCoord, (((u32)randomState >> 16) & EFFECT_GRENADE_BURST_LATE_JITTER_MASK) | EFFECT_GRENADE_BURST_SLOW_SMOKE_ARG,
                                 &work->move);
                     if (work->age >= EFFECT_GRENADE_BURST_FRAGMENTATION_LATE_LAST_AGE) {
@@ -2813,7 +2815,7 @@ void effectControlTask71(Task* task)
                     particleIndex = 0;
                     do {
                         EFFECT_CHOOSE_GRENADE_BURST_OFFSET(&work->move);
-                        randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        randomState = RANDOM_LCG_ADVANCE();
                         effectSpawn(EFFECT_SMOKE_PUFF, blastCoord, (((u32)randomState >> 16) & EFFECT_GRENADE_BURST_SMOKE_JITTER_MASK) | EFFECT_GRENADE_BURST_PAIR_SMOKE_ARG,
                                     &work->move);
                         particleIndex += 1;
@@ -2826,7 +2828,7 @@ void effectControlTask71(Task* task)
                     particleIndex = 0;
                     do {
                         EFFECT_CHOOSE_GRENADE_BURST_OFFSET(&work->move);
-                        randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        randomState = RANDOM_LCG_ADVANCE();
                         effectSpawn(EFFECT_SMOKE_PUFF, blastCoord, (((u32)randomState >> 16) & EFFECT_GRENADE_BURST_LATE_JITTER_MASK) | EFFECT_GRENADE_BURST_FAST_SMOKE_ARG,
                                     &work->move);
                         particleIndex += 1;
@@ -2870,7 +2872,7 @@ void effectControlTask71(Task* task)
                     particleIndex = 0;
                     do {
                         EFFECT_CHOOSE_GRENADE_BURST_OFFSET(&work->move);
-                        randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        randomState = RANDOM_LCG_ADVANCE();
                         effectSpawn(EFFECT_SMOKE_PUFF, blastCoord, (((u32)randomState >> 16) & EFFECT_GRENADE_BURST_SMOKE_JITTER_MASK) | EFFECT_GRENADE_BURST_PAIR_SMOKE_ARG,
                                     &work->move);
                         particleIndex += 1;
@@ -2919,18 +2921,18 @@ void effectLineTask92(Task* task)
     work  = task->spawnArg2.pointer;
     actorRenderComposeCoord(coord);
     if (work->age == 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vy   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        fadeRate        = 2;
-        if (((gRandomLcgState >> 16) & 3) != 0) {
+        RANDOM_LCG_ADVANCE();
+        work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+        RANDOM_LCG_ADVANCE();
+        work->move.vy = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+        RANDOM_LCG_ADVANCE();
+        work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+        RANDOM_LCG_ADVANCE();
+        fadeRate = 2;
+        if ((RANDOM_LCG_DRAW() & 3) != 0) {
             fadeRate = 1;
         }
-        randomState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState = RANDOM_LCG_NEXT(gRandomLcgState);
         work->angle = (((u32)randomState >> 16) & 1) + 1;
         work->scale = fadeRate;
         gfxSetRotIdentity(&coord->coord);
@@ -2981,7 +2983,7 @@ void effectLineTask92(Task* task)
             line->y0 = block->screenEndpoints[0].vy;
             line->x1 = block->screenEndpoints[1].vx;
             line->y1 = block->screenEndpoints[1].vy;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     line);
             gpuSetPrimitiveBlendMode(line, GPU_BLEND_ADD, block->depth);
             // Cache an endpoint only when both projections succeeded.
@@ -3093,7 +3095,7 @@ static void _effectDrawCriticalHitBurst(const GfxCoord* coord, s16 radius, s16 b
             quad->g3         = 0;
             quad->b3         = 0;
             nextSegmentAngle = _effectSetCriticalHitRingCorners(quad, block, segmentAngle);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
             segmentAngle = nextSegmentAngle;
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, block->depth);
@@ -3104,9 +3106,9 @@ static void _effectDrawCriticalHitBurst(const GfxCoord* coord, s16 radius, s16 b
             block->extent.spike.halfWidth = 0x2400 / block->depth;
             segmentAngle                  = 0;
             do {
-                randomState = gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                tri                           = gGpuPrimCursor;
-                gGpuPrimCursor                = tri + 1;
+                randomState    = RANDOM_LCG_ADVANCE();
+                tri            = gGpuPrimCursor;
+                gGpuPrimCursor = tri + 1;
                 setPolyG3(tri);
                 tri->r0    = red;
                 tri->g0    = green;
@@ -3128,7 +3130,7 @@ static void _effectDrawCriticalHitBurst(const GfxCoord* coord, s16 radius, s16 b
                           ((block->extent.spike.halfWidth * rsin(spikeAngle + EFFECT_DRAW_QUARTER_TURN)) >> 12);
                 tri->y2 = block->screenY + ((block->extent.spike.radius * rcos(spikeAngle)) >> 12) +
                           ((block->extent.spike.halfWidth * rcos(spikeAngle + EFFECT_DRAW_QUARTER_TURN)) >> 12);
-                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                         tri);
                 segmentAngle += EFFECT_DRAW_QUARTER_TURN;
                 gpuSetPrimitiveBlendMode(tri, GPU_BLEND_ADD, block->depth);
@@ -3152,8 +3154,8 @@ void effectSpriteTask9E(Task* task)
     work  = task->spawnArg2.pointer;
     coord = task->extra.coordBody->coord;
     if (task->state == EFFECT_DRAW_TASK_NEW) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        gfxRotMatrixY(&coord->coord, (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK, GRAPHICS_ROTATION_REPLACE);
+        RANDOM_LCG_ADVANCE();
+        gfxRotMatrixY(&coord->coord, RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK, GRAPHICS_ROTATION_REPLACE);
         coord->composeStamp = GRAPHICS_COORD_DIRTY;
         if (task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK) {
             halfSize = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
@@ -3220,7 +3222,7 @@ void effectSpriteTask9E(Task* task)
         quad->y2    = quadScratch->screenCorners[2].vy;
         quad->x3    = quadScratch->screenCorners[3].vx;
         quad->y3    = quadScratch->screenCorners[3].vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectQuadScratch);
@@ -3258,21 +3260,21 @@ void effectSpriteTask54(Task* task)
 
     actorRenderComposeCoord(puffCoord);
     if (task->state == EFFECT_DRAW_TASK_NEW) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->scale     = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
-        work->angle     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
+        RANDOM_LCG_ADVANCE();
+        work->scale = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
+        work->angle = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
         if (task->spawnArg1.value & EFFECT_DUST_PUFF_PERIOD_MASK) {
             framePeriod = (task->spawnArg1.value >> EFFECT_DUST_PUFF_PERIOD_SHIFT) & EFFECT_DUST_PUFF_MAX_PERIOD;
         } else {
             framePeriod = 1;
         }
-        work->period    = framePeriod;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vy   = -((gRandomLcgState >> 16) & 0xF);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vz   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
+        work->period = framePeriod;
+        RANDOM_LCG_ADVANCE();
+        work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+        RANDOM_LCG_ADVANCE();
+        work->move.vy = -(RANDOM_LCG_DRAW() & 0xF);
+        RANDOM_LCG_ADVANCE();
+        work->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
         if (task->spawnArg1.value < 0) {
             if (work->angle & 1) {
                 effectSpawn(EFFECT_DUST_PUFF, puffCoord, ((work->scale * 3) >> 2) + EFFECT_DUST_PUFF_CHILD_PERIOD_ARG, NULL);
@@ -3311,7 +3313,7 @@ void effectSpriteTask54(Task* task)
         quad->v3   = (EFFECT_DUST_PUFF_TEXTURE_V + EFFECT_DUST_PUFF_CELL_SIZE - 1);
 
         _effectSetDustPuffCorners(quad, block, work);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -3387,7 +3389,7 @@ void effectDrawGroundGlow(const GfxCoord* coord, s32 halfSize, u32 brightness)
         quad->y2 = quadScratch->screenCorners[2].vy;
         quad->x3 = quadScratch->screenCorners[3].vx;
         quad->y3 = quadScratch->screenCorners[3].vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectQuadScratch);
@@ -3447,7 +3449,7 @@ void effectDrawGroundShadow(const VECTOR3* centre, s32 halfSize, s16 shade)
             quad->y2 = quadScratch->screenCorners[2].vy;
             quad->x3 = quadScratch->screenCorners[3].vx;
             quad->y3 = quadScratch->screenCorners[3].vy;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectQuadScratch);

@@ -1,5 +1,5 @@
 #include "actors/actor_210700.h"
-#include "actors/task_tables.h"
+#include "actors/actor_210700.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -39,9 +39,6 @@ enum {
     ACTOR_210700_BLINK_HALF   = 2, // The half-open eyes are posted next
     ACTOR_210700_BLINK_OPEN   = 3, // The open eyes are posted next, which ends the blink
 };
-
-/// Eye-texture command accepted by this actor's message table.
-enum { ACTOR_210700_MESSAGE_SET_EYES = 0x7E0 };
 
 /// Ground-shadow half extent in world-coordinate units.
 enum { ACTOR_210700_GROUND_SHADOW_HALF_SIZE = 0x400 };
@@ -186,10 +183,8 @@ static AnimationSet** _gActor210700AnimationBanks[1] = {
     _gActor210700AnimationSets,
 };
 
-enum { ACTOR_210700_RUPERT_TASK_PRIORITY = 192 };
-
 TaskDesc gActor210700RupertBroderickTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_210700_RUPERT_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
     .callback = _actor210700Task,
     .data     = { .model = &_gRupertBody },
 };
@@ -202,7 +197,7 @@ static TaskMessageEntry _gActor210700Messages[5] = {
     { ACTOR_MESSAGE_PLAY_ANIMATION, _actor210700PlayAnimation },
     { ACTOR_MESSAGE_PLACE, _actor210700Place },
     { ACTOR_MESSAGE_SET_MODEL_DRAW, _actor210700SetModelDraw },
-    { ACTOR_210700_MESSAGE_SET_EYES, _actor210700SetEyes },
+    { ACTOR_MESSAGE_SET_TEXTURE_MODE, _actor210700SetEyes },
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 

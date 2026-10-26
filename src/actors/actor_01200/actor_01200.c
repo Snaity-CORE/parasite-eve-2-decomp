@@ -8,7 +8,7 @@
 #include "gte.h"
 
 #include "actors/actor.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01200.h"
 
 #include "gameplay/actor.h"
 #include "gameplay/actor_render.h"
@@ -222,15 +222,14 @@ static void      _actor01200Task(Task* task);
 static s32 _actor01200SetModelDraw(Task* task, s32 messageId, s32 drawMode, s32 unusedArg);
 static s32 _actor01200ApplyCommand(Task* task, s32 messageId, const ActorCommand* request, s32 unusedArg);
 
-/// Distinct, status-free player hit presentation selected by the burst attack.
+/// Row of the burst attack.
 enum {
-    ACTOR_01200_BURST_HIT_REACTION = 7,
     ACTOR_01200_BURST_ATTACK_INDEX = 0
 };
 
 /// The Bone Suckler's single burst attack, borrowed by its enemy parameters.
 static DamageAttack _gActor01200BurstAttacks[1] = {
-    { 24, ACTOR_01200_BURST_HIT_REACTION },
+    { 24, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
 };
 
 /// Shared Bone Suckler combat and battle-release reward parameters.
@@ -408,9 +407,7 @@ static TaskMessageEntry _gActor01200Messages[4] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { ACTOR_01200_TASK_PRIORITY = 96 };
-
-TaskDesc gActor01200BoneSucklerTaskDesc = { { { TASK_BODY_TMD, ACTOR_01200_TASK_PRIORITY } }, _actor01200Task, { .model = &_gSucklerBoneBody } };
+TaskDesc gActor01200BoneSucklerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor01200Task, { .model = &_gSucklerBoneBody } };
 
 SVECTOR ActorContact_ScratchPosition = { 0 };
 
@@ -732,7 +729,7 @@ static void _actor01200StateIdle(Enemy* enemy, Task* task)
     }
     _animDriverTick(task);
     if ((work->rig.slots[ANIM_DRIVER_FIRST_SLOT].status.fields.flags & ANIMATION_SLOT_FOLLOWED_JUMP) && work->driver.jumpCount >= ACTOR_01200_IDLE_MIN_LOOPS) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
         if (!((gRandomLcgState >> 0x10) & ACTOR_01200_IDLE_RANDOM_MASK)) {
             work->state = ACTOR_01200_STATE_ROUSE;
         }
@@ -1148,8 +1145,8 @@ static void _actor01200SpawnHitEffect(Task* task, s16 hitYaw, u32 attackKey)
     yawMagnitude = (hitYaw >= 0) ? hitYaw : -hitYaw;
     work         = task->work;
     if (yawMagnitude < ACTOR_01200_HIT_FRONT_LIMIT) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (!((gRandomLcgState >> 16) & 1)) {
+        RANDOM_LCG_ADVANCE();
+        if (!(RANDOM_LCG_DRAW() & 1)) {
             offset->pad = ACTOR_01200_HIT_PART_BODY;
             offset->vx  = 80;
             offset->vy  = -180;
@@ -1161,8 +1158,8 @@ static void _actor01200SpawnHitEffect(Task* task, s16 hitYaw, u32 attackKey)
             offset->vz  = 300;
         }
     } else if (yawMagnitude > ACTOR_01200_HIT_REAR_LIMIT) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (!((gRandomLcgState >> 16) & 1)) {
+        RANDOM_LCG_ADVANCE();
+        if (!(RANDOM_LCG_DRAW() & 1)) {
             offset->pad = ACTOR_01200_HIT_PART_BACK;
             offset->vx  = 0;
             offset->vy  = 0;
@@ -1174,8 +1171,8 @@ static void _actor01200SpawnHitEffect(Task* task, s16 hitYaw, u32 attackKey)
             offset->vz  = -50;
         }
     } else if (hitYaw > 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (!((gRandomLcgState >> 16) & 1)) {
+        RANDOM_LCG_ADVANCE();
+        if (!(RANDOM_LCG_DRAW() & 1)) {
             offset->pad = ACTOR_01200_HIT_PART_RIGHT;
             offset->vx  = 100;
             offset->vy  = 0;
@@ -1187,8 +1184,8 @@ static void _actor01200SpawnHitEffect(Task* task, s16 hitYaw, u32 attackKey)
             offset->vz  = 100;
         }
     } else {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (!((gRandomLcgState >> 16) & 1)) {
+        RANDOM_LCG_ADVANCE();
+        if (!(RANDOM_LCG_DRAW() & 1)) {
             offset->pad = ACTOR_01200_HIT_PART_LEFT;
             offset->vx  = -100;
             offset->vy  = 0;
@@ -1362,7 +1359,7 @@ static void _actor01200StatePatrol(Enemy* enemy, Task* task)
     _animDriverTick(task);
     task->extra.tmd->coords->composeStamp = GRAPHICS_COORD_DIRTY;
     if ((work->rig.slots[ANIM_DRIVER_FIRST_SLOT].status.fields.flags & ANIMATION_SLOT_FOLLOWED_JUMP) && work->driver.jumpCount > ACTOR_01200_PATROL_MIN_LOOPS) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
         if (!((gRandomLcgState >> 0x10) & ACTOR_01200_PATROL_RANDOM_MASK)) {
             work->state = ACTOR_01200_STATE_SETTLE;
         }

@@ -145,10 +145,10 @@ static Task* _gActor461800SceneDistortionTask = NULL;
 
 /// Bodyless scene-effect recipes: fade at index 0, distortion at index 1.
 ///
-/// Both run at priority 32 with unused spawn arguments; there is no terminator.
+/// Both run at priority `TASK_PRIORITY_SCENE` with unused spawn arguments; there is no terminator.
 static TaskDesc _gActor461800SceneEffectTasks[2] = {
-    { { { TASK_BODY_NONE, 32 } }, _actor461800SceneFadeTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 32 } }, _actor461800SceneDistortionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _actor461800SceneFadeTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _actor461800SceneDistortionTask, { .value = 0 } },
 };
 
 /// Scene-child selectors and native clip IDs used by this package's requests.
@@ -258,7 +258,7 @@ EvsCommand gActor461800NeoArkSceneScript[52] = {
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _actor461800SetSceneDistortionState }, { .value = ACTOR_461800_SCENE_EFFECT_START }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_KYLE }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_461800_WALKER_DRAW_SHOW }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_EVE }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = 0 }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_EVE }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_EVE }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor461800SceneEvePlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_KYLE }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor461800SceneKyleAnimation1Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -288,7 +288,7 @@ EvsCommand gActor461800NeoArkSceneScript[52] = {
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _actor461800SetSceneDistortionState }, { .value = ACTOR_461800_SCENE_DISTORTION_STOP }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_KYLE }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = 0 }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_KYLE }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_EVE }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_461800_WALKER_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_461800_SCENE_EVE }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor461800SceneEveAnimationRequest } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _actor461800SetSceneFadeState }, { .value = ACTOR_461800_SCENE_FADE_IN }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -345,9 +345,9 @@ static TaskMessageEntry _gActor461800ScriptedWalkerMessages[6] = {
 };
 
 TaskDesc gActor461800ScriptedWalkerTasks[3] = {
-    { { { TASK_BODY_TMD, 192 } }, _actor461800ScriptedWalkerTask, { .model = &gKyleBody } },
-    { { { TASK_BODY_TMD, 192 } }, _actor461800ScriptedWalkerAttachmentTask, { .model = &_gKyleHandLeft3 } },
-    { { { TASK_BODY_TMD, 192 } }, _actor461800ScriptedWalkerAttachmentTask, { .model = &_gKyleHandRight2 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor461800ScriptedWalkerTask, { .model = &gKyleBody } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor461800ScriptedWalkerAttachmentTask, { .model = &_gKyleHandLeft3 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor461800ScriptedWalkerAttachmentTask, { .model = &_gKyleHandRight2 } },
 };
 
 /// Native clip-index table borrowed by Kyle walker's twenty-part animation rig.
@@ -385,7 +385,7 @@ static TaskMessageEntry _gFootstepWalkMessageTable[6] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-TaskDesc gActor461800FootstepWalkerTaskDesc = { { { TASK_BODY_TMD, 192 } }, _actor461800FootstepWalkerTask, { .model = &_gEveBody } };
+TaskDesc gActor461800FootstepWalkerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor461800FootstepWalkerTask, { .model = &_gEveBody } };
 
 /// Native clip-index table borrowed by the sound walker's animation context.
 ///
@@ -549,7 +549,6 @@ static inline void _actor461800QueueSceneFade(const Task* fadeTask)
 {
     enum {
         ACTOR_461800_SCENE_FADE_MAX_INTENSITY      = 255,
-        ACTOR_461800_SCENE_FADE_WIDTH_PIXELS       = 320,
         ACTOR_461800_SCENE_FADE_HEIGHT_PIXELS      = 256,
         ACTOR_461800_SCENE_FADE_OT_TAG             = 5,
         ACTOR_461800_SCENE_FADE_TEXTURE_DEPTH_4BIT = 0,
@@ -563,9 +562,9 @@ static inline void _actor461800QueueSceneFade(const Task* fadeTask)
     intensity      = (fadeTask->killCountdown * ACTOR_461800_SCENE_FADE_MAX_INTENSITY) / ACTOR_461800_SCENE_FADE_RAMP_UPDATES;
     setTile(tile);
     setSemiTrans(tile, true);
-    tile->x0 = -ACTOR_461800_SCENE_FADE_WIDTH_PIXELS / 2;
+    tile->x0 = -DISPLAY_SCREEN_WIDTH / 2;
     tile->y0 = -ACTOR_461800_SCENE_FADE_HEIGHT_PIXELS / 2;
-    tile->w  = ACTOR_461800_SCENE_FADE_WIDTH_PIXELS;
+    tile->w  = DISPLAY_SCREEN_WIDTH;
     tile->h  = ACTOR_461800_SCENE_FADE_HEIGHT_PIXELS;
     tile->r0 = intensity;
     tile->g0 = intensity;

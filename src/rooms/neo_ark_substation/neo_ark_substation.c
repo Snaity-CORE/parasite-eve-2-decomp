@@ -59,12 +59,6 @@ static s32  _neoArkSubstationResolveRoomEvent(Task* task, s32 messageId, RoomEve
 static s32  _neoArkSubstationHandleCapCommand(Task* unusedTask, s32 unusedMessageId, s32 commandIndex, s32 unusedSecondArg);
 static s32  _neoArkSubstationIgnoreRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unused);
 
-/// Key-item menu request and the reply that displays the cannot-use notice.
-enum {
-    NEO_ARK_SUBSTATION_MESSAGE_USE_KEY_ITEM = 0x13F1,
-    NEO_ARK_SUBSTATION_KEY_ITEM_UNUSABLE    = 0,
-};
-
 static WorldCollisionGrid    _gNeoArkSubstationCollisionGrid;
 static WorldCollisionTrigger _gNeoArkSubstationViewBoundaryTriggers[12];
 static WorldCollisionTrigger _gNeoArkSubstationActionTriggers[10];
@@ -76,20 +70,18 @@ static WorldCoordRoomLights  _gNeoArkSubstationRoomLights;
 /// table and its callbacks; keep this overlay loaded through dispatch.
 static TaskMessageEntry _gNeoArkSubstationRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _neoArkSubstationResolveRoomEvent },
-    { NEO_ARK_SUBSTATION_MESSAGE_USE_KEY_ITEM, _neoArkSubstationRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _neoArkSubstationRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _neoArkSubstationIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _neoArkSubstationHandleCapCommand },
     { TASK_MESSAGE_TABLE_END, NULL },
 };
-
-enum { NEO_ARK_SUBSTATION_AMBIENCE_PRIORITY = 32 };
 
 /// Bodyless priority-32 ambience task recipe, selected at index zero.
 ///
 /// Spawn arguments are zero. The room starts it only before Power Plant 2
 /// clearance; it retunes independently until teardown. No END record is stored.
 static TaskDesc _gNeoArkSubstationAmbienceTaskDescs[1] = {
-    { { { TASK_BODY_NONE, NEO_ARK_SUBSTATION_AMBIENCE_PRIORITY } }, _neoArkSubstationAmbienceTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _neoArkSubstationAmbienceTask, { .value = 0 } },
 };
 
 /// Ambience pan offsets and attenuation for logical view slots 0..8.
@@ -706,7 +698,7 @@ static void _neoArkSubstationAmbienceTask(Task* task)
 /// `itemId` is the selected inventory item ID; all arguments are ignored.
 static s32 _neoArkSubstationRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unused)
 {
-    return NEO_ARK_SUBSTATION_KEY_ITEM_UNUSABLE;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Allows a Neo Ark room transition after resolving its destination variant.

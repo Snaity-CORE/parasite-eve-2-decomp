@@ -106,15 +106,22 @@ resources = [
 sha1 = "cf461a73a92f5a7d0f35bf2efe4e3bb7659308d1"
 
 [package]
-type = "room"
+type = "package"
 embedded = [
-    { name = "acropolis_bridge_model_0AD9C", offset = 0x0A81C, size = 0x1070, address = 0x80187DDC },
-    "acropolis_bridge_path_0BC80",
-    "acropolis_bridge_model_13870",
-    "acropolis_bridge_animation_13C00",
+    { name = "water_surface", offset = 0x0A81C, size = 0x1070, address = 0x80187DDC },
+    "rooms/akropolis/bridge/keypad_movie_enemy_heights",
+    { asset = "enemies/bass/body", offset = 0x136AC, size = 0x554, address = 0x80190C6C },
+    { asset = "enemies/bass/patrol", offset = 0x13C00, size = 0x100, address = 0x801911C0 },
+    { asset = "enemies/bass/chase", offset = 0x13D00, size = 0x100, address = 0x801912C0 },
+    { asset = "enemies/bass/bob", offset = 0x13E00, size = 0x70, address = 0x801913C0 },
+    { asset = "enemies/bass/fall", offset = 0x13E70, size = 0x118, address = 0x80191430 },
+    { asset = "enemies/bass/collapse", offset = 0x13F88, size = 0x80, address = 0x80191548 },
+    { asset = "enemies/bass/bank", offset = 0x14008, size = 0x1C, address = 0x801915C8 },
 ]
-package_name = "acropolis_bridge"
+load = { slot = "room" }
+package_name = "akropolis_bridge"
 required = true
+requires = ["gameplay", "rooms/akropolis/stage"]
 sha1 = "c24f91488b8fd9a1555870bbd30bb4e08d72bb8a"
 
 [package.entries]
@@ -992,6 +999,12 @@ height = 256
 variants = ["row_0", "row_1", "row_2"]
 width = 128
 
+[water_surface]
+type = "model"
+slots = ["bridge"]
+symbol = "_gAkropolisBridgeWaterSurfaceModel"
+sha1 = "77ce31e152d110faf8cba604eadb8ff32db339c9"
+
 [run_surface_2_1]
 type = "sound"
 sha1 = "0766fcfcf69498fa2a51613ca33a06d278bf0d56"
@@ -1066,17 +1079,11 @@ sha1 = "3f91f7838c27fc77e7df8efb10f22e43d6b5dd68"
 type = "sound"
 sha1 = "09ea8a5071f88a17cbf5f86c2c1086c65a580b39"
 
+[water_surface_binding]
+type = "binding"
+model = "rooms/akropolis/bridge/water_surface"
+textures = { bridge = "rooms/akropolis/bridge/bridge.default" }
+
 [door_fire_escape_close]
 type = "sound"
 sha1 = "d431093b45cb046357868d648353162b00211e59"
-
-[acropolis_bridge_model_0AD9C]
-type = "model"
-slots = ["bridge"]
-symbol = "_gAkropolisBridgeAcropolisBridgeModel0AD9C"
-sha1 = "77ce31e152d110faf8cba604eadb8ff32db339c9"
-
-[acropolis_bridge_model_0AD9C_binding]
-type = "binding"
-model = "rooms/akropolis/bridge/acropolis_bridge_model_0AD9C"
-textures = { bridge = "rooms/akropolis/bridge/bridge.default" }

@@ -21,6 +21,7 @@
 #include "gameplay/hud_sprites.h"
 #include "gameplay/loading.h"
 #include "gameplay/message.h"
+#include "gameplay/player_actor.h"
 #include "gameplay/room_effects.h"
 #include "gameplay/scene.h"
 #include "gameplay/sprites.h"
@@ -49,6 +50,10 @@
 #include "overlay.h"
 #include "../../shared/actor/actor_messages.h"
 #include "../../shared/screen/screen_fade.h"
+#include "../../shared/screen/screen_fade_step_up.inc.c"
+#include "../../shared/screen/screen_fade_tile_overlay.inc.c"
+
+#include "assets/engine/animation/player_schema.h"
 
 /// Requests the room's event script leaves for the event task, each carried
 /// out on the task's next update.
@@ -93,14 +98,12 @@ static void      _dryfieldWaterTankMovieTask(Task* task);
 static void      _dryfieldWaterTankSetEventCommand(s16 command);
 static void      _dryfieldWaterTankRestorePlayerAfterSkip(void);
 
-/// Timing, CAP slots and execution priorities of the room's placement and scene tables.
+/// Timing and CAP slots of the room's placement and scene tables.
 enum {
     DRYFIELD_WATER_TANK_PLACEMENT_STANCE_CLIP   = 1,
     DRYFIELD_WATER_TANK_PLACEMENT_FADE_FRAMES   = 32,
     DRYFIELD_WATER_TANK_PLACEMENT_HOLD_FRAMES   = 30,
     DRYFIELD_WATER_TANK_PLACEMENT_SOUND         = SOUND_AREA(GAME_STAGE_DRYFIELD, GAME_AREA_DRYFIELD_WATER_TANK, 1),
-    DRYFIELD_WATER_TANK_ROOM_ACTION_PRIORITY    = 32,
-    DRYFIELD_WATER_TANK_SCENE_PRIORITY          = 192,
     DRYFIELD_WATER_TANK_PROP_SCENE_CAP_COMMAND  = 15,
     DRYFIELD_WATER_TANK_MOVIE_EVENT_CAP_COMMAND = 3,
     DRYFIELD_WATER_TANK_SKIP_FADE_WAIT_FRAMES   = 8,
@@ -156,8 +159,8 @@ TaskMessageEntry gDryfieldWaterTankRoomMessages[5] = {
 };
 
 TaskDesc gDryfieldWaterTankRoomActionTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_ROOM_ACTION_PRIORITY } }, dryfieldWaterTankWaitMovieEventTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_ROOM_ACTION_PRIORITY } }, dryfieldWaterTankMechanismPromptTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, dryfieldWaterTankWaitMovieEventTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, dryfieldWaterTankMechanismPromptTask, { .value = 0 } },
 };
 
 static TmdBone _gDryfieldWaterTankModel020D4Skeleton[1] = {
@@ -240,8 +243,8 @@ EvsCommand gDryfieldWaterTankPropSceneSkipScript[8] = {
 };
 
 TaskDesc gDryfieldWaterTankPropSceneTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_SCENE_PRIORITY } }, dryfieldWaterTankPropSceneTask, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), DRYFIELD_WATER_TANK_SCENE_PRIORITY } }, dryfieldWaterTankPropTask, { .model = &_gDryfieldWaterTankModel020D4 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, dryfieldWaterTankPropSceneTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, dryfieldWaterTankPropTask, { .model = &_gDryfieldWaterTankModel020D4 } },
 };
 
 static AnimationPackedPose _gDryfieldWaterTankAnimation02B70Bank1[2] = {
@@ -352,13 +355,13 @@ static EvsCommand _gDryfieldWaterTankMovieEventSkipScript[9] = {
 /// current callers pass eight. Movie arguments and all spawnArg2 values are zero.
 /// This indexed table has no TASK_DESC_END entry.
 static TaskDesc _gDryfieldWaterTankMovieFadeTaskDescs[4] = {
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_SCENE_PRIORITY } }, NULL, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_SCENE_PRIORITY } }, _dryfieldWaterTankMovieTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_SCENE_PRIORITY } }, screenFadeInTileTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_SCENE_PRIORITY } }, _dryfieldWaterTankFadeOutTileTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, NULL, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldWaterTankMovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, screenFadeInTileTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldWaterTankFadeOutTileTask, { .value = 0 } },
 };
 
-TaskDesc gDryfieldWaterTankMovieEventTaskDesc = { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_SCENE_PRIORITY } }, _dryfieldWaterTankMovieEventTask, { .value = 0 } };
+TaskDesc gDryfieldWaterTankMovieEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldWaterTankMovieEventTask, { .value = 0 } };
 
 static AnimationPackedPose _gDryfieldWaterTankAnimation034BCBank1[6] = {
 #include "assets/dryfield_water_tank_animation_034BC_bank1.inc"
@@ -807,70 +810,18 @@ static inline void _dryfieldWaterTankResumeAfterMovie(Task* task)
 /// is unproven. Position and orientation are supplied separately by the caller.
 static inline void _dryfieldWaterTankRestoreWeaponStance(void)
 {
-    enum {
-        DRYFIELD_WATER_TANK_PRIMARY_CHARACTER_ID        = 1,
-        DRYFIELD_WATER_TANK_PRIMARY_WEAPON_BANK_BASE    = 1,
-        DRYFIELD_WATER_TANK_OTHER_CHARACTER_BANK_OFFSET = 0x22,
-        DRYFIELD_WATER_TANK_WEAPON_STANCE_CLIP          = 1,
-    };
-
     AnimationPlayRequest stance;
     s32                  weaponId;
     s32                  animationBank;
 
     weaponId                    = gPlayerStatus.weapon;
-    animationBank               = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_WATER_TANK_PRIMARY_CHARACTER_ID) ? weaponId + DRYFIELD_WATER_TANK_PRIMARY_WEAPON_BANK_BASE : weaponId + DRYFIELD_WATER_TANK_OTHER_CHARACTER_BANK_OFFSET;
+    animationBank               = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     stance.source.index         = animationBank;
-    stance.animationId          = DRYFIELD_WATER_TANK_WEAPON_STANCE_CLIP;
+    stance.animationId          = PLAYER_ANIMATION_IDLE;
     stance.blend                = ANIMATION_BLEND_RESET;
     stance.blendFrames          = 0;
     stance.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
     TASK_MESSAGE_DISPATCH_POINTER(gameGetTaskSlot(GAME_TASK_SLOT_PLAYER), ANIMATION_MESSAGE_PLAY, &stance, 0);
-}
-
-/// Queues a 320x240 subtractive fade tile at the current draw origin.
-///
-/// Borrows readable ramp channels and uses their low red/green/red bytes without
-/// advancing them. The current draw origin, including screen shake, offsets the
-/// centred tile. Requires a word-aligned frame cursor with space for a `TILE`
-/// and `DR_TPAGE`, and foreground tag -16 in the active ordering table.
-/// Packet storage must remain live through GPU consumption. The mode runs first
-/// and remains active: subtractive blending, dithering on, displayed-area
-/// drawing off and a 4-bit texture page at (0,0), unused by the untextured tile.
-static inline void _dryfieldWaterTankDrawFadeOverlay(const ScreenFadeWork* fade)
-{
-    enum {
-        DRYFIELD_WATER_TANK_FADE_WIDTH_PIXELS   = 320,
-        DRYFIELD_WATER_TANK_FADE_HEIGHT_PIXELS  = 240,
-        DRYFIELD_WATER_TANK_FADE_FOREGROUND_TAG = -16,
-        DRYFIELD_WATER_TANK_FADE_TEXTURE_4BIT   = 0,
-    };
-
-    u8        red;
-    u8        green;
-    TILE*     tile;
-    DR_TPAGE* drawMode;
-
-    red            = fade->r;
-    green          = fade->g;
-    tile           = gGpuPrimCursor;
-    gGpuPrimCursor = tile + 1;
-    setTile(tile);
-    setSemiTrans(tile, true);
-    tile->r0 = red;
-    tile->g0 = green;
-    tile->b0 = red;
-    tile->x0 = -DRYFIELD_WATER_TANK_FADE_WIDTH_PIXELS / 2;
-    tile->y0 = -DRYFIELD_WATER_TANK_FADE_HEIGHT_PIXELS / 2;
-    tile->w  = DRYFIELD_WATER_TANK_FADE_WIDTH_PIXELS;
-    tile->h  = DRYFIELD_WATER_TANK_FADE_HEIGHT_PIXELS;
-    addPrim(gGpuCurrentOt + DRYFIELD_WATER_TANK_FADE_FOREGROUND_TAG, tile);
-
-    // Prepending the mode after the tile makes the GPU execute it first.
-    drawMode       = gGpuPrimCursor;
-    gGpuPrimCursor = drawMode + 1;
-    setDrawTPage(drawMode, false, true, getTPage(DRYFIELD_WATER_TANK_FADE_TEXTURE_4BIT, GPU_BLEND_SUBTRACT, 0, 0));
-    addPrim(gGpuCurrentOt + DRYFIELD_WATER_TANK_FADE_FOREGROUND_TAG, drawMode);
 }
 
 /// Darkens the screen before the water-tank movie with a rising subtractive tile.
@@ -911,12 +862,10 @@ static void _dryfieldWaterTankFadeOutTileTask(Task* task)
             task->state += 1;
             /* fallthrough */
         case DRYFIELD_WATER_TANK_FADE_STATE_DRAW:
-            _dryfieldWaterTankDrawFadeOverlay(fade);
+            _screenFadeDrawTileOverlay(fade);
 
             // Blue follows the ramp even though the packet uses red for blue.
-            fade->r += (u16)task->spawnArg1.value;
-            fade->g += (u16)task->spawnArg1.value;
-            fade->b += (u16)task->spawnArg1.value;
+            _screenFadeStepUp(fade, task);
             if (fade->r >= DRYFIELD_WATER_TANK_FADE_CHANNEL_END) {
                 taskKill(task);
             }
@@ -1125,10 +1074,6 @@ static void _dryfieldWaterTankExecuteEventCommand(Task* task)
 static inline void _dryfieldWaterTankBlendPlayerWeaponStance(void)
 {
     enum {
-        DRYFIELD_WATER_TANK_EVENT_PRIMARY_CHARACTER   = 1,
-        DRYFIELD_WATER_TANK_EVENT_PRIMARY_WEAPON_BANK = 1,
-        DRYFIELD_WATER_TANK_EVENT_OTHER_WEAPON_BANK   = 34,
-        DRYFIELD_WATER_TANK_EVENT_STANCE_CLIP         = 1,
         DRYFIELD_WATER_TANK_EVENT_STANCE_BLEND_FRAMES = 10,
     };
     AnimationPlayRequest stance;
@@ -1136,9 +1081,9 @@ static inline void _dryfieldWaterTankBlendPlayerWeaponStance(void)
     s32                  animationBank;
 
     weaponId                    = gPlayerStatus.weapon;
-    animationBank               = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_WATER_TANK_EVENT_PRIMARY_CHARACTER) ? weaponId + DRYFIELD_WATER_TANK_EVENT_PRIMARY_WEAPON_BANK : weaponId + DRYFIELD_WATER_TANK_EVENT_OTHER_WEAPON_BANK;
+    animationBank               = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     stance.source.index         = animationBank;
-    stance.animationId          = DRYFIELD_WATER_TANK_EVENT_STANCE_CLIP;
+    stance.animationId          = PLAYER_ANIMATION_IDLE;
     stance.blend                = ANIMATION_BLEND_INTERPOLATE;
     stance.blendFrames          = DRYFIELD_WATER_TANK_EVENT_STANCE_BLEND_FRAMES;
     stance.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;

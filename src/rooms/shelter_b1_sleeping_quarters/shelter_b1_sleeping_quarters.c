@@ -12,6 +12,7 @@
 #include "gameplay/items.h"
 #include "gameplay/message.h"
 
+#include "main/event_flags.h"
 #include "main/gameflag.h"
 #include "main/session.h"
 #include "main/task.h"
@@ -76,15 +77,12 @@ static TaskMessageEntry _gShelterB1SleepingQuartersRoomMessages[5] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-/// Scheduler priority byte of the bodyless scene task.
-enum { SHELTER_B1_SLEEPING_QUARTERS_ALTERNATE_CAP_TASK_PRIORITY = 192 };
-
 /// Bodyless task recipe for alternate-resource CAP playback and control restoration.
 ///
 /// A single priority-192 descriptor, spawned at index 0. The first argument
 /// is a valid alternate CAP command (the room sends 8); the second is unused.
 /// Keep both CAP resources and this callback loaded until playback completes.
-static TaskDesc _gShelterB1SleepingQuartersAlternateCapTaskDesc = { { { TASK_BODY_NONE, SHELTER_B1_SLEEPING_QUARTERS_ALTERNATE_CAP_TASK_PRIORITY } }, _shelterB1SleepingQuartersPlayAlternateCapTask, { .value = 0 } };
+static TaskDesc _gShelterB1SleepingQuartersAlternateCapTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB1SleepingQuartersPlayAlternateCapTask, { .value = 0 } };
 
 static void _shelterB1SleepingQuartersInitializeRoom(Task* task);
 static void _shelterB1SleepingQuartersIdleRoomState(Task* task);
@@ -134,7 +132,7 @@ static s32 _shelterB1SleepingQuartersResolveRoomEvent(Task* task, s32 messageId,
     if (request->areaId != GAME_AREA_SHELTER_B1_NORTH_MAINTENANCE_WALKWAY) {
         return SHELTER_B1_SLEEPING_QUARTERS_DEPARTURE_ALLOWED;
     }
-    if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) < SHELTER_B1_SLEEPING_QUARTERS_WALKWAY_CAP_CHAPTER) {
+    if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) < SHELTER_B1_SLEEPING_QUARTERS_WALKWAY_CAP_CHAPTER) {
         return SHELTER_B1_SLEEPING_QUARTERS_DEPARTURE_ALLOWED;
     }
     if (request->queryOnly != ROOM_EVENT_EXECUTE) {

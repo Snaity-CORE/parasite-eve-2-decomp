@@ -18,46 +18,259 @@ chunk = "palette"
 sha1 = "aaf7fc2cc45fb1084d639c61339ac08f9a06cee8"
 palettes = [
     { texture = "lift", variant = "default", region = "engine/vram/effect_palettes", offset = [0x00000, 0x00002] },
-    { name = "lights", entries = 256, region = "engine/vram/effect_palettes", offset = [0x00000, 0x00003] },
+    { texture = "cable", variant = "default", region = "engine/vram/effect_palettes", offset = [0x00000, 0x00003] },
 ]
 
 [[file.contents]]
 chunk = "palette_2"
 sha1 = "8f52d6ca09354deea1c944d19a32ae6732721dd3"
-palettes = [
-    { texture = "sparks", variant = "sparkle", region = "engine/vram/effect_palettes", offset = [0x00000, 0x00009] },
-    { name = "unread_270_16", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00010, 0x00009] },
-    { name = "unread_270_32", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00020, 0x00009] },
-    { texture = "sparks", variant = "ember", region = "engine/vram/effect_palettes", offset = [0x00030, 0x00009] },
-    { texture = "sparks", variant = "lens_flare", region = "engine/vram/effect_palettes", offset = [0x00040, 0x00009] },
-    { name = "unread_270_80", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00050, 0x00009] },
-    { name = "unread_270_96", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00060, 0x00009] },
-    { name = "unread_270_112", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00070, 0x00009] },
-    { name = "unread_270_128", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00080, 0x00009] },
-    { name = "unread_270_144", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00090, 0x00009] },
-    { name = "unread_270_160", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000A0, 0x00009] },
-    { name = "unread_270_176", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000B0, 0x00009] },
-    { name = "unread_270_192", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000C0, 0x00009] },
-    { name = "unread_270_208", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000D0, 0x00009] },
-    { name = "unread_270_224", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000E0, 0x00009] },
-    { name = "unread_270_240", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000F0, 0x00009] },
-    { name = "unread_270_256", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00100, 0x00009] },
-    { name = "unread_270_272", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00110, 0x00009] },
-    { name = "unread_270_288", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00120, 0x00009] },
-    { name = "unread_270_304", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00130, 0x00009] },
-    { name = "unread_row_271", entries = 256, region = "engine/vram/effect_palettes", offset = [0x00000, 0x0000A] },
-    { name = "unread_271_256", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00100, 0x0000A] },
-    { name = "unread_271_272", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00110, 0x0000A] },
-    { name = "unread_271_288", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00120, 0x0000A] },
-    { name = "unread_271_304", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00130, 0x0000A] },
-]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "sparkle"
+region = "engine/vram/effect_palettes"
+offset = [0x00000, 0x00009]
+
+[[file.contents.palettes]]
+name = "unread_270_16"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00010, 0x00009]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "smudge"
+region = "engine/vram/effect_palettes"
+offset = [0x00020, 0x00009]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "ember"
+region = "engine/vram/effect_palettes"
+offset = [0x00030, 0x00009]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "lens_flare"
+region = "engine/vram/effect_palettes"
+offset = [0x00040, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_0"
+region = "engine/vram/effect_palettes"
+offset = [0x00050, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_1"
+region = "engine/vram/effect_palettes"
+offset = [0x00060, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_2"
+region = "engine/vram/effect_palettes"
+offset = [0x00070, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_3"
+region = "engine/vram/effect_palettes"
+offset = [0x00080, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_4"
+region = "engine/vram/effect_palettes"
+offset = [0x00090, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_5"
+region = "engine/vram/effect_palettes"
+offset = [0x000A0, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_6"
+region = "engine/vram/effect_palettes"
+offset = [0x000B0, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_7"
+region = "engine/vram/effect_palettes"
+offset = [0x000C0, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_8"
+region = "engine/vram/effect_palettes"
+offset = [0x000D0, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_9"
+region = "engine/vram/effect_palettes"
+offset = [0x000E0, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_10"
+region = "engine/vram/effect_palettes"
+offset = [0x000F0, 0x00009]
+
+[[file.contents.palettes]]
+texture = "rooms/akropolis/west_elevator_hall/effect_atlas"
+variant = "fireball_11"
+region = "engine/vram/effect_palettes"
+offset = [0x00100, 0x00009]
+
+[[file.contents.palettes]]
+name = "unread_270_272"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00110, 0x00009]
+
+[[file.contents.palettes]]
+name = "unread_270_288"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00120, 0x00009]
+
+[[file.contents.palettes]]
+name = "unread_270_304"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00130, 0x00009]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_0"
+region = "engine/vram/effect_palettes"
+offset = [0x00000, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_1"
+region = "engine/vram/effect_palettes"
+offset = [0x00010, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_2"
+region = "engine/vram/effect_palettes"
+offset = [0x00020, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_3"
+region = "engine/vram/effect_palettes"
+offset = [0x00030, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_4"
+region = "engine/vram/effect_palettes"
+offset = [0x00040, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_5"
+region = "engine/vram/effect_palettes"
+offset = [0x00050, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_6"
+region = "engine/vram/effect_palettes"
+offset = [0x00060, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "tongue_7"
+region = "engine/vram/effect_palettes"
+offset = [0x00070, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_0"
+region = "engine/vram/effect_palettes"
+offset = [0x00080, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_1"
+region = "engine/vram/effect_palettes"
+offset = [0x00090, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_2"
+region = "engine/vram/effect_palettes"
+offset = [0x000A0, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_3"
+region = "engine/vram/effect_palettes"
+offset = [0x000B0, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_4"
+region = "engine/vram/effect_palettes"
+offset = [0x000C0, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_5"
+region = "engine/vram/effect_palettes"
+offset = [0x000D0, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_6"
+region = "engine/vram/effect_palettes"
+offset = [0x000E0, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_7"
+region = "engine/vram/effect_palettes"
+offset = [0x000F0, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_8"
+region = "engine/vram/effect_palettes"
+offset = [0x00100, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_9"
+region = "engine/vram/effect_palettes"
+offset = [0x00110, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_10"
+region = "engine/vram/effect_palettes"
+offset = [0x00120, 0x0000A]
+
+[[file.contents.palettes]]
+texture = "sparks"
+variant = "burning_11"
+region = "engine/vram/effect_palettes"
+offset = [0x00130, 0x0000A]
 
 [[file.contents]]
 chunk = "image"
 sha1 = "79242a86687b7d076198360707fb1a93c1e9e072"
 pages = [
     { texture = "sparks", region = "engine/vram/effect_sheet", offset = [0x000C0, 0x00000] },
-    { texture = "lift", region = "engine/vram/room_sprite_sheet", offset = [0x00000, 0x00000] },
+    { atlas = "lift_page", region = "engine/vram/room_sprite_sheet", offset = [0x00000, 0x00000] },
 ]
 
 [[file.contents]]
@@ -69,9 +282,16 @@ chunk = "bundle"
 [lift]
 type = "texture"
 bpp = 8
-height = 256
+height = 192
 variants = ["default"]
 width = 128
+
+[cable]
+type = "texture"
+bpp = 4
+height = 8
+variants = ["default"]
+width = 24
 
 [radio]
 type = "texture"
@@ -119,31 +339,88 @@ sha1 = "33c413287357346ce3ac0944e5f2f4c670e938df"
 type = "texture"
 bpp = 4
 height = 256
-variants = ["sparkle", "ember", "lens_flare"]
+variants = [
+    "sparkle",
+    "ember",
+    "lens_flare",
+    "smudge",
+    "tongue_0",
+    "tongue_1",
+    "tongue_2",
+    "tongue_3",
+    "tongue_4",
+    "tongue_5",
+    "tongue_6",
+    "tongue_7",
+    "burning_0",
+    "burning_1",
+    "burning_2",
+    "burning_3",
+    "burning_4",
+    "burning_5",
+    "burning_6",
+    "burning_7",
+    "burning_8",
+    "burning_9",
+    "burning_10",
+    "burning_11",
+]
 width = 256
 
 [sparks.cells]
+burning_0 = [0, 160, 32, 48]
+burning_1 = [32, 160, 32, 48]
+burning_2 = [64, 160, 32, 48]
+burning_3 = [96, 160, 32, 48]
+burning_4 = [128, 160, 32, 48]
+burning_5 = [160, 160, 32, 48]
+burning_6 = [192, 160, 32, 48]
+burning_7 = [224, 160, 32, 48]
+burning_8 = [0, 208, 32, 48]
+burning_9 = [32, 208, 32, 48]
+burning_10 = [64, 208, 32, 48]
+burning_11 = [96, 208, 32, 48]
 ember_0 = [32, 40, 32, 32]
 ember_1 = [64, 40, 32, 32]
 ember_2 = [96, 40, 32, 32]
 ember_3 = [128, 40, 32, 32]
 ember_4 = [160, 40, 32, 32]
 ember_5 = [192, 40, 32, 32]
+flame_0 = [0, 0, 32, 40]
+flame_1 = [32, 0, 32, 40]
+flame_2 = [64, 0, 32, 40]
+flame_3 = [96, 0, 32, 40]
+flame_4 = [128, 0, 32, 40]
+flame_5 = [160, 0, 32, 40]
 flash_0 = [0, 72, 40, 40]
 flash_1 = [40, 72, 40, 40]
 flash_2 = [80, 72, 40, 40]
 flash_3 = [120, 72, 40, 40]
 flash_4 = [160, 72, 40, 40]
 flash_5 = [200, 72, 40, 40]
+smudge_0 = [128, 208, 32, 32]
+smudge_1 = [160, 208, 32, 32]
+smudge_2 = [192, 208, 32, 32]
+smudge_3 = [224, 208, 32, 32]
+tongue_0 = [0, 112, 32, 48]
+tongue_1 = [32, 112, 32, 48]
+tongue_2 = [64, 112, 32, 48]
+tongue_3 = [96, 112, 32, 48]
+tongue_4 = [128, 112, 32, 48]
+tongue_5 = [160, 112, 32, 48]
+tongue_6 = [192, 112, 32, 48]
+tongue_7 = [224, 112, 32, 48]
 
 [package]
-type = "room"
+type = "package"
 embedded = [
-    { name = "acropolis_helicopter_landing_pad_model_0547C", offset = 0x04E04, size = 0x134C, address = 0x801823C4 },
-    "acropolis_helicopter_landing_pad_model_0A8E8",
+    { name = "akropolis_helicopter_landing_pad_model_0547C", offset = 0x04E04, size = 0x134C, address = 0x801823C4 },
+    { name = "ammunition_pickup", offset = 0x0A828, size = 0x18C, address = 0x80187DE8 },
 ]
-package_name = "acropolis_helicopter_landing_pad"
+load = { slot = "room" }
+package_name = "akropolis_helicopter_landing_pad"
 required = true
+requires = ["gameplay", "rooms/akropolis/stage"]
 sha1 = "dc29089521da635762fcffefbbf44f6e4914266a"
 
 [package.entries]
@@ -161,6 +438,10 @@ vibrations = [
     { commands = 0x0A7A8, segments = 0x0A7B8 },
 ]
 wide_view_masks = [0x07920]
+
+[package.slots]
+golem_no_9_akropolis = "enemies/golem/no_9/package_akropolis"
+helicopter_departure = "rooms/akropolis/helicopter_landing_pad/helicopter_departure"
 
 [ambience]
 type = "sound"
@@ -227,10 +508,14 @@ sha1 = "863b9bc243a152ba13c3254a969777f72c89350e"
 type = "sound"
 sha1 = "dd8bb6403f195387658248078d50760a10b29bca"
 
+[lift_page]
+type = "atlas"
+sprites = [{ texture = "lift", at = [0x00000, 0x00000] }, { texture = "cable", at = [0x00000, 0x000F8] }]
+
 [no_9_bank]
 type = "animation_bank"
 schema = "rooms/akropolis/helicopter_landing_pad/no_9_schema"
-symbol = "_gActor511000No9GolemAnimationSets"
+symbol = "_gHelicopterDepartureNo9GolemAnimationSets"
 
 [no_9_bank.clips]
 standoff = "rooms/akropolis/helicopter_landing_pad/no_9_standoff"
@@ -696,7 +981,7 @@ slots = ["", "standoff", "times_up", "leap_away"]
 [rupert_bank]
 type = "animation_bank"
 schema = "rooms/akropolis/helicopter_landing_pad/rupert_schema"
-symbol = "_gActor511000RupertAnimationSets"
+symbol = "_gHelicopterDepartureRupertAnimationSets"
 
 [rupert_bank.clips]
 shoot = "rooms/akropolis/helicopter_landing_pad/rupert_shoot"
@@ -1046,8 +1331,8 @@ region = "engine/vram/effect_palettes"
 offset = [0x00000, 0x00002]
 
 [[view24_file.contents.palettes]]
-name = "flash_overwritten"
-entries = 256
+texture = "helicopter_lamp"
+variant = "default"
 region = "engine/vram/effect_palettes"
 offset = [0x00000, 0x00003]
 
@@ -1060,7 +1345,7 @@ slots = 3
 [[view24_file.contents]]
 chunk = "view24_image_2"
 sha1 = "0d13666bf619dea4a84cfa7d8f0ddff867e75bb5"
-pages = [{ texture = "helicopter_page_2", region = "engine/vram/room_sprite_sheet", offset = [0x00040, 0x00000] }]
+pages = [{ atlas = "helicopter_page_2_sheet", region = "engine/vram/room_sprite_sheet", offset = [0x00040, 0x00000] }]
 slots = 3
 
 [[view24_file.contents]]
@@ -1277,6 +1562,19 @@ width = 128
 type = "clip"
 rig = "enemies/golem/no_9/rig"
 
+[helicopter_hull]
+type = "model"
+slots = ["lamp", "helicopter_page_1", "helicopter_page_2"]
+symbol = "_gHelicopterDepartureHelicopterHullModel"
+sha1 = "287290885e659e103d74d7e5151a9035e63ce992"
+
+[helicopter_lamp]
+type = "texture"
+bpp = 4
+height = 16
+variants = ["default"]
+width = 16
+
 [dialogue_0_atlas]
 type = "font_atlas"
 bpp = 4
@@ -1344,6 +1642,12 @@ sha1 = "1ead7b32f316f2f0a2f96a8b141e38b39f8797d4"
 type = "bs"
 sha1 = "c96d9f7831e2ca12c52ff2a7952cc1a210251ce1"
 
+[ammunition_pickup]
+type = "model"
+slots = ["pickup"]
+symbol = "gAkropolisHelicopterLandingPadAmmunitionPickupModel"
+sha1 = "a6442f10321bac7d60e2785b835223fea54daf41"
+
 [helicopter_page_1]
 type = "texture"
 bpp = 8
@@ -1356,7 +1660,7 @@ type = "texture"
 bpp = 8
 height = 256
 variants = ["default"]
-width = 128
+width = 120
 
 [view10_background]
 type = "bs"
@@ -1434,11 +1738,11 @@ model = "rooms/akropolis/helicopter_landing_pad/searchlight"
 textures = { helicopter_page_1 = "rooms/akropolis/helicopter_landing_pad/helicopter_page_1.default" }
 
 [helicopter_departure]
-type = "pe2pkg"
+type = "package"
 embedded = [
     { name = "player_helipad_report_escape", offset = 0x02350, size = 0x29A0, address = 0x80134170 },
     { name = "player_helipad_detonator_talk", offset = 0x04CF0, size = 0x2E14, address = 0x80136B10 },
-    "actor_511000_helicopter_base",
+    { name = "helicopter_hull", offset = 0x07B34, size = 0x21E0, address = 0x80139954 },
     { name = "main_rotor", offset = 0x09D14, size = 0x3E8, address = 0x8013BB34 },
     { name = "tail_rotor", offset = 0x0A0FC, size = 0x160, address = 0x8013BF1C },
     { name = "searchlight", offset = 0x0A25C, size = 0x604, address = 0x8013C07C },
@@ -1453,15 +1757,23 @@ embedded = [
     "rooms/akropolis/helicopter_landing_pad/searchlight_rotation_track",
     "rooms/akropolis/helicopter_landing_pad/helicopter_palette_lit",
     "rooms/akropolis/helicopter_landing_pad/helicopter_palette_dark",
+    { name = "helicopter_camera_track", offset = 0x160C4, size = 0x10E0 },
     { name = "no_9_standoff", offset = 0x1D228, size = 0x36EC, address = 0x8014F048 },
     { name = "no_9_times_up", offset = 0x20914, size = 0x15D0, address = 0x80152734 },
     { name = "no_9_leap_away", offset = 0x21EE4, size = 0x136C, address = 0x80153D04 },
     { name = "no_9_bank", offset = 0x232A0, size = 0x10, address = 0x801550C0 },
 ]
-package_name = "actor_511000"
+load = { slot = "actor_1" }
+package_name = "helicopter_departure"
 parent = "rooms/akropolis/helicopter_landing_pad/package"
 required = true
+requires = ["gameplay"]
 sha1 = "e742256cbd375eff51b21ed26f4631946ba06139"
+
+[helicopter_departure.exports]
+no_9_tasks = { at = 0x23250, symbol = "gHelicopterDepartureNo9GolemTaskDescriptors" }
+rupert_tasks = { at = 0x154C8, symbol = "gHelicopterDepartureRupertTaskDescriptors" }
+helicopter_tasks = { at = 0x07B04, symbol = "gHelicopterDepartureHelicopterTaskDescriptors" }
 
 [rupert_detonator_talk]
 type = "clip"
@@ -1470,6 +1782,32 @@ rig = "characters/rupert/rig"
 [encounter_intro_impact]
 type = "sound"
 sha1 = "18e686f8ffdbab741a9de541d5e9877cc83cabcf"
+
+[helicopter_camera_track]
+type = "camera_path"
+include = "layout"
+layout = "9h 2x 3i I"
+
+[helicopter_hull_binding]
+type = "binding"
+model = "rooms/akropolis/helicopter_landing_pad/helicopter_hull"
+
+[helicopter_hull_binding.textures]
+lamp = "rooms/akropolis/helicopter_landing_pad/helicopter_lamp.default"
+helicopter_page_1 = "rooms/akropolis/helicopter_landing_pad/helicopter_page_1.default"
+helicopter_page_2 = "rooms/akropolis/helicopter_landing_pad/helicopter_page_2.default"
+
+[helicopter_page_2_sheet]
+type = "atlas"
+sprites = [
+    { texture = "helicopter_page_2", at = [0x00008, 0x00000] },
+    { texture = "helicopter_lamp", at = [0x00000, 0x00000] },
+]
+
+[ammunition_pickup_binding]
+type = "binding"
+model = "rooms/akropolis/helicopter_landing_pad/ammunition_pickup"
+textures = { pickup = "rooms/akropolis/cafeteria/container.ammunition" }
 
 [player_helipad_report_escape]
 type = "clip"
@@ -1481,13 +1819,13 @@ type = "clip"
 rig = "characters/aya/rig"
 symbol = "gAkropolisHelicopterLandingPadPlayerHelipadDetonatorTalkClip"
 
-[acropolis_helicopter_landing_pad_model_0547C]
+[akropolis_helicopter_landing_pad_model_0547C]
 type = "model"
 slots = ["lift"]
-symbol = "gAkropolisHelicopterLandingPadAcropolisHelicopterLandingPadModel0547C"
+symbol = "gAkropolisHelicopterLandingPadAkropolisHelicopterLandingPadModel0547C"
 sha1 = "88e26b362ce7871a986f0dfe7b2bce392e56cc33"
 
-[acropolis_helicopter_landing_pad_model_0547C_binding]
+[akropolis_helicopter_landing_pad_model_0547C_binding]
 type = "binding"
-model = "rooms/akropolis/helicopter_landing_pad/acropolis_helicopter_landing_pad_model_0547C"
+model = "rooms/akropolis/helicopter_landing_pad/akropolis_helicopter_landing_pad_model_0547C"
 textures = { lift = "rooms/akropolis/helicopter_landing_pad/lift.default" }

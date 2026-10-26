@@ -10,7 +10,12 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
+#include "actors/actor_01500.h"
+#include "actors/actor_01600.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_05700.h"
+#include "actors/actor_400600.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -228,7 +233,6 @@ static TaskMessageEntry _gDryfieldNightGasStationRoomMessages[7] = {
 
 /// Authored settings for the jerry-can scene and the companion's reentry idle request.
 enum {
-    DRYFIELD_NIGHT_GAS_STATION_JERRY_CAN_TASK_PRIORITY     = 32,
     DRYFIELD_NIGHT_GAS_STATION_IDLE_ANIMATION_ID           = 1,
     DRYFIELD_NIGHT_GAS_STATION_JERRY_CAN_CAP_SEQUENCE      = 19,
     DRYFIELD_NIGHT_GAS_STATION_JERRY_CAN_SKIP_CAP_SEQUENCE = 20,
@@ -241,7 +245,7 @@ enum {
 /// Spawning reads the descriptor synchronously; its callback must remain
 /// loaded until the one-shot task starts the script and releases itself.
 static TaskDesc _gDryfieldNightGasStationJerryCanTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_NIGHT_GAS_STATION_JERRY_CAN_TASK_PRIORITY } }, _dryfieldNightGasStationStartJerryCanCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldNightGasStationStartJerryCanCutsceneTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -711,19 +715,16 @@ static void _dryfieldNightGasStationTrackRedStreakTask(Task* task);
 static void _dryfieldNightGasStationSpriteFlickerTask(Task* task);
 static void _dryfieldNightGasStationCompanionRedStreakTask(Task* task);
 
-/// Authored execution priority shared by the four room-local cutscene tasks.
-enum { DRYFIELD_NIGHT_GAS_STATION_CUTSCENE_TASK_PRIORITY = 192 };
-
 /// Indexed recipes for head aim toward the companion, track streak, sprite flicker and companion streak.
 ///
-/// Slots 0..3 have priority 192 and no terminator. Only the streaks allocate
+/// Slots 0..3 have priority `TASK_PRIORITY_CONTROL` and no terminator. Only the streaks allocate
 /// coordinate bodies. Spawning borrows a recipe synchronously; callbacks and
 /// the actor models or sprite resources they borrow must remain loaded.
 static TaskDesc _gDryfieldNightGasStationCutsceneTaskDescriptors[4] = {
-    { { { TASK_BODY_NONE, DRYFIELD_NIGHT_GAS_STATION_CUTSCENE_TASK_PRIORITY } }, _dryfieldNightGasStationCompanionHeadAimTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, DRYFIELD_NIGHT_GAS_STATION_CUTSCENE_TASK_PRIORITY } }, _dryfieldNightGasStationTrackRedStreakTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_NIGHT_GAS_STATION_CUTSCENE_TASK_PRIORITY } }, _dryfieldNightGasStationSpriteFlickerTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, DRYFIELD_NIGHT_GAS_STATION_CUTSCENE_TASK_PRIORITY } }, _dryfieldNightGasStationCompanionRedStreakTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldNightGasStationCompanionHeadAimTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _dryfieldNightGasStationTrackRedStreakTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldNightGasStationSpriteFlickerTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _dryfieldNightGasStationCompanionRedStreakTask, { .value = 0 } },
 };
 
 /// Player weapon-bank slots 47..52: a null slot followed by five cutscene clips.
@@ -3202,7 +3203,7 @@ static void _dryfieldNightGasStationInitializeRoomTask(Task* task)
     }
     if (gameFlagGetNibble(GAME_FLAG_NIGHT_GAS_STATION_FIRST_VISIT) == 0) {
         gameFlagSetNibble(GAME_FLAG_NIGHT_GAS_STATION_FIRST_VISIT, 1);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_GAS_STATION_INTRO_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_GAS_STATION_INTRO_OBJECTIVE);
         gameFlagSetNibble(GAME_FLAG_COMPANION_1_SCHEDULE, DRYFIELD_NIGHT_GAS_STATION_COMPANION_INTRO_SCHEDULE);
         _dryfieldNightGasStationClearCutsceneTaskHandles();
         if (gameGetTaskSlot(GAME_TASK_SLOT_COMPANION) != NULL) {
@@ -3359,7 +3360,7 @@ static void _dryfieldNightGasStationStartJerryCanCutsceneTask(Task* task)
     SetDispMask(0);
     inventoryClearCollectedBit(INVENTORY_COLLECTION_ID_JERRY_CAN);
     evsStartScriptWithSkip(_gDryfieldNightGasStationJerryCanScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gDryfieldNightGasStationJerryCanSkipScript);
-    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_GAS_STATION_JERRY_CAN_OBJECTIVE);
+    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_GAS_STATION_JERRY_CAN_OBJECTIVE);
     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = DRYFIELD_NIGHT_GAS_STATION_JERRY_CAN_AUDIO_EVENT;
     taskKill(task);
 }
@@ -3528,11 +3529,11 @@ static void _dryfieldNightGasStationDrawTrackRedStreak(s32 frameIndex)
         setRGB0(core, 0x80, 0, 0);
         core->w = 3;
         core->h = 3;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)drawValue << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), core);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(drawValue), core);
         drawMode       = gGpuPrimCursor;
         gGpuPrimCursor = drawMode + 1;
         setDrawTPage(drawMode, 1, 0, getTPage(0, GPU_BLEND_ADD, 320, 0));
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)drawValue << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), drawMode);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(drawValue), drawMode);
         centrePixel    = gGpuPrimCursor;
         gGpuPrimCursor = centrePixel + 1;
         setTile1(centrePixel);
@@ -3540,7 +3541,7 @@ static void _dryfieldNightGasStationDrawTrackRedStreak(s32 frameIndex)
         centrePixel->x0 = coreX;
         centrePixel->y0 = coreY;
         setRGB0(centrePixel, 0xFF, 0, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)drawValue << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), centrePixel);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(drawValue), centrePixel);
 
         // Reproject the tip and retain its Y for the screen-space streak tail.
         gfxSetRotIdentity(&trackRotation);
@@ -3566,11 +3567,11 @@ static void _dryfieldNightGasStationDrawTrackRedStreak(s32 frameIndex)
         setRGB1(streak, rand() % 60 + 0x50, 0, 0);
         drawValue = DRYFIELD_NIGHT_GAS_STATION_RED_STREAK_OT_DEPTH;
         setRGB0(streak, 0, 0, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)drawValue << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), streak);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(drawValue), streak);
         drawMode       = gGpuPrimCursor;
         gGpuPrimCursor = drawMode + 1;
         setDrawTPage(drawMode, 1, 0, getTPage(0, GPU_BLEND_ADD, 320, 0));
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)drawValue << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), drawMode);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(drawValue), drawMode);
     }
 }
 
@@ -3642,11 +3643,11 @@ static void _dryfieldNightGasStationDrawCompanionRedStreak(s32 unusedFrame)
         // The negative red value deliberately wraps when stored in the GPU byte.
         setRGB0(streak, rand() % 100 - 0x7E, 0, 0);
         setRGB1(streak, 0, 0, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)DRYFIELD_NIGHT_GAS_STATION_RED_STREAK_OT_DEPTH << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), streak);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(DRYFIELD_NIGHT_GAS_STATION_RED_STREAK_OT_DEPTH), streak);
         drawMode       = gGpuPrimCursor;
         gGpuPrimCursor = drawMode + 1;
         setDrawTPage(drawMode, 1, 0, getTPage(0, GPU_BLEND_ADD, 320, 0));
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)DRYFIELD_NIGHT_GAS_STATION_RED_STREAK_OT_DEPTH << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), drawMode);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(DRYFIELD_NIGHT_GAS_STATION_RED_STREAK_OT_DEPTH), drawMode);
     }
 }
 
@@ -4128,13 +4129,13 @@ void dryfieldNightGasStationAmbientEffectsTask(Task* task)
     /// Captures the anchor table and this function's scatter constants. Two ordered
     /// LCG draws add X/Z jitter -255..256 parent-coordinate units, preserving anchor
     /// Y. XYZ narrow to s16 and move.pad is retained. Expands to one block.
-#define DRYFIELD_NIGHT_GAS_STATION_CHOOSE_SCATTER_OFFSET(effectWork, pointIndex)                                                                                                                                             \
-    {                                                                                                                                                                                                                        \
-        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                                                                              \
-        (effectWork)->move.vx = _gDryfieldNightGasStationAmbientEffectAnchors[(pointIndex)].vx - ((gRandomLcgState >> 16) & DRYFIELD_NIGHT_GAS_STATION_SCATTER_RANDOM_MASK) + DRYFIELD_NIGHT_GAS_STATION_SCATTER_OFFSET_MAX; \
-        (effectWork)->move.vy = _gDryfieldNightGasStationAmbientEffectAnchors[(pointIndex)].vy;                                                                                                                              \
-        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                                                                              \
-        (effectWork)->move.vz = _gDryfieldNightGasStationAmbientEffectAnchors[(pointIndex)].vz - ((gRandomLcgState >> 16) & DRYFIELD_NIGHT_GAS_STATION_SCATTER_RANDOM_MASK) + DRYFIELD_NIGHT_GAS_STATION_SCATTER_OFFSET_MAX; \
+#define DRYFIELD_NIGHT_GAS_STATION_CHOOSE_SCATTER_OFFSET(effectWork, pointIndex)                                                                                                                                       \
+    {                                                                                                                                                                                                                  \
+        RANDOM_LCG_ADVANCE();                                                                                                                                                                                          \
+        (effectWork)->move.vx = _gDryfieldNightGasStationAmbientEffectAnchors[(pointIndex)].vx - (RANDOM_LCG_DRAW() & DRYFIELD_NIGHT_GAS_STATION_SCATTER_RANDOM_MASK) + DRYFIELD_NIGHT_GAS_STATION_SCATTER_OFFSET_MAX; \
+        (effectWork)->move.vy = _gDryfieldNightGasStationAmbientEffectAnchors[(pointIndex)].vy;                                                                                                                        \
+        RANDOM_LCG_ADVANCE();                                                                                                                                                                                          \
+        (effectWork)->move.vz = _gDryfieldNightGasStationAmbientEffectAnchors[(pointIndex)].vz - (RANDOM_LCG_DRAW() & DRYFIELD_NIGHT_GAS_STATION_SCATTER_RANDOM_MASK) + DRYFIELD_NIGHT_GAS_STATION_SCATTER_OFFSET_MAX; \
     }
 
     enum {
@@ -4194,16 +4195,16 @@ void dryfieldNightGasStationAmbientEffectsTask(Task* task)
         work->scale = 1;
         if (gRoomEffectState->battleState != ROOM_EFFECT_BATTLE_ENGAGED && gRoomEffectState->effectControl == ROOM_EFFECT_CONTROL_RUNNING) {
             for (anchorIndex = DRYFIELD_NIGHT_GAS_STATION_SCATTER_ANCHOR_FIRST; anchorIndex < (s32)ARRAY_SIZE(_gDryfieldNightGasStationAmbientEffectAnchors); anchorIndex++) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->angle     = (gRandomLcgState >> 16) % DRYFIELD_NIGHT_GAS_STATION_SCATTER_CHOICE_COUNT;
+                RANDOM_LCG_ADVANCE();
+                work->angle = RANDOM_LCG_DRAW() % DRYFIELD_NIGHT_GAS_STATION_SCATTER_CHOICE_COUNT;
                 DRYFIELD_NIGHT_GAS_STATION_CHOOSE_SCATTER_OFFSET(work, anchorIndex);
                 if (work->angle == DRYFIELD_NIGHT_GAS_STATION_SCATTER_PUFF) {
                     effectSpawn(EFFECT_ADDITIVE_PUFF, spawnCoord, DRYFIELD_NIGHT_GAS_STATION_SCATTER_PUFF_ARG, &work->move);
                 } else if (work->angle == DRYFIELD_NIGHT_GAS_STATION_SCATTER_FIRE) {
                     effectSpawn(EFFECT_FIRE_BURST, spawnCoord, DRYFIELD_NIGHT_GAS_STATION_SCATTER_FIRE_SIZE, &work->move);
                 } else {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    if ((u16)((gRandomLcgState >> 16) % DRYFIELD_NIGHT_GAS_STATION_SCATTER_CHOICE_COUNT) == 0) {
+                    RANDOM_LCG_ADVANCE();
+                    if ((u16)(RANDOM_LCG_DRAW() % DRYFIELD_NIGHT_GAS_STATION_SCATTER_CHOICE_COUNT) == 0) {
                         effectSpawn(EFFECT_SMOKE_PUFF, spawnCoord, DRYFIELD_NIGHT_GAS_STATION_SCATTER_SMOKE_ARG, &work->move);
                     }
                 }
@@ -4211,8 +4212,8 @@ void dryfieldNightGasStationAmbientEffectsTask(Task* task)
         }
     } else if (work->scale != 0 && gRoomEffectState->effectControl == ROOM_EFFECT_CONTROL_RUNNING) {
         for (anchorIndex = DRYFIELD_NIGHT_GAS_STATION_SCATTER_ANCHOR_FIRST; anchorIndex < (s32)ARRAY_SIZE(_gDryfieldNightGasStationAmbientEffectAnchors); anchorIndex++) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((u16)((gRandomLcgState >> 16) % DRYFIELD_NIGHT_GAS_STATION_SCATTER_CHOICE_COUNT) == 0) {
+            RANDOM_LCG_ADVANCE();
+            if ((u16)(RANDOM_LCG_DRAW() % DRYFIELD_NIGHT_GAS_STATION_SCATTER_CHOICE_COUNT) == 0) {
                 DRYFIELD_NIGHT_GAS_STATION_CHOOSE_SCATTER_OFFSET(work, anchorIndex);
                 effectSpawn(EFFECT_SMOKE_PUFF, spawnCoord, DRYFIELD_NIGHT_GAS_STATION_SCATTER_SMOKE_ARG, &work->move);
             }

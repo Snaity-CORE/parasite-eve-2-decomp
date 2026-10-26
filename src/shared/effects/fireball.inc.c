@@ -31,7 +31,7 @@ static inline void _fireballRefreshGlowLight(const GfxCoord* coord)
     pointLight                                              = &pointLightSlot->light;
     pointLight->inner                                       = FIREBALL_LIGHT_INNER_RADIUS;
     pointLight->outer                                       = FIREBALL_LIGHT_OUTER_RADIUS;
-    randomBits                                              = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    randomBits                                              = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState                                         = randomBits;
     intensity                                               = ((randomBits >> 16) & FIREBALL_LIGHT_RANDOM_MASK_Q12) + FIREBALL_LIGHT_MIN_INTENSITY_Q12;
     pointLight->head.color.r                                = intensity;
@@ -127,7 +127,7 @@ static void _fireballDrawGlow(const GfxCoord* coord, s16 halfExtent)
         glowQuad->y3             = bottom;
         glowQuad->y2             = bottom;
         addPrim(
-            GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)projection->depth << gDisplayState.otDepthShift) >> 2 & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
             glowQuad);
         glowQuad       = gGpuPrimCursor;
         gGpuPrimCursor = glowQuad + 1;
@@ -153,7 +153,7 @@ static void _fireballDrawGlow(const GfxCoord* coord, s16 halfExtent)
         glowQuad->y3             = outerBottom;
         glowQuad->y2             = outerBottom;
         addPrim(
-            GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)projection->depth << gDisplayState.otDepthShift) >> 2 & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
             glowQuad);
         // The optional floor quad shares this call's still-reserved projection block.
         if (gRoomEffectState->groundTraceEnabled != 0) {
@@ -262,7 +262,7 @@ static void _fireballDrawGroundGlow(const GfxCoord* coord, s32 halfExtent)
             prim->y2 = quadScratch->screenCorners[2].vy;
             prim->x3 = quadScratch->screenCorners[3].vx;
             prim->y3 = quadScratch->screenCorners[3].vy;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(depth),
                     prim);
         }
     }

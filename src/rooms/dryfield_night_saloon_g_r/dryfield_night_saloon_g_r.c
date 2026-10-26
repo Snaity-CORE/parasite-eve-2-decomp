@@ -9,7 +9,9 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01600.h"
+#include "actors/actor_04000.h"
+#include "actors/actor_135600.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -140,9 +142,7 @@ static s32  _dryfieldNightSaloonGRRoomActionMessage(Task* task, s32 messageId, c
 static void _dryfieldNightSaloonGRJukeboxSceneTask(Task* task);
 
 enum {
-    DRYFIELD_NIGHT_SALOON_G_R_MESSAGE_USE_KEY_ITEM  = 0x13F1,
-    DRYFIELD_NIGHT_SALOON_G_R_ROOM_AFTER_CUTSCENE   = 2,
-    DRYFIELD_NIGHT_SALOON_G_R_JUKEBOX_TASK_PRIORITY = 192,
+    DRYFIELD_NIGHT_SALOON_G_R_ROOM_AFTER_CUTSCENE = 2,
 };
 
 /// Bodyless transition task spawned by this room's event gate at priority 32.
@@ -151,7 +151,7 @@ enum {
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Message routes installed on the live night-saloon room task.
 ///
@@ -160,7 +160,7 @@ static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIO
 /// The task borrows the table and callbacks while this room overlay is loaded.
 static TaskMessageEntry _gDryfieldNightSaloonGRRoomMessages[] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _roomVariantSaloonMsg },
-    { DRYFIELD_NIGHT_SALOON_G_R_MESSAGE_USE_KEY_ITEM, _dryfieldNightSaloonGRRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldNightSaloonGRRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldNightSaloonGRRoomActionMessage },
     { ROOM_MESSAGE_COMMAND, _dryfieldNightSaloonGRCommandMessage },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -169,10 +169,10 @@ static TaskMessageEntry _gDryfieldNightSaloonGRRoomMessages[] = {
 /// Bodyless task recipe for the jukebox's caption, view switch and restoration.
 ///
 /// Spawn at index 0 with zero payloads after holding scripted player control.
-/// Priority 192; the task uses the room's singleton saved view, so scenes must
+/// Priority `TASK_PRIORITY_CONTROL`; the task uses the room's singleton saved view, so scenes must
 /// not overlap. Spawning copies the recipe; keep this room loaded through exit.
 static TaskDesc _gDryfieldNightSaloonGRJukeboxSceneTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = DRYFIELD_NIGHT_SALOON_G_R_JUKEBOX_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
     .callback = _dryfieldNightSaloonGRJukeboxSceneTask,
     .data     = { .value = 0 },
 };
@@ -1086,7 +1086,6 @@ enum {
     DRYFIELD_NIGHT_SALOON_G_R_FOLLOW_UP_TALK_VIEW   = 11,
     DRYFIELD_NIGHT_SALOON_G_R_ENTRY_RETURN_VIEW     = 4,
     DRYFIELD_NIGHT_SALOON_G_R_FOLLOW_UP_RETURN_VIEW = 7,
-    DRYFIELD_NIGHT_SALOON_G_R_KYLE_DRAW_SHOW        = 1,
 };
 
 /// Skippable first-entry dialogue and animation sequence with Kyle Madigan.
@@ -1103,7 +1102,7 @@ static EvsCommand _gDryfieldNightSaloonGREntrySceneScript[] = {
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_COPY_BANK_EXTENSION }, { .message = { .animationBankCopy = &_gDryfieldNightSaloonGRPlayerDialogueBankCopyRequest } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRPlayerEntrySceneStartTransform } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_NIGHT_SALOON_G_R_KYLE_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRKyleDialogueTransform } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = DRYFIELD_NIGHT_SALOON_G_R_ENTRY_SCENE_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_MOVE_TO }, { .message = { .transform = &_gDryfieldNightSaloonGRPlayerEntrySceneWalkTarget } }, { .message = { .moveAnimation = &_gDryfieldNightSaloonGRPlayerEntrySceneMoveClips } } },
@@ -1253,7 +1252,7 @@ static EvsCommand _gDryfieldNightSaloonGRFirstTalkScript[] = {
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_COPY_BANK_EXTENSION }, { .message = { .animationBankCopy = &_gDryfieldNightSaloonGRPlayerDialogueBankCopyRequest } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRPlayerFirstTalkTransform } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_NIGHT_SALOON_G_R_KYLE_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRKyleDialogueTransform } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = DRYFIELD_NIGHT_SALOON_G_R_TALK_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldNightSaloonGRPlayerDialogueClip48Request }, { .value = 0 } },
@@ -1287,7 +1286,7 @@ static EvsCommand _gDryfieldNightSaloonGRRepeatTalkScript[] = {
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_COPY_BANK_EXTENSION }, { .message = { .animationBankCopy = &_gDryfieldNightSaloonGRPlayerDialogueBankCopyRequest } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRPlayerRepeatTalkTransform } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_NIGHT_SALOON_G_R_KYLE_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRKyleDialogueTransform } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = DRYFIELD_NIGHT_SALOON_G_R_TALK_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldNightSaloonGRPlayerDialogueClip48Request }, { .value = 0 } },
@@ -1318,7 +1317,7 @@ static EvsCommand _gDryfieldNightSaloonGRFollowUpTalkScript[] = {
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_COPY_BANK_EXTENSION }, { .message = { .animationBankCopy = &_gDryfieldNightSaloonGRPlayerDialogueBankCopyRequest } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRPlayerFollowUpTalkTransform } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_NIGHT_SALOON_G_R_KYLE_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gDryfieldNightSaloonGRKyleDialogueTransform } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = DRYFIELD_NIGHT_SALOON_G_R_FOLLOW_UP_TALK_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldNightSaloonGRPlayerDialogueClip48Request }, { .value = 0 } },
@@ -1524,7 +1523,7 @@ static UiObjectDesc _gJukeboxPanelDesc = {
 /// with zero payloads. The host creates the panel and exits the mode after its
 /// closing delay. Keep the room, callbacks and menu data loaded through exit.
 static TaskDesc _gDryfieldNightSaloonGRJukeboxHostTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = DRYFIELD_NIGHT_SALOON_G_R_JUKEBOX_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
     .callback = _jukeboxHostTask,
     .data     = { .value = 0 },
 };
@@ -2841,9 +2840,7 @@ static const char _gDryfieldNightSaloonGRJukeboxSelectLabel[8] = "SELECT\0\x0D";
 /// All arguments are ignored; the zero result selects the menu's refusal notice.
 static s32 _dryfieldNightSaloonGRRejectKeyItemUse(Task* task, s32 messageId, s32 keyItemId, s32 unusedArg)
 {
-    enum { DRYFIELD_NIGHT_SALOON_G_R_KEY_ITEM_REFUSED = 0 };
-
-    return DRYFIELD_NIGHT_SALOON_G_R_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Handles the saloon's jukebox and progress-dependent conversation commands.
@@ -3316,7 +3313,7 @@ static void _dryfieldNightSaloonGRDrawTaperedBeam(const GfxCoord* coord, const S
             prim->y2  = block->sy0;
             prim->x3  = block->sx0 + ((block->radius0 * rsin(nextAngle)) >> GLOW_TRIG_SHIFT);
             prim->y3  = block->sy0 + ((block->radius0 * rcos(nextAngle)) >> GLOW_TRIG_SHIFT);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz0 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz0),
                     prim);
             gpuSetPrimitiveBlendMode(prim, GPU_BLEND_ADD, block->otz0);
 
@@ -3335,7 +3332,7 @@ static void _dryfieldNightSaloonGRDrawTaperedBeam(const GfxCoord* coord, const S
             prim->y2 = block->sy0;
             prim->x3 = block->sx1;
             prim->y3 = block->sy1;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz0 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz0),
                     prim);
             gpuSetPrimitiveBlendMode(prim, GPU_BLEND_ADD, block->otz0);
 
@@ -3351,7 +3348,7 @@ static void _dryfieldNightSaloonGRDrawTaperedBeam(const GfxCoord* coord, const S
             prim->x3 = block->sx1 + ((block->radius1 * rsin((GLOW_FULL_TURN - GLOW_QUARTER_TURN) - angle)) >> GLOW_TRIG_SHIFT);
             prim->y3 = block->sy1 + ((block->radius1 * rcos((GLOW_FULL_TURN - GLOW_QUARTER_TURN) - angle)) >> GLOW_TRIG_SHIFT);
             angle    = nextAngle;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz1),
                     prim);
             gpuSetPrimitiveBlendMode(prim, GPU_BLEND_ADD, block->otz1);
         } while (angle < GLOW_HALF_TURN);

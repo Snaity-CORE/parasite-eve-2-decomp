@@ -280,7 +280,7 @@ static void _maggotCaterpillarWaitState(Task* actor)
                 work->step         = 0;
                 work->animId       = MAGGOT_CATERPILLAR_ANIM_IDLE;
                 placementRow       = ((Enemy*)actor->spawnArg2.pointer)->place->rowIndex;
-                randomDelay        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                randomDelay        = RANDOM_LCG_NEXT(gRandomLcgState);
                 gRandomLcgState    = randomDelay;
                 work->stateCounter = _gMaggotCaterpillarIdleDelay[placementRow] + ((randomDelay >> 0x10) & 0xF);
             }
@@ -481,7 +481,7 @@ static void _maggotCaterpillarAmbushState(Task* actor)
                 work->behaviour         = MAGGOT_CATERPILLAR_BEHAVIOUR_ROAM;
                 work->step              = MAGGOT_CATERPILLAR_AMBUSH_WAIT;
                 work->animId            = MAGGOT_CATERPILLAR_ANIM_IDLE;
-                work->stateCounter      = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + (((gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT) >> 0x10) & 0xF);
+                work->stateCounter      = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + (((RANDOM_LCG_ADVANCE()) >> 0x10) & 0xF);
                 work->attackBody.coord  = actor->extra.tmd->coords + 4;
                 work->attackBody.radius = 0xC8;
                 work->attackBody.pos.vy = 0;
@@ -549,7 +549,7 @@ static void _maggotCaterpillarRoamState(Task* actor)
             if (--work->stateCounter <= 0) {
                 work->step         = MAGGOT_CATERPILLAR_ROAM_CRAWL;
                 work->animId       = MAGGOT_CATERPILLAR_ANIM_CRAWL;
-                crawlRandom        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                crawlRandom        = RANDOM_LCG_NEXT(gRandomLcgState);
                 work->stateCounter = _gMaggotCaterpillarRoamDistance[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + ((crawlRandom >> 0x10) & 0x3FF);
                 gRandomLcgState    = crawlRandom;
                 return;
@@ -568,7 +568,7 @@ static void _maggotCaterpillarRoamState(Task* actor)
             if (work->stateCounter <= 0) {
                 work->step         = MAGGOT_CATERPILLAR_ROAM_IDLE;
                 work->animId       = MAGGOT_CATERPILLAR_ANIM_IDLE;
-                idleRandom         = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                idleRandom         = RANDOM_LCG_NEXT(gRandomLcgState);
                 work->stateCounter = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + ((idleRandom >> 0x10) & 0xF);
                 gRandomLcgState    = idleRandom;
                 return;
@@ -643,7 +643,7 @@ static void _maggotCaterpillarSprayState(Task* actor)
         work->behaviour    = MAGGOT_CATERPILLAR_BEHAVIOUR_ROAM;
         work->step         = 0;
         work->animId       = MAGGOT_CATERPILLAR_ANIM_IDLE;
-        randomDelay        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomDelay        = RANDOM_LCG_NEXT(gRandomLcgState);
         work->stateCounter = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + ((randomDelay >> 0x10) & 0xF);
         gRandomLcgState    = randomDelay;
     }
@@ -745,7 +745,7 @@ static void _maggotCaterpillarPounceState(Task* actor)
                 work->behaviour    = MAGGOT_CATERPILLAR_BEHAVIOUR_ROAM;
                 work->step         = 0;
                 work->animId       = MAGGOT_CATERPILLAR_ANIM_IDLE;
-                random             = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                random             = RANDOM_LCG_NEXT(gRandomLcgState);
                 work->stateCounter = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + ((random >> 0x10) & 0xF);
                 gRandomLcgState    = random;
             }
@@ -782,7 +782,7 @@ static void _maggotCaterpillarPounceState(Task* actor)
                 work->behaviour    = MAGGOT_CATERPILLAR_BEHAVIOUR_ROAM;
                 work->step         = 0;
                 work->animId       = MAGGOT_CATERPILLAR_ANIM_IDLE;
-                work->stateCounter = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + (((gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT) >> 0x10) & 0xF);
+                work->stateCounter = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + (((RANDOM_LCG_ADVANCE()) >> 0x10) & 0xF);
                 work->field_3AA    = 1;
                 if (work->reactionMode == MAGGOT_CATERPILLAR_REACTION_REBOUND) {
                     MAGGOT_CATERPILLAR_TURN_AROUND(work, coord, rotation);
@@ -847,7 +847,7 @@ static void _maggotCaterpillarHurtState(Task* actor)
                 work->behaviour    = MAGGOT_CATERPILLAR_BEHAVIOUR_ROAM;
                 work->step         = 0;
                 work->animId       = MAGGOT_CATERPILLAR_ANIM_IDLE;
-                random             = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                random             = RANDOM_LCG_NEXT(gRandomLcgState);
                 gRandomLcgState    = random;
                 work->stateCounter = (random >> 0x10) & 0xF;
             } else {
@@ -953,10 +953,10 @@ static void _maggotCaterpillarEntranceState(Task* actor)
                 do {
                     spawnOffset->vx = 0;
                     spawnOffset->vz = 0;
-                    randomRise      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                    randomRise      = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState = randomRise;
                     spawnOffset->vy = ((randomRise >> 0x10) & 0x1FF) + 0x2EE;
-                    effectSpawn(EFFECT_ACROPOLIS_ROOF_GARDEN_LEAF, coord, 0, spawnOffset);
+                    effectSpawn(EFFECT_AKROPOLIS_ROOF_GARDEN_LEAF, coord, 0, spawnOffset);
                     loopIndex++;
                 } while (loopIndex < MAGGOT_CATERPILLAR_ENTRANCE_DROP_LEAVES);
                 soundKey     = ((((Enemy*)actor->spawnArg2.pointer)->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | MAGGOT_CATERPILLAR_ENTRANCE_DROP_SOUND;
@@ -973,17 +973,17 @@ static void _maggotCaterpillarEntranceState(Task* actor)
             loopIndex = 0;
             if (work->animFrame == MAGGOT_CATERPILLAR_ENTRANCE_LEAF_FRAME) {
                 do {
-                    randomX         = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                    randomX         = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState = randomX;
                     // These randomized offsets place leaves behind the facing axis.
                     spawnOffset->vx = -((coord->coord.m[0][2] * (s32)(((randomX >> 16) & 0x3F) + 0xAF)) >> 12);
-                    randomY         = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                    randomY         = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState = randomY;
                     spawnOffset->vy = ((randomY >> 16) & 0x1FF) - 0x6D6;
-                    randomZ         = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                    randomZ         = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState = randomZ;
                     spawnOffset->vz = -((coord->coord.m[2][2] * (s32)(((randomZ >> 16) & 0x3F) + 0xAF)) >> 12);
-                    effectSpawn(EFFECT_ACROPOLIS_FORKED_ROAD_FALLING_LEAF, coord, 0, spawnOffset);
+                    effectSpawn(EFFECT_AKROPOLIS_FORKED_ROAD_FALLING_LEAF, coord, 0, spawnOffset);
                     loopIndex++;
                 } while (loopIndex < MAGGOT_CATERPILLAR_ENTRANCE_LEAP_LEAVES);
                 loopIndex = 0;
@@ -1010,7 +1010,7 @@ static void _maggotCaterpillarEntranceState(Task* actor)
                 work->behaviour    = MAGGOT_CATERPILLAR_BEHAVIOUR_ROAM;
                 work->step         = 0;
                 work->animId       = MAGGOT_CATERPILLAR_ANIM_IDLE;
-                randomDelay        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                randomDelay        = RANDOM_LCG_NEXT(gRandomLcgState);
                 work->stateCounter = _gMaggotCaterpillarIdleDelay[((Enemy*)actor->spawnArg2.pointer)->place->rowIndex] + ((randomDelay >> 0x10) & 0xF);
                 gRandomLcgState    = randomDelay;
                 sceneEngageBattle(1);
@@ -1347,7 +1347,7 @@ static void _maggotCaterpillarPuffTick(Enemy* enemy, Task* task)
                 task->state = MAGGOT_CATERPILLAR_PUFF_TASK_DESTROY;
                 return;
             }
-            random              = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            random              = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState     = random;
             work->forwardSpeed -= (random >> 0x10) & MAGGOT_CATERPILLAR_PUFF_DECELERATION_MASK;
             if (work->forwardSpeed < 0) {
@@ -1454,7 +1454,7 @@ static void _maggotCaterpillarDrawPuff(Task* actor, s32 frame)
         quad->y2    = (u16)scratch->corners[2].vy;
         quad->x3    = (u16)scratch->corners[3].vx;
         quad->y3    = (u16)scratch->corners[3].vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), quad);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz), quad);
     }
     SCRATCH_STACK_CURSOR(u8) += sizeof(ActorScreenQuadScratch);
 }
@@ -1537,12 +1537,12 @@ static void _maggotCaterpillarDrawThread(Task* actor)
         line->g1 = line->r1;
         line->b1 = line->r1;
     }
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), line);
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth), line);
     // The draw mode is linked last so the GPU executes it before the line.
     drawMode       = gGpuPrimCursor;
     gGpuPrimCursor = drawMode + 1;
     setDrawTPage(drawMode, 1, 1, getTPage(0, 1, 0, 0));
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), drawMode);
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth), drawMode);
     SCRATCH_STACK_RELEASE_BLOCK(MaggotCaterpillarLineScratch);
 #undef MAGGOT_CATERPILLAR_PROJECT_THREAD_END
 }

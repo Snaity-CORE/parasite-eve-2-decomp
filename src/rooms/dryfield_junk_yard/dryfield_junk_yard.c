@@ -5,7 +5,8 @@
 
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
+#include "actors/actor_02500.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/actor_render_shadow_types.h"
@@ -19,6 +20,7 @@
 #include "gameplay/enemy.h"
 #include "gameplay/evs.h"
 #include "gameplay/evs_scripts.h"
+#include "gameplay/game_debug.h"
 #include "gameplay/items.h"
 #include "gameplay/light.h"
 #include "gameplay/message.h"
@@ -31,6 +33,7 @@
 #include "main/coord.h"
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/gameflag.h"
 #include "main/mc.h"
 #include "main/mc_types.h"
@@ -44,11 +47,6 @@
 #include "mapui/map_dryfield.h"
 
 static s32 _junkYardCommandMessage(Task* task, s32 messageId, s32 command, s32 unusedSecondArg);
-
-/// Resident routine at the fixed address `0x80724608`, outside every image
-/// the build links. The room hands it the slot-0xA game pointer, two
-/// constants and the `"DOG"` name below; what it does with them is unproven.
-void func_80724608(void* owner, s32 arg1, s32 arg2, void* name);
 
 static void _dryfieldJunkYardDrawModelGroundShadow(Task* task);
 static void _dryfieldJunkYardInitRoomTask(Task* task);
@@ -70,8 +68,7 @@ static s32  _dryfieldJunkYardResolveRoomTransition(Task* unusedTask, s32 unusedM
 static s32  _dryfieldJunkYardHandleRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedArgument);
 
 enum {
-    DRYFIELD_JUNK_YARD_MESSAGE_USE_KEY_ITEM = 0x13F1,
-    DRYFIELD_JUNK_YARD_RETURN_SCENE_EVENT   = 5,
+    DRYFIELD_JUNK_YARD_RETURN_SCENE_EVENT = 5,
 };
 
 /// Native companion bank and clip selections used by this room's scenes.
@@ -122,9 +119,6 @@ enum {
     DRYFIELD_JUNK_YARD_TRAILER_WARP_SLOTS      = (2 << 4) | 1,
 };
 
-/// Execution-list priority of the room's bodyless companion controller.
-enum { DRYFIELD_JUNK_YARD_COMPANION_SEQUENCE_PRIORITY = 32 };
-
 static WorldCollisionGrid         _gDryfieldJunkYardCollisionGrid;
 static WorldCollisionOccluder     _gDryfieldJunkYardSightOccluders[1];
 static WorldCollisionTrigger      _gDryfieldJunkYardViewBoundaryTriggers[10];
@@ -151,7 +145,7 @@ static TaskMessageEntry _gDryfieldJunkYardRoomMessages[] = {
 /// scene at state 0 with both spawn arguments zero. Keep the overlay loaded
 /// until the task ends.
 static TaskDesc _gDryfieldJunkYardCompanionSequenceTasks[] = {
-    { { { TASK_BODY_NONE, DRYFIELD_JUNK_YARD_COMPANION_SEQUENCE_PRIORITY } }, _dryfieldJunkYardCompanionSequenceTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldJunkYardCompanionSequenceTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -2165,9 +2159,7 @@ static void _dryfieldJunkYardCompanionSequenceTask(Task* task)
 /// parameters are ignored.
 static s32 _dryfieldJunkYardRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unused)
 {
-    enum { DRYFIELD_JUNK_YARD_KEY_ITEM_USE_REFUSED = 0 };
-
-    return DRYFIELD_JUNK_YARD_KEY_ITEM_USE_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Resolves garage arrivals and gates departure to the trailer coach on companion progress.
@@ -2192,7 +2184,7 @@ static s32 _dryfieldJunkYardResolveRoomTransition(Task* unusedTask, s32 unusedMe
 
     *reply = *request;
     if (request->areaId == GAME_AREA_DRYFIELD_GARAGE && request->queryOnly == ROOM_EVENT_EXECUTE) {
-        if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) >= GARAGE_LATE_CHAPTER) {
+        if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) >= GARAGE_LATE_CHAPTER) {
             reply->roomState = GARAGE_LATE_ROOM;
         } else {
             reply->roomState = GARAGE_DEFAULT_ROOM;

@@ -101,7 +101,6 @@ _gAkropolisSquareBackdropScrollX = 0x801888A0; // size:0x4 defined:True
 _gAkropolisSquareBackdropPhaseFrames = 0x801888A4; // size:0x4 defined:True
 gRoomCutsceneSoundTask = 0x801888A8; // size:0x4 defined:True
 _gAkropolisSquareCutsceneRec = 0x801888AC; // size:0x20 defined:True
-gActor111800GrinningStrangerTaskDesc = 0x8013A468; // absolute:True owner=actor_111800
 gMapAkropolisSquareVariant1Placements = 0x8017ACBC; // absolute:True owner=map_akropolis
 _gAkropolisSquareTelephoneCoord = 0x801888CC; // size:0x50 defined:True
 
@@ -151,6 +150,6 @@ _akropolisSquareIdleRoomTask = 0x801822a4; // type:func
 akropolisSquareRoomTask = 0x80182308; // type:func
 _akropolisSquareResolveRoomTransition = 0x80181794; // type:func
 _akropolisSquareHandleRoomCommand = 0x801819bc; // type:func
-_akropolisSquareCapViewSequenceTask = 0x80182148; // type:func
+_akropolisSquareMapBoardSequenceTask = 0x80182148; // type:func
 _akropolisSquareControlScrollingBackdrop = 0x80182200; // type:func
 _gAkropolisSquareRoomStates = 0x8017d6b4;

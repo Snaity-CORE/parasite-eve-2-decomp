@@ -9,7 +9,10 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_02600.h"
+#include "actors/actor_07000.h"
+#include "actors/actor_207200.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -92,18 +95,13 @@ static s32 _shelterB2OperatingRoomIgnoreKeyItem(Task* task, s32 messageId, s32 i
 static s32 _shelterB2OperatingRoomHandleCommandMessage(Task* unusedTask, s32 messageId, s32 commandId, s32 unusedArg);
 static s32 _shelterB2OperatingRoomIgnoreAction(Task* task, s32 messageId, const DirectionActionRequest* action, s32 unusedArg);
 
-/// Inventory key-item message received by this room's task.
-enum { SHELTER_B2_OPERATING_ROOM_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Bodyless transition task spawned by this room's event gate at priority 32.
 ///
 /// Uses the latched request and destination to play CAP and optional sounds,
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
-
-enum { SHELTER_B2_OPERATING_ROOM_STAGED_EVENT_PRIORITY = 32 };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Bodyless controller for a latched south-walkway or laboratory departure scene.
 ///
@@ -111,7 +109,7 @@ enum { SHELTER_B2_OPERATING_ROOM_STAGED_EVENT_PRIORITY = 32 };
 /// event into room-owned storage. The room overlay, CAP data and sound resources
 /// must remain loaded until the controller requests the destination reload.
 static TaskDesc _gShelterB2OperatingRoomStagedEventTaskDesc = {
-    { { TASK_BODY_NONE, SHELTER_B2_OPERATING_ROOM_STAGED_EVENT_PRIORITY } }, roomEventStagedTask, { .value = 0 }
+    { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 }
 };
 
 /// Synchronous departure, key-item, interaction and CAP-command handlers.
@@ -122,7 +120,7 @@ static TaskDesc _gShelterB2OperatingRoomStagedEventTaskDesc = {
 /// room commands carry an integer command ID.
 static TaskMessageEntry _gShelterB2OperatingRoomMessageTable[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB2OperatingRoomResolveRoomEventMessage },
-    { SHELTER_B2_OPERATING_ROOM_MESSAGE_USE_KEY_ITEM, _shelterB2OperatingRoomIgnoreKeyItem },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB2OperatingRoomIgnoreKeyItem },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB2OperatingRoomIgnoreAction },
     { ROOM_MESSAGE_COMMAND, _shelterB2OperatingRoomHandleCommandMessage },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -1212,9 +1210,7 @@ static s32 _shelterB2OperatingRoomResolveRoomEventMessage(Task* unusedTask, s32 
 /// Returns zero, which the inventory presents as an unusable item.
 static s32 _shelterB2OperatingRoomIgnoreKeyItem(Task* task, s32 messageId, s32 itemId, s32 unusedArg)
 {
-    enum { SHELTER_B2_OPERATING_ROOM_KEY_ITEM_UNUSED = 0 };
-
-    return SHELTER_B2_OPERATING_ROOM_KEY_ITEM_UNUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Selects one of two CAP event pairs from nursery progress for room commands 4/5.

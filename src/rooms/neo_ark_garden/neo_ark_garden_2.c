@@ -53,16 +53,13 @@ static WorldCollisionTrigger _gNeoArkGardenViewBoundaries[6];
 static WorldCollisionTrigger _gNeoArkGardenActionTriggers[7];
 static WorldCoordRoomLights  _gNeoArkGardenRoomLights;
 
-/// Execution priority of the garden's framebuffer water tasks.
-enum { NEO_ARK_GARDEN_WATER_TASK_PRIORITY = 192 };
-
-TaskDesc gNeoArkGardenWaterRefractionTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_GARDEN_WATER_TASK_PRIORITY } }, waterRefractionTask, { .value = 0 } };
+TaskDesc gNeoArkGardenWaterRefractionTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterRefractionTask, { .value = 0 } };
 
 /// Retained bodyless water-band spawn recipe with no garden caller.
 ///
 /// Priority matches refraction. The callback ignores both spawn payloads and
 /// returns without drawing in the garden; it supports tunnel/gallery views.
-static TaskDesc _gNeoArkGardenWaterDistortionTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_GARDEN_WATER_TASK_PRIORITY } }, waterDistortBandTask, { .value = 0 } };
+static TaskDesc _gNeoArkGardenWaterDistortionTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterDistortBandTask, { .value = 0 } };
 
 TaskMessageEntry gNeoArkGardenRoomMessageTable[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, neoArkGardenResolveTransition },
@@ -521,16 +518,16 @@ static inline void _neoArkGardenSpawnAmbientSmoke(void)
     /// `worldPosition` once on a successful roll; it must point to a live
     /// `SVECTOR` in world units. The spawner copies XYZ and retains its address.
     /// Expand only as a standalone braced block; the binding ends below.
-#define NEO_ARK_GARDEN_TRY_SPAWN_AMBIENT_SMOKE(worldPosition)                                                         \
-    {                                                                                                                 \
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                             \
-        gRandomLcgState = randomState;                                                                                \
-        if (((randomState >> 16) & NEO_ARK_GARDEN_SMOKE_CHANCE_MASK) == 0) {                                          \
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                         \
-            effectSpawn(EFFECT_SMOKE_PUFF, NULL,                                                                      \
-                        ((gRandomLcgState >> 16) & NEO_ARK_GARDEN_SMOKE_JITTER_MASK) | NEO_ARK_GARDEN_SMOKE_BASE_ARG, \
-                        (worldPosition));                                                                             \
-        }                                                                                                             \
+#define NEO_ARK_GARDEN_TRY_SPAWN_AMBIENT_SMOKE(worldPosition)                                                   \
+    {                                                                                                           \
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);                                                     \
+        gRandomLcgState = randomState;                                                                          \
+        if (((randomState >> 16) & NEO_ARK_GARDEN_SMOKE_CHANCE_MASK) == 0) {                                    \
+            RANDOM_LCG_ADVANCE();                                                                               \
+            effectSpawn(EFFECT_SMOKE_PUFF, NULL,                                                                \
+                        (RANDOM_LCG_DRAW() & NEO_ARK_GARDEN_SMOKE_JITTER_MASK) | NEO_ARK_GARDEN_SMOKE_BASE_ARG, \
+                        (worldPosition));                                                                       \
+        }                                                                                                       \
     }
 
     NEO_ARK_GARDEN_TRY_SPAWN_AMBIENT_SMOKE(&_gNeoArkGardenAmbiencePositions.smokeEmitters[0]);
@@ -743,7 +740,7 @@ static void _neoArkGardenDrawRotatingSquare(const SVECTOR* centre)
                quadScratch->screenCorners[1].vx, quadScratch->screenCorners[1].vy,
                quadScratch->screenCorners[2].vx, quadScratch->screenCorners[2].vy,
                quadScratch->screenCorners[3].vx, quadScratch->screenCorners[3].vy);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectQuadScratch);

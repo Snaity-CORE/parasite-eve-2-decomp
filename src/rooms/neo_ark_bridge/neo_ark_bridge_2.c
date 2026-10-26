@@ -10,7 +10,9 @@
 #include "common.h"
 
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_03800.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -1069,10 +1071,10 @@ void neoArkBridgeAmbientEffectsTask(Task* task)
     /// cell and drifting rise. Keep the room-owned point live for the puff.
 #define NEO_ARK_BRIDGE_TRY_SPAWN_AMBIENT_SMOKE(worldPoint, rollState, optionsState)                                                                            \
     {                                                                                                                                                          \
-        (rollState)     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                      \
+        (rollState)     = RANDOM_LCG_NEXT(gRandomLcgState);                                                                                                    \
         gRandomLcgState = (rollState);                                                                                                                         \
         if ((((rollState) >> 16) & NEO_ARK_BRIDGE_SMOKE_CHANCE_MASK) == 0) {                                                                                   \
-            (optionsState)  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                  \
+            (optionsState)  = RANDOM_LCG_NEXT(gRandomLcgState);                                                                                                \
             gRandomLcgState = (optionsState);                                                                                                                  \
             effectSpawn(EFFECT_SMOKE_PUFF, 0, (((optionsState) >> 16) & NEO_ARK_BRIDGE_SMOKE_JITTER_MASK) | NEO_ARK_BRIDGE_SMOKE_BASE_ARGUMENT, (worldPoint)); \
         }                                                                                                                                                      \
@@ -1209,7 +1211,7 @@ static void _neoArkBridgeDrawPulsingRedStar(const SVECTOR* worldPoint, s16 pulse
             diamondHalf->y0 = screenY;
             verticalSide    = partIndex * 2;
             diamondHalf->y1 = (projection->sy - (u16)projection->radius) + (projection->radius * verticalSide);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->otz),
                     diamondHalf);
             gpuSetPrimitiveBlendMode(diamondHalf, GPU_BLEND_ADD, projection->otz);
             partIndex++;

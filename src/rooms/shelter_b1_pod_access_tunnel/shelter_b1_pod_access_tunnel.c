@@ -9,7 +9,10 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_141000.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/actor_render.h"
@@ -45,6 +48,7 @@
 #include "main/coord.h"
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/fs.h"
 #include "main/gameflag.h"
 #include "main/gamemain.h"
@@ -75,6 +79,8 @@
 #include "../../shared/room/room_events.h"
 #include "../../shared/actor/actor_messages.h"
 
+#include "assets/engine/animation/player_schema.h"
+
 /// Logical view containing the two-image pod-chamber pan.
 enum { SHELTER_B1_POD_ACCESS_TUNNEL_POD_PAN_VIEW               = 11,
        SHELTER_B1_POD_ACCESS_TUNNEL_IMAGE_SCROLL_FRACTION_BITS = 16 };
@@ -83,9 +89,6 @@ enum {
     SHELTER_B1_POD_ACCESS_TUNNEL_IMAGE_SCROLL_DELAY_FRAMES = 46,  // Frames the lower image is held still before the scroll starts
     SHELTER_B1_POD_ACCESS_TUNNEL_IMAGE_SCROLL_LINES        = 240, // Screen lines the seam travels, the height of either image
 };
-
-/// Key-item-use message handled by this room; inventory sends the selected item ID.
-enum { SHELTER_B1_POD_ACCESS_TUNNEL_MESSAGE_USE_KEY_ITEM = 0x13F1 };
 
 /// Replies to the room-transition dispatcher: refuse, use its warp, or handle it here.
 enum { SHELTER_B1_POD_ACCESS_TUNNEL_EVENT_BLOCKED           = 0,
@@ -101,8 +104,6 @@ enum { SHELTER_B1_POD_ACCESS_TUNNEL_TRAVEL_TO_B2     = 0,
        SHELTER_B1_POD_ACCESS_TUNNEL_TRAVEL_TO_GANTRY = 1 };
 
 enum {
-    SHELTER_B1_POD_ACCESS_TUNNEL_DEPARTURE_TASK_PRIORITY = 32,
-    SHELTER_B1_POD_ACCESS_TUNNEL_SCENE_TASK_PRIORITY     = 192,
     SHELTER_B1_POD_ACCESS_TUNNEL_PLAYER_SCENE_FIRST_CLIP = ANIMATION_BANK_BASE_SET_COUNT + 1,
 };
 
@@ -193,7 +194,7 @@ static void _shelterB1PodAccessTunnelCancelRoomEffects(void);
 /// records. Only one staged departure may use those records at a time; keep
 /// them and the room overlay loaded until reload discards the old task list.
 static TaskDesc _gShelterB1PodAccessTunnelStagedDepartureTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B1_POD_ACCESS_TUNNEL_DEPARTURE_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = roomEventStagedTask,
     .data     = { .value = 0 },
 };
@@ -204,7 +205,7 @@ static TaskDesc _gShelterB1PodAccessTunnelStagedDepartureTaskDesc = {
 /// payload types selected by its message ID; this overlay must remain loaded.
 static TaskMessageEntry _gShelterB1PodAccessTunnelRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB1PodAccessTunnelResolveRoomEvent },
-    { SHELTER_B1_POD_ACCESS_TUNNEL_MESSAGE_USE_KEY_ITEM, _shelterB1PodAccessTunnelRejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB1PodAccessTunnelRejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB1PodAccessTunnelIgnoreActionMessage },
     { ROOM_MESSAGE_COMMAND, _shelterB1PodAccessTunnelHandleCommandMessage },
     { ROOM_MESSAGE_SOUND, _shelterB1PodAccessTunnelHandleSoundMessage },
@@ -217,8 +218,8 @@ static TaskMessageEntry _gShelterB1PodAccessTunnelRoomMessages[6] = {
 /// control; their CAP choices either restore control or commit a session reload.
 /// Keep this room overlay loaded through the travel task's completion.
 static TaskDesc _gShelterB1PodAccessTunnelTravelTaskDescs[2] = {
-    { { { TASK_BODY_NONE, SHELTER_B1_POD_ACCESS_TUNNEL_DEPARTURE_TASK_PRIORITY } }, _shelterB1PodAccessTunnelRideToB2Task, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_POD_ACCESS_TUNNEL_DEPARTURE_TASK_PRIORITY } }, _shelterB1PodAccessTunnelTravelToGantryTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB1PodAccessTunnelRideToB2Task, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB1PodAccessTunnelTravelToGantryTask, { .value = 0 } },
 };
 
 /// Return-from-gantry dialogue: CAP selection 7, area music and player-control restoration.
@@ -241,7 +242,7 @@ static EvsCommand _gShelterB1PodAccessTunnelPostGantryDialogueScript[7] = {
 /// Requires the player, its weapon bank and room CAP resources to stay loaded
 /// until dialogue completion. The spawned task waits for pending displays to close.
 static TaskDesc _gShelterB1PodAccessTunnelPostGantryDialogueTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B1_POD_ACCESS_TUNNEL_SCENE_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _shelterB1PodAccessTunnelPostGantryDialogueTask,
     .data     = { .value = 0 },
 };
@@ -408,9 +409,9 @@ static AnimationSet _gShelterB1PodAccessTunnelAnimation05744 = {
 /// The gray-countdown recipe runs on the display-mode list; the others use the
 /// current list. Keep this room overlay loaded while any callback is active.
 static TaskDesc _gShelterB1PodAccessTunnelSceneTaskDescs[3] = {
-    { { { TASK_BODY_NONE, SHELTER_B1_POD_ACCESS_TUNNEL_SCENE_TASK_PRIORITY } }, _shelterB1PodAccessTunnelPanSceneCameraTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_POD_ACCESS_TUNNEL_SCENE_TASK_PRIORITY } }, _shelterB1PodAccessTunnelImageScrollTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_POD_ACCESS_TUNNEL_SCENE_TASK_PRIORITY } }, _shelterB1PodAccessTunnelGrayCaptureCountdownTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB1PodAccessTunnelPanSceneCameraTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB1PodAccessTunnelImageScrollTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB1PodAccessTunnelGrayCaptureCountdownTask, { .value = 0 } },
 };
 
 /// Player entry-scene bank extension: null slot 47 followed by clips 48..54.
@@ -1544,7 +1545,7 @@ static s32 _shelterB1PodAccessTunnelResolveRoomEvent(Task* task, s32 messageId, 
             }
             return SHELTER_B1_POD_ACCESS_TUNNEL_EVENT_HANDLED;
         }
-        if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) >= STORY_CHAPTER_GANTRY_TRANSIT) {
+        if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) >= STORY_CHAPTER_GANTRY_TRANSIT) {
             if (request->queryOnly == ROOM_EVENT_EXECUTE) {
                 playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);
                 taskSpawnFromTable(_gShelterB1PodAccessTunnelTravelTaskDescs, SHELTER_B1_POD_ACCESS_TUNNEL_TRAVEL_TO_GANTRY, 0, 0);
@@ -1834,10 +1835,10 @@ static void _shelterB1PodAccessTunnelInitializeRoomTask(Task* task)
         // Consume the gantry return before considering the one-time entry scene.
         taskSpawnFromTable(&_gShelterB1PodAccessTunnelPostGantryDialogueTaskDesc, 0, 0, 0);
         gameFlagSetNibble(GAME_FLAG_118, SHELTER_B1_POD_ACCESS_TUNNEL_GANTRY_RETURN_COMPLETE);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_AFTER_GANTRY);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_AFTER_GANTRY);
     } else if (gameFlagGetNibble(GAME_FLAG_POD_ACCESS_TUNNEL_SCENE_SEEN) == 0) {
         evsStartScriptWithSkip(_gShelterB1PodAccessTunnelEntrySceneScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gShelterB1PodAccessTunnelEntrySceneSkipScript);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_FIRST_POD_ENTRY);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_FIRST_POD_ENTRY);
         gameFlagSetNibble(GAME_FLAG_POD_ACCESS_TUNNEL_SCENE_SEEN, ENTRY_SCENE_RECORDED);
     }
     task->state = task->state + ROOM_IDLE;
@@ -1871,11 +1872,7 @@ static void _shelterB1PodAccessTunnelPostGantryDialogueTask(Task* task)
 {
     enum { DIALOGUE_START,
            DIALOGUE_WAIT_SCRIPT,
-           DIALOGUE_PRIMARY_CHARACTER         = 1,
-           DIALOGUE_PRIMARY_WEAPON_SET_BASE   = 1,
-           DIALOGUE_ALTERNATE_WEAPON_SET_BASE = 0x22,
-           DIALOGUE_WEAPON_POSE               = 1,
-           DIALOGUE_MUSIC_EVENT               = 29 };
+           DIALOGUE_MUSIC_EVENT = 29 };
 
     AnimationPlayRequest poseRequest;
     s32                  state;
@@ -1888,11 +1885,9 @@ static void _shelterB1PodAccessTunnelPostGantryDialogueTask(Task* task)
             if (gAttachmentState.mode != ATTACHMENT_MODE_WHEEL && gDisplayState.pendingMode == DISPLAY_MODE_NONE) {
                 // The arrival script holds a weapon pose until normal control resumes.
                 weaponId                         = gPlayerStatus.weapon;
-                weaponSetIndex                   = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DIALOGUE_PRIMARY_CHARACTER)
-                                                       ? weaponId + DIALOGUE_PRIMARY_WEAPON_SET_BASE
-                                                       : weaponId + DIALOGUE_ALTERNATE_WEAPON_SET_BASE;
+                weaponSetIndex                   = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
                 poseRequest.source.index         = weaponSetIndex;
-                poseRequest.animationId          = DIALOGUE_WEAPON_POSE;
+                poseRequest.animationId          = PLAYER_ANIMATION_IDLE;
                 poseRequest.blend                = ANIMATION_BLEND_RESET;
                 poseRequest.blendFrames          = 0;
                 poseRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;

@@ -126,9 +126,8 @@ static WorldCoordRoomLights       _gDryfieldNightMotelLobbyRoomLights;
 static void _dryfieldNightMotelLobbyCashRegisterCursorTask(Task* task);
 static void _dryfieldNightMotelLobbyCashRegisterTask(Task* task);
 
-/// Execution priority and first command-menu row of the register's task recipes and keys.
+/// First command-menu row of the register's keys.
 enum {
-    DRYFIELD_NIGHT_MOTEL_LOBBY_CASH_REGISTER_TASK_PRIORITY  = 192,
     DRYFIELD_NIGHT_MOTEL_LOBBY_CASH_REGISTER_PROMPT_EXAMINE = 0,
 };
 
@@ -138,7 +137,7 @@ enum {
 /// both ports. The controller retains and kills the independent child;
 /// its callbacks and cursor graphics require the lobby and gameplay to stay loaded.
 static TaskDesc _gDryfieldNightMotelLobbyCashRegisterCursorTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, DRYFIELD_NIGHT_MOTEL_LOBBY_CASH_REGISTER_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _dryfieldNightMotelLobbyCashRegisterCursorTask,
     .data     = { .value = 0 },
 };
@@ -162,7 +161,7 @@ ActionPromptHotspot gDryfieldNightMotelLobbyCashRegisterHotspots[15] = {
 };
 
 TaskDesc gDryfieldNightMotelLobbyCashRegisterTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, DRYFIELD_NIGHT_MOTEL_LOBBY_CASH_REGISTER_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _dryfieldNightMotelLobbyCashRegisterTask,
     .data     = { .value = 0 },
 };
@@ -1369,7 +1368,7 @@ static void _dryfieldNightMotelLobbyDrawFlare(const SVECTOR* worldPoint, s32 tex
         // Perspective-size the square and sort it at the light's projected depth.
         projection->radius = ((s16)radiusScale * GLOW_FLARE_CELL_LAST_TEXEL) / projection->otz;
         _dryfieldNightMotelLobbySetFlareBounds(flare, projection);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->otz),
                 flare);
     }
     // Preserve the extra reservation above the projection, including on rejection.

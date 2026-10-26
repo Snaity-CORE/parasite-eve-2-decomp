@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_121300.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -10,16 +10,17 @@
 
 #include "actors/actor.h"
 
-#include "gameplay/companion_load.h"
-#include "gameplay/captions.h"
 #include "gameplay/animation.h"
 #include "gameplay/area.h"
 #include "gameplay/areaplace.h"
 #include "gameplay/attachment_state.h"
 #include "gameplay/attachments.h"
+#include "gameplay/companion_load.h"
+#include "gameplay/captions.h"
 #include "gameplay/evs.h"
 #include "gameplay/evs_scripts.h"
 #include "gameplay/message.h"
+#include "gameplay/player_actor.h"
 #include "gameplay/room_effects.h"
 #include "gameplay/scene_runtime.h"
 #include "gameplay/world_coords.h"
@@ -49,6 +50,10 @@
 #include "rooms/dryfield_r08.h"
 #include "../../shared/screen/screen_wave.h"
 #include "../../shared/actor/actor_messages.h"
+#include "../../shared/screen/screen_fade.h"
+#include "../../shared/screen/screen_fade_step_up.inc.c"
+
+#include "assets/engine/animation/player_schema.h"
 
 /// Scene step of Eve, stored in `_Actor121300EveWork::step`.
 ///
@@ -174,8 +179,6 @@ ScreenWaveOscillator _gScreenWaveColumnWaves[13];
 
 ScreenWaveOscillator _gScreenWaveRowWaves[30];
 
-enum { ACTOR_121300_MESSAGE_SET_TEXTURE_SEQUENCE = 2016 };
-
 static s32 _actor121300SetTextureSequence(Task* task, s32 unusedMessageId, s32 textureSequence, s32 unusedArg);
 
 static TmdSource _gEveBody;
@@ -200,9 +203,6 @@ static void      _actor121300SetDoubleDrawMode(s32 drawMode);
 static void      _actor121300StageSceneAudioStart(void);
 static void      _actor121300QueueScenePlayback(void);
 static void      _actor121300FinishScene(void);
-
-/// Execution priority of the scene double and its effect children.
-enum { ACTOR_121300_SCENE_TASK_PRIORITY = 192 };
 
 /// Full-rate percentage used by debris gravity, translation and spin.
 enum { ACTOR_121300_DEBRIS_FULL_SPEED_PERCENT = 100 };
@@ -391,7 +391,7 @@ static TmdSource _gActor121300Model08768 = {
 /// Keep the context and this overlay live through the wave's final draw; waves
 /// must not overlap because they share the renderer's oscillator storage.
 static TaskDesc _gActor121300ScreenWaveTasks[2] = {
-    { { { TASK_BODY_NONE, ACTOR_121300_SCENE_TASK_PRIORITY } }, _screenWaveTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -497,7 +497,7 @@ static _Actor121300Lamp _gActor121300Lamps[13] = {
 /// The double's placement, draw-mode and texture-sequence message handlers.
 ///
 /// Dispatch only `ACTOR_MESSAGE_PLACE`, `ACTOR_MESSAGE_SET_MODEL_DRAW` or
-/// `ACTOR_121300_MESSAGE_SET_TEXTURE_SEQUENCE`: this exact three-entry table
+/// `ACTOR_MESSAGE_SET_TEXTURE_MODE`: this exact three-entry table
 /// has no end marker. Placement borrows an `ActorTransform` during dispatch;
 /// draw modes use `ACTOR_MESSAGE_DRAW_*`. Texture sequences 0, 1, 2, 4 and 5
 /// upload patches; 3 and unsupported selectors retain an idle upload task.
@@ -506,7 +506,7 @@ static _Actor121300Lamp _gActor121300Lamps[13] = {
 static TaskMessageEntry _gActor121300DoubleMessages[3] = {
     { ACTOR_MESSAGE_PLACE, actorMsgPlaceYawPitchRoll },
     { ACTOR_MESSAGE_SET_MODEL_DRAW, actorMsgSetDrawMode },
-    { ACTOR_121300_MESSAGE_SET_TEXTURE_SEQUENCE, _actor121300SetTextureSequence },
+    { ACTOR_MESSAGE_SET_TEXTURE_MODE, _actor121300SetTextureSequence },
 };
 
 /// The scene double's standing mark in its model root's parent frame.
@@ -660,17 +660,17 @@ static EvsCommand _gActor121300SceneSkipScript[7] = {
 };
 
 TaskDesc gActor121300SceneTasks[11] = {
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300EveSceneTask, { .model = &_gEveBody } },
-    { { { TASK_BODY_NONE, ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300FadeInTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300FadeOutTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300SpawnLampDebrisTask, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model07E84 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model080F0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model0834C } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model08580 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model08768 } },
-    { { { TASK_BODY_NONE, ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300BlackoutTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_121300_SCENE_TASK_PRIORITY } }, _actor121300UploadTexturesTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor121300EveSceneTask, { .model = &_gEveBody } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor121300FadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor121300FadeOutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor121300SpawnLampDebrisTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model07E84 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model080F0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model0834C } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model08580 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor121300LampDebrisTask, { .model = &_gActor121300Model08768 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor121300BlackoutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor121300UploadTexturesTask, { .value = 0 } },
 };
 
 /// Borrowed context of this renderer's active wave task.
@@ -744,7 +744,6 @@ static void _actor121300FadeInTask(Task* task)
         ACTOR_121300_FADE_IN_HOLD_BLACK     = 1,
         ACTOR_121300_FADE_IN_ENABLE_DISPLAY = 2,
         ACTOR_121300_FADE_IN_REVEAL         = 3,
-        ACTOR_121300_FADE_IN_MAX_INTENSITY  = 255,
     };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
@@ -759,9 +758,9 @@ static void _actor121300FadeInTask(Task* task)
                 return;
             }
             fade    = allocatedFade;
-            fade->r = ACTOR_121300_FADE_IN_MAX_INTENSITY;
-            fade->g = ACTOR_121300_FADE_IN_MAX_INTENSITY;
-            fade->b = ACTOR_121300_FADE_IN_MAX_INTENSITY;
+            fade->r = SCREEN_FADE_FULL_INTENSITY;
+            fade->g = SCREEN_FADE_FULL_INTENSITY;
+            fade->b = SCREEN_FADE_FULL_INTENSITY;
             fadeDrawOverlay(fade->r, fade->g, fade->b, GPU_BLEND_SUBTRACT);
             task->state += 1;
             break;
@@ -839,13 +838,13 @@ static inline s16 _actor121300RollDebrisSpin(void)
     enum { ACTOR_121300_DEBRIS_SPIN_MAGNITUDE_MASK = 127 };
     s16 spin;
 
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    if ((gRandomLcgState >> 16) & 1) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        spin            = (gRandomLcgState >> 16) & ACTOR_121300_DEBRIS_SPIN_MAGNITUDE_MASK;
+    RANDOM_LCG_ADVANCE();
+    if (RANDOM_LCG_DRAW() & 1) {
+        RANDOM_LCG_ADVANCE();
+        spin = RANDOM_LCG_DRAW() & ACTOR_121300_DEBRIS_SPIN_MAGNITUDE_MASK;
     } else {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        spin            = -((gRandomLcgState >> 16) & ACTOR_121300_DEBRIS_SPIN_MAGNITUDE_MASK);
+        RANDOM_LCG_ADVANCE();
+        spin = -(RANDOM_LCG_DRAW() & ACTOR_121300_DEBRIS_SPIN_MAGNITUDE_MASK);
     }
     return spin;
 }
@@ -952,33 +951,33 @@ static void _actor121300LampDebrisTask(Task* task)
             model->colorMtx = &work->colorMtx;
 
             // The positive lateral roll is 0..7; the negative roll is -17..-10.
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                lateralVelocity = ((gRandomLcgState >> 16) + 10) & 7;
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
+                RANDOM_LCG_ADVANCE();
+                lateralVelocity = (RANDOM_LCG_DRAW() + 10) & 7;
             } else {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                lateralVelocity = -10 - ((gRandomLcgState >> 16) & 7);
+                RANDOM_LCG_ADVANCE();
+                lateralVelocity = -10 - (RANDOM_LCG_DRAW() & 7);
             }
-            work->velX      = lateralVelocity;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->velY      = ((gRandomLcgState >> 16) & 3) + 3;
+            work->velX = lateralVelocity;
+            RANDOM_LCG_ADVANCE();
+            work->velY = (RANDOM_LCG_DRAW() & 3) + 3;
 
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                lateralVelocity = ((gRandomLcgState >> 16) + 10) & 7;
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
+                RANDOM_LCG_ADVANCE();
+                lateralVelocity = (RANDOM_LCG_DRAW() + 10) & 7;
             } else {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                lateralVelocity = -10 - ((gRandomLcgState >> 16) & 7);
+                RANDOM_LCG_ADVANCE();
+                lateralVelocity = -10 - (RANDOM_LCG_DRAW() & 7);
             }
             work->velZ = lateralVelocity;
 
-            work->spinX     = _actor121300RollDebrisSpin();
-            work->spinY     = _actor121300RollDebrisSpin();
-            work->spinZ     = _actor121300RollDebrisSpin();
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->delay     = (gRandomLcgState >> 16) & 3;
+            work->spinX = _actor121300RollDebrisSpin();
+            work->spinY = _actor121300RollDebrisSpin();
+            work->spinZ = _actor121300RollDebrisSpin();
+            RANDOM_LCG_ADVANCE();
+            work->delay = RANDOM_LCG_DRAW() & 3;
             task->state++;
             break;
         case ACTOR_121300_DEBRIS_DELAY:
@@ -1227,10 +1226,10 @@ static void _actor121300SpawnRingSprites(Task* unusedTask, s16 raised)
         if (point->vx != ACTOR_121300_RING_END_X) {
             spriteArg = ACTOR_121300_DRIFT_SPRITE_ARGUMENT;
             do {
-                randomSeed      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                randomSeed      = RANDOM_LCG_NEXT(gRandomLcgState);
                 gRandomLcgState = randomSeed;
-                jitteredX       = pointX + (((randomSeed >> 16) & 1) ? ((gRandomLcgState = (randomSeed * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT) >> 16) & 7
-                                                                     : -(((gRandomLcgState = (randomSeed * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT) >> 16) & 7)) *
+                jitteredX       = pointX + (((randomSeed >> 16) & 1) ? ((gRandomLcgState = RANDOM_LCG_NEXT(randomSeed)) >> 16) & 7
+                                                                     : -(((gRandomLcgState = RANDOM_LCG_NEXT(randomSeed)) >> 16) & 7)) *
                                          10;
                 spawnPosition.vx = jitteredX;
                 spawnPosition.vy = point->vy;
@@ -1272,10 +1271,10 @@ static void _actor121300SpawnUpperRowSprites(Task* task, s16 dwindle)
         for (pointIndex = 0; pointIndex < ARRAY_SIZE(_gActor121300UpperRowPoints) - 1 - work->spritePointsDropped; pointIndex++) {
             spriteArg       = ACTOR_121300_DRIFT_SPRITE_ARGUMENT;
             points          = _gActor121300UpperRowPoints;
-            randomSeed      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            randomSeed      = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = randomSeed;
-            jitteredX       = points[pointIndex].vx + (((randomSeed >> 16) & 1) ? ((gRandomLcgState = (randomSeed * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT) >> 16) & 7
-                                                                                : -(((gRandomLcgState = (randomSeed * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT) >> 16) & 7)) *
+            jitteredX       = points[pointIndex].vx + (((randomSeed >> 16) & 1) ? ((gRandomLcgState = RANDOM_LCG_NEXT(randomSeed)) >> 16) & 7
+                                                                                : -(((gRandomLcgState = RANDOM_LCG_NEXT(randomSeed)) >> 16) & 7)) *
                                                     10;
             spawnPosition.vx = jitteredX;
             spawnPosition.vy = points[pointIndex].vy;
@@ -1575,20 +1574,13 @@ static void _actor121300InitBody(Task* task)
 static void _actor121300EveSceneTask(Task* task)
 {
     enum {
-        ACTOR_121300_SCENE_INITIALIZE          = 0,
-        ACTOR_121300_SCENE_START_SCRIPT        = 1,
-        ACTOR_121300_SCENE_WAIT_SCRIPT         = 2,
-        ACTOR_121300_SCENE_RELOAD              = 3,
-        ACTOR_121300_SCENE_PRIMARY_CHARACTER   = 1,
-        ACTOR_121300_SCENE_PRIMARY_BANK_BASE   = 1,
-        ACTOR_121300_SCENE_ALTERNATE_BANK_BASE = 34,
-        ACTOR_121300_SCENE_WEAPON_CLIP         = 1,
-        ACTOR_121300_SCENE_END_TASK            = 9,
-        ACTOR_121300_SCENE_FRAME_WIDTH         = 320,
-        ACTOR_121300_SCENE_FRAME_HEIGHT        = 240,
-        ACTOR_121300_SCENE_SECOND_FRAME_Y      = 272,
-        ACTOR_121300_SCENE_RETURN_WARP         = 3,
-        ACTOR_121300_SCENE_LIGHT_COUNT         = 3,
+        ACTOR_121300_SCENE_INITIALIZE   = 0,
+        ACTOR_121300_SCENE_START_SCRIPT = 1,
+        ACTOR_121300_SCENE_WAIT_SCRIPT  = 2,
+        ACTOR_121300_SCENE_RELOAD       = 3,
+        ACTOR_121300_SCENE_END_TASK     = 9,
+        ACTOR_121300_SCENE_RETURN_WARP  = 3,
+        ACTOR_121300_SCENE_LIGHT_COUNT  = 3,
     };
     TmdObject* model;
     s32        sceneState;
@@ -1602,9 +1594,9 @@ static void _actor121300EveSceneTask(Task* task)
 
             if ((gAttachmentState.mode != ATTACHMENT_MODE_WHEEL) && (gDisplayState.pendingMode == DISPLAY_MODE_NONE)) {
                 weaponId                     = gPlayerStatus.weapon;
-                animationBank                = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_121300_SCENE_PRIMARY_CHARACTER) ? weaponId + ACTOR_121300_SCENE_PRIMARY_BANK_BASE : weaponId + ACTOR_121300_SCENE_ALTERNATE_BANK_BASE;
+                animationBank                = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
                 request.source.index         = animationBank;
-                request.animationId          = ACTOR_121300_SCENE_WEAPON_CLIP;
+                request.animationId          = PLAYER_ANIMATION_IDLE;
                 request.blend                = ANIMATION_BLEND_RESET;
                 request.blendFrames          = 0;
                 request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -1630,10 +1622,10 @@ static void _actor121300EveSceneTask(Task* task)
 
             rect.x = 0;
             rect.y = 0;
-            rect.w = ACTOR_121300_SCENE_FRAME_WIDTH;
-            rect.h = ACTOR_121300_SCENE_FRAME_HEIGHT;
+            rect.w = DISPLAY_SCREEN_WIDTH;
+            rect.h = DISPLAY_SCREEN_HEIGHT;
             ClearImage(&rect, 0, 0, 0);
-            rect.y = ACTOR_121300_SCENE_SECOND_FRAME_Y;
+            rect.y = DISPLAY_BUFFER_STRIDE_ROWS;
             ClearImage(&rect, 0, 0, 0);
             memFillBytes(gFsImageWorkspacePtr, 0, sizeof(*gFsImageWorkspacePtr));
             SetDispMask(1);
@@ -1683,9 +1675,8 @@ static void _actor121300EveSceneTask(Task* task)
 static void _actor121300FadeOutTask(Task* task)
 {
     enum {
-        ACTOR_121300_FADE_OUT_INITIALIZE    = 0,
-        ACTOR_121300_FADE_OUT_DARKEN        = 1,
-        ACTOR_121300_FADE_OUT_END_INTENSITY = 256,
+        ACTOR_121300_FADE_OUT_INITIALIZE = 0,
+        ACTOR_121300_FADE_OUT_DARKEN     = 1,
     };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
@@ -1707,10 +1698,8 @@ static void _actor121300FadeOutTask(Task* task)
             /* fallthrough */
         case ACTOR_121300_FADE_OUT_DARKEN:
             fadeDrawOverlay(fade->r, fade->g, fade->r, GPU_BLEND_SUBTRACT);
-            fade->r += task->spawnArg1.halves.low;
-            fade->g += task->spawnArg1.halves.low;
-            fade->b += task->spawnArg1.halves.low;
-            if (fade->r < ACTOR_121300_FADE_OUT_END_INTENSITY) {
+            _screenFadeStepUp(fade, task);
+            if (fade->r < SCREEN_FADE_OUT_COMPLETE) {
                 return;
             }
             SetDispMask(0);

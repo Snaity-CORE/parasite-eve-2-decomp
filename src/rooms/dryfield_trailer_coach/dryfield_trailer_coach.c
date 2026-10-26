@@ -11,7 +11,7 @@
 
 #include "actors/actor_420700.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_420700.h"
 
 #include "gameplay/direction_input.h"
 #include "gameplay/display.h"
@@ -65,8 +65,6 @@
 
 #include "mapui/map_dryfield.h"
 
-#include "rooms/akropolis_square.h"
-
 #include "rooms/room.h"
 
 #include "rooms/room_common.h"
@@ -109,9 +107,6 @@ static void _dryfieldTrailerCoachTopicChoiceTask(Task* task);
 enum { DRYFIELD_TRAILER_COACH_FIRST_CONVERSATION_COMPLETE  = 2,
        DRYFIELD_TRAILER_COACH_SECOND_CONVERSATION_COMPLETE = 3 };
 
-/// Inventory request to use a key item in this room.
-enum { DRYFIELD_TRAILER_COACH_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static AnimationSet                     _gDryfieldTrailerCoachAnimation07668;
 static AnimationSet                     _gDryfieldTrailerCoachAnimation07994;
 static WorldCollisionGrid               _gDryfieldTrailerCoachRoomCollisionGrid;
@@ -129,37 +124,8 @@ TaskDesc gDryfieldTrailerCoachShopSessionTaskDesc = {
     .data     = { .value = 0 },
 };
 
-static TmdBone _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Skeleton[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_skeleton.inc"
-};
-
-static u32 _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0PartVerts[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_partVerts.inc"
-};
-
-static SVECTOR _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Verts[56] = {
-#include "assets/acropolis_sanctuary_model_090F0_verts.inc"
-};
-
-static SVECTOR _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Normals[6] = {
-#include "assets/acropolis_sanctuary_model_090F0_normals.inc"
-};
-
-static u32 _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Stream[215] = {
-#include "assets/acropolis_sanctuary_model_090F0_stream.inc"
-};
-
-TmdSource gDryfieldTrailerCoachAcropolisSanctuaryModel090F0 = {
-    0,
-    1768,
-    0,
-    3,
-    _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0PartVerts,
-    _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Verts,
-    _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Normals,
-    _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Skeleton,
-    _gDryfieldTrailerCoachAcropolisSanctuaryModel090F0Stream,
-};
+#include "assets/rooms/item_box/model.inc"
+DEFINE_ALIAS(_gItemBoxModel, gDryfieldTrailerCoachItemBoxModel);
 
 #include "../../shared/room/telephone_data.inc.c"
 
@@ -214,8 +180,8 @@ static AnimationSet _gDryfieldTrailerCoachAnimation07994 = {
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -225,13 +191,12 @@ static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
 /// The fourth entry terminates lookup; unsupported messages return zero.
 static const TaskMessageEntry _gDryfieldTrailerCoachRoomMessages[4] SECTION(".data") = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _dryfieldTrailerCoachResolveRoomEvent },
-    { DRYFIELD_TRAILER_COACH_MESSAGE_USE_KEY_ITEM, _dryfieldTrailerCoachRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldTrailerCoachRejectKeyItemUse },
     { ROOM_MESSAGE_COMMAND, _dryfieldTrailerCoachHandleCommand },
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { DRYFIELD_TRAILER_COACH_INTERACTION_TASK_COUNT    = 2,
-       DRYFIELD_TRAILER_COACH_INTERACTION_TASK_PRIORITY = 32 };
+enum { DRYFIELD_TRAILER_COACH_INTERACTION_TASK_COUNT = 2 };
 
 /// Bodyless topic-choice and conversation-selector task recipes, at indices 0 and 1.
 ///
@@ -242,8 +207,8 @@ enum { DRYFIELD_TRAILER_COACH_INTERACTION_TASK_COUNT    = 2,
 /// Spawning copies a recipe synchronously; keep this room's callbacks loaded
 /// until task completion. The spawner's interface requires a mutable table.
 static TaskDesc _gDryfieldTrailerCoachInteractionTaskDescs[DRYFIELD_TRAILER_COACH_INTERACTION_TASK_COUNT] = {
-    { { { TASK_BODY_NONE, DRYFIELD_TRAILER_COACH_INTERACTION_TASK_PRIORITY } }, _dryfieldTrailerCoachTopicChoiceTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_TRAILER_COACH_INTERACTION_TASK_PRIORITY } }, _dryfieldTrailerCoachConversationTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldTrailerCoachTopicChoiceTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldTrailerCoachConversationTask, { .value = 0 } },
 };
 
 /// Places the player for trailer-coach conversations in room coordinates.
@@ -2149,7 +2114,7 @@ static inline void _dryfieldTrailerCoachStartFirstStoryConversation(void)
     gameFlagSetNibble(GAME_FLAG_TRAILER_COACH_PROGRESS, DRYFIELD_TRAILER_COACH_FIRST_CONVERSATION_COMPLETE);
     gameFlagSetNibble(GAME_FLAG_DRIVEWAY_PROGRESS, DRIVEWAY_FIRST_CONVERSATION_PROGRESS);
     gameFlagSetNibble(GAME_FLAG_COMPANION_2_SCHEDULE, COMPANION_FIRST_CONVERSATION_SCHEDULE);
-    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, CONVERSATION_OBJECTIVE);
+    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, CONVERSATION_OBJECTIVE);
     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = CONVERSATION_SCENE_EVENT;
     areaApplySavedUpdates(_gDryfieldTrailerCoachFirstConversationAreaUpdates);
 }
@@ -2219,9 +2184,7 @@ static void _dryfieldTrailerCoachConversationTask(Task* task)
 /// result selects the inventory's "No use now" notice.
 static s32 _dryfieldTrailerCoachRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_TRAILER_COACH_KEY_ITEM_USE_REJECTED = 0 };
-
-    return DRYFIELD_TRAILER_COACH_KEY_ITEM_USE_REJECTED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Permits a room transition with the requested destination unchanged.

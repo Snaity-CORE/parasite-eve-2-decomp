@@ -1,4 +1,4 @@
-/* Shared No. 9 GOLEM implementation, carried by actor_510900 and actor_521100. */
+/* Shared No. 9 GOLEM implementation, carried by helicopter_landing_pad_no_9 and actor_521100. */
 
 /// Scratch-stack block of the No. 9 GOLEM's head turned to aim at the player.
 ///
@@ -15,7 +15,7 @@ STATIC_ASSERT_SIZEOF(_No9GolemHeadAimScratch, 0x40);
 
 /// Turns the GOLEM's head toward a bounded player direction in root-local space.
 ///
-/// Requires a live model with coordinate 4, a cached head transform in the view
+/// Requires a live model with its head (coordinate 4), a cached head transform in the view
 /// frame, and the player's world transform. Removes the view from that cache,
 /// aims 1536 world units above the player, and rotates the difference by the
 /// root's local rotation transpose. Clamps X/Y to +/-1024/768 and forward Z

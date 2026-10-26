@@ -1,6 +1,6 @@
 #include "actors/actor_335800.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_335800.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -94,9 +94,6 @@ enum {
 
 /// One game-coordinate unit in the approach vectors' signed 16.16 velocity.
 enum { ACTOR_335800_WALK_VELOCITY_ONE = 0x10000 };
-
-/// Execution priority shared by the body, attached-part and scene spawn recipes.
-enum { ACTOR_335800_TASK_PRIORITY = 192 };
 
 /// Balcony Z ranges, placement-table entries and ordinary views used by the scenes.
 enum {
@@ -272,10 +269,10 @@ static void _actor335800FlintTask(Task* task);
 /// the player's scene animation, start stream 59/60 from the first spawn word,
 /// or shake the display. Only index 0 has a coordinate body; all run at priority 192.
 static TaskDesc _gActor335800SceneTasks[] = {
-    { { { TASK_BODY_COORD, ACTOR_335800_TASK_PRIORITY } }, _actor335800SceneGroundShadowTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_335800_TASK_PRIORITY } }, _actor335800RestorePlayerAnimationOnBattleResetTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_335800_TASK_PRIORITY } }, _actor335800StartSceneVariantTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_335800_TASK_PRIORITY } }, _actor335800SceneScreenShakeTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _actor335800SceneGroundShadowTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor335800RestorePlayerAnimationOnBattleResetTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor335800StartSceneVariantTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor335800SceneScreenShakeTask, { .value = 0 } },
 };
 
 /// Five words installed at player weapon-bank indices 47..51 for balcony scenes.
@@ -610,7 +607,6 @@ enum {
 enum {
     ACTOR_335800_GARY_DOUGLAS_PLACEMENT   = 1,
     ACTOR_335800_FLINT_PLACEMENT          = 2,
-    ACTOR_335800_SCENE_ACTOR_SHOW         = 1,
     ACTOR_335800_SCENE_ACTOR_HIDE_RELEASE = 2,
     ACTOR_335800_BALCONY_ENTRY_VIEW       = 22,
     ACTOR_335800_BURNER_ENTRANCE_VIEW     = 17,
@@ -643,12 +639,12 @@ EvsCommand gActor335800BalconyEntryScript[72] = {
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 49 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gActor335800BurnerEntranceCommand } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_HIDE_RELEASE }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = ACTOR_335800_BURNER_ENTRANCE_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 140 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = ACTOR_335800_FLINT_SCENE_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gActor335800BurnerAimAndImpactCommand } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_FLINT_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_FLINT_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_FLINT_PLACEMENT }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor335800FlintScenePlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_FLINT_PLACEMENT }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor335800FlintSceneAnimationReset } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 18 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -661,7 +657,7 @@ EvsCommand gActor335800BalconyEntryScript[72] = {
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_FLINT_PLACEMENT }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor335800FlintSceneAnimationBlend } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 30 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_FLINT_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_HIDE_RELEASE }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     // Douglas's gunshot, moving shadow and dim request precede his later placements.
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor335800GaryDouglasSceneArrivalPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor335800GaryDouglasGunshotAnimation } }, { .value = 0 } },
@@ -675,7 +671,7 @@ EvsCommand gActor335800BalconyEntryScript[72] = {
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor335800GaryDouglasSceneSecondPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor335800GaryDouglasSceneAnimation3 } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 50 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gActor335800BurnerAdvanceCommand } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor335800GaryDouglasSceneThirdPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = ACTOR_335800_BALCONY_ENTRY_END_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -717,7 +713,7 @@ EvsCommand gActor335800BalconyEntrySkipScript[19] = {
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gActor335800PlayerRestoreAnimation }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = _gActor335800PlayerScenePlacements } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_GARY_DOUGLAS_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_HIDE_RELEASE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_BURNER_PLACEMENT }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gActor335800BurnerBeginFightCommand } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = ACTOR_335800_FLINT_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_335800_SCENE_ACTOR_HIDE_RELEASE }, { .value = 0 } },
@@ -886,9 +882,9 @@ static AnimationSet** _gActorMotionAnimBanks[1] = {
 };
 
 TaskDesc gActor335800GaryDouglasTasks[3] = {
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_335800_TASK_PRIORITY } }, _actor335800GaryDouglasTask, { .model = &_gGaryBody } },
-    { { { TASK_BODY_TMD, ACTOR_335800_TASK_PRIORITY } }, _actor335800GaryDouglasPartTask, { .model = &_gGaryHeadHat } },
-    { { { TASK_BODY_TMD, ACTOR_335800_TASK_PRIORITY } }, _actor335800GaryDouglasPartTask, { .model = &_gGaryShotgun } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor335800GaryDouglasTask, { .model = &_gGaryBody } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor335800GaryDouglasPartTask, { .model = &_gGaryHeadHat } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor335800GaryDouglasPartTask, { .model = &_gGaryShotgun } },
 };
 
 /// Gary Douglas's body-task interface for animation, placement, draw, walk and dimming.
@@ -925,7 +921,7 @@ static AnimationSet** _gActor335800FlintAnimationBanks[1] = {
     _gActor335800FlintAnimationBank,
 };
 
-TaskDesc gActor335800FlintTaskDesc = { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_335800_TASK_PRIORITY } }, _actor335800FlintTask, { .model = &gFlintBody } };
+TaskDesc gActor335800FlintTaskDesc = { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor335800FlintTask, { .model = &gFlintBody } };
 
 /// Flint's synchronous placed-actor message table.
 ///
@@ -1266,7 +1262,7 @@ static void _actor335800StopStageMusic(s32 fadeTicks)
 static void _actor335800SetPostSceneObjective(void)
 {
     enum { ACTOR_335800_POST_SCENE_OBJECTIVE = 24 };
-    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, ACTOR_335800_POST_SCENE_OBJECTIVE);
+    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, ACTOR_335800_POST_SCENE_OBJECTIVE);
 }
 
 /// Locks attachment commands for the scene and requests cancellation of room effects.
@@ -1694,10 +1690,9 @@ static void _actor335800GaryDouglasBeginApproach(Task* task)
 static s32 _actor335800GaryDouglasSetDrawMode(Task* task, s32 messageId, s32 mode, s32 unusedArg)
 {
     enum {
-        ACTOR_335800_GARY_DOUGLAS_DRAW_HIDE                  = 0,
-        ACTOR_335800_GARY_DOUGLAS_DRAW_SHOW_ALLOCATE         = 1,
-        ACTOR_335800_GARY_DOUGLAS_DRAW_HIDE_RELEASE          = 2,
-        ACTOR_335800_GARY_DOUGLAS_DRAW_SHOW_SKIP_AUTO_BUFFER = 3
+        ACTOR_335800_GARY_DOUGLAS_DRAW_HIDE          = 0,
+        ACTOR_335800_GARY_DOUGLAS_DRAW_SHOW_ALLOCATE = 1,
+        ACTOR_335800_GARY_DOUGLAS_DRAW_HIDE_RELEASE  = 2,
     };
     _Actor335800GaryDouglasWork* work;
     TmdObject*                   bodyModel;
@@ -1726,7 +1721,7 @@ static s32 _actor335800GaryDouglasSetDrawMode(Task* task, s32 messageId, s32 mod
             work->freeCountdown = mode;
             bodyModel->flags   |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_335800_GARY_DOUGLAS_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             bodyModel->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             bodyModel->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
@@ -2155,10 +2150,9 @@ static s32 _actor335800FlintPlayAnimation(Task* task, s32 messageId, const Anima
 static s32 _actor335800FlintSetDrawMode(Task* task, s32 messageId, s32 mode, s32 unusedArg)
 {
     enum {
-        ACTOR_335800_FLINT_DRAW_HIDE                  = 0,
-        ACTOR_335800_FLINT_DRAW_SHOW_ALLOCATE         = 1,
-        ACTOR_335800_FLINT_DRAW_HIDE_RELEASE          = 2,
-        ACTOR_335800_FLINT_DRAW_SHOW_SKIP_AUTO_BUFFER = 3
+        ACTOR_335800_FLINT_DRAW_HIDE          = 0,
+        ACTOR_335800_FLINT_DRAW_SHOW_ALLOCATE = 1,
+        ACTOR_335800_FLINT_DRAW_HIDE_RELEASE  = 2,
     };
     TmdObject* model;
     s32        result;
@@ -2184,7 +2178,7 @@ static s32 _actor335800FlintSetDrawMode(Task* task, s32 messageId, s32 mode, s32
             model->flags       |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
         }
-        case ACTOR_335800_FLINT_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             model->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             model->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

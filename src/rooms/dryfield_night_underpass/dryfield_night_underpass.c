@@ -8,7 +8,11 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_01500.h"
+#include "actors/actor_01600.h"
+#include "actors/actor_400500.h"
+#include "actors/actor_402200.h"
 
 #include "gameplay/area.h"
 #include "gameplay/captions.h"
@@ -48,8 +52,6 @@ static s32  _underpassSwitchMsg(Task* unusedTask, s32 unusedMessageId, s32 switc
 
 static s32 _underpassSoundMsg(Task* unusedTask, s32 unusedMessageId, s32 cueKey, s32 unusedSecondArg);
 
-enum { DRYFIELD_NIGHT_UNDERPASS_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static s32  _dryfieldNightUnderpassRejectKeyItemUse(Task* unusedTask, s32 messageId, s32 itemId, s32 unused);
 static s32  _dryfieldNightUnderpassIgnoreRoomAction(Task* unusedTask, s32 messageId, const DirectionActionRequest* request, s32 unused);
 static void _dryfieldNightUnderpassIdleTask(Task* unusedTask);
@@ -61,15 +63,13 @@ static WorldCollisionTrigger  _gDryfieldNightUnderpassActionTriggers[6];
 static WorldCoordRoomLights   _gDryfieldNightUnderpassLampRoomLights;
 static WorldCoordRoomLights   _gDryfieldNightUnderpassDimRoomLights;
 
-enum { UNDERPASS_SWITCH_TASK_PRIORITY = 32 };
-
 /// Bodyless switch-prompt recipe at index zero, followed by the descriptor end marker.
 ///
 /// The command handler supplies a flag nibble index and CAP command in the
 /// two spawn words. Spawning reads the recipe synchronously; the room and CAP
 /// resources must remain loaded until the prompt task completes.
 static TaskDesc _gUnderpassSwitchTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, UNDERPASS_SWITCH_TASK_PRIORITY } }, _underpassSwitchTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _underpassSwitchTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -80,7 +80,7 @@ static TaskDesc _gUnderpassSwitchTaskDescriptors[2] = {
 /// this overlay and its callback code loaded while the task receives messages.
 static const TaskMessageEntry _gDryfieldNightUnderpassRoomMessages[6] SECTION(".data") = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _roomVariantUnderpassMsg },
-    { DRYFIELD_NIGHT_UNDERPASS_MESSAGE_USE_KEY_ITEM, _dryfieldNightUnderpassRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldNightUnderpassRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldNightUnderpassIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _underpassSwitchMsg },
     { ROOM_MESSAGE_SOUND, _underpassSoundMsg },

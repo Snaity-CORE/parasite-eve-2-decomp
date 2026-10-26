@@ -1,5 +1,5 @@
 #include "actors/actor_202900.h"
-#include "actors/task_tables.h"
+#include "actors/actor_202900.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -96,18 +96,16 @@ static TaskMessageEntry _gActor202900WomanMessages[3] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { ACTOR_202900_WOMAN_TASK_PRIORITY = 192 };
-
 TaskDesc gActor202900WomanTaskDescriptors[2] = {
     // 0: body.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_202900_WOMAN_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor202900BodyTask,
         .data     = { .model = &_gAnmcWoman2Body },
     },
     // 1: carried model.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_202900_WOMAN_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor202900CarriedModelTask,
         .data     = { .model = &_gAnmcWoman2Glasses },
     },
@@ -268,7 +266,7 @@ static void _actor202900UpdateState(Enemy* unusedEnemy, Task* task)
     _actor202900RelightModel(model);
     _actor202900StepAnim(task);
     if (_gActor202900Work->st.animId == ACTOR_202900_SOUND_ANIM && _actor202900LatchSoundCue()) {
-        sndEvtRequestScriptStart(SOUND_ACROPOLIS_CAFETERIA_WOMAN_CUE, 0, 0);
+        sndEvtRequestScriptStart(SOUND_AKROPOLIS_CAFETERIA_WOMAN_CUE, 0, 0);
     }
 }
 

@@ -182,12 +182,6 @@ enum {
     FACTORY_SPAWN_HATCH                    = 7,
 };
 
-/// Scheduler priorities of factory interaction tasks and their session poller.
-enum {
-    FACTORY_TASK_PRIORITY          = 192,
-    FACTORY_PANEL_SESSION_PRIORITY = 32
-};
-
 /// Messages the operator panel task receives.
 enum {
     /// The lift has finished the movement the panel asked for, whether it ran

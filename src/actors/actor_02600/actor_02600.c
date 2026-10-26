@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_02600.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -62,8 +62,6 @@
 #include "../../shared/creatures/maggot_caterpillar/maggot_caterpillar.h"
 #undef MAGGOT_CATERPILLAR_KIND
 
-enum { MAGGOT_CATERPILLAR_BODY_PRIORITY = 96 };
-
 MATRIX* ScaleMatrix(MATRIX* m, VECTOR* v);
 MATRIX* MulMatrix(MATRIX* m0, MATRIX* m1);
 
@@ -97,8 +95,8 @@ static DamageAttack _gMaggotCaterpillarAttacks[6] = {
     [MAGGOT_CATERPILLAR_ATTACK_BITE_LATE]          = { 14, GAME_ACTOR_REACTION_ORDINARY },
     [MAGGOT_CATERPILLAR_ATTACK_BITE_EARLY]         = { 20, GAME_ACTOR_REACTION_ORDINARY },
     [MAGGOT_CATERPILLAR_ATTACK_PUFF]               = { 10, GAME_ACTOR_REACTION_DARKNESS },
-    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_LATE]  = { 16, MAGGOT_CATERPILLAR_ATTACK_REACTION_BODY_BLAST },
-    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_EARLY] = { 24, MAGGOT_CATERPILLAR_ATTACK_REACTION_BODY_BLAST },
+    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_LATE]  = { 16, GAME_ACTOR_REACTION_BODY_BLAST },
+    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_EARLY] = { 24, GAME_ACTOR_REACTION_BODY_BLAST },
     [MAGGOT_CATERPILLAR_ATTACK_DROP]               = { 10, GAME_ACTOR_REACTION_ORDINARY },
 };
 
@@ -316,7 +314,7 @@ static s16 _gMaggotCaterpillarPuffRadius[14] = {
 };
 
 TaskDesc gActor02600MaggotCaterpillarBodyTask = {
-    .header   = { .fields = { TASK_BODY_TMD, MAGGOT_CATERPILLAR_BODY_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } },
     .callback = _maggotCaterpillarTask,
     .data     = { .model = &_gCrawlerBody },
 };
@@ -328,7 +326,7 @@ TaskDesc gActor02600MaggotCaterpillarBodyTask = {
 /// descriptor data is ignored for coordinate bodies. Keep it immediately after
 /// the body recipe: the retained spawn table reaches it at index 1.
 static TaskDesc _gMaggotCaterpillarPuffTaskDesc = {
-    .header   = { .fields = { TASK_BODY_COORD, MAGGOT_CATERPILLAR_BODY_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } },
     .callback = _maggotCaterpillarPuffTask,
     .data     = { .value = 0 },
 };

@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_141000.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -73,9 +73,6 @@ enum {
 
 /// Four screen rings of six vertices, consumed together by the beam drawer.
 enum { ACTOR_141000_BEAM_SCREEN_POINT_COUNT = 24 };
-
-/// Actor-specific facial texture request, carried in the first message argument.
-enum { ACTOR_141000_MESSAGE_SET_TEXTURE_MODE = 0x7E0 };
 
 /// Work block of Eve's body, the package's scripted walker.
 ///
@@ -324,21 +321,19 @@ static SVECTOR _gActor141000CappedBeamEndCapOffsets[ARRAY_SIZE(_gActor141000Capp
     { 10, 0, 0, 0 },
 };
 
-enum { ACTOR_141000_TASK_PRIORITY = 192 };
-
 TaskDesc gActor141000FlightTasks[3] = {
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_141000_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor141000FlightControllerTask,
         .data     = { .model = &_gShelterB1PodAccessTunnelFlame },
     },
     {
-        .header   = { .fields = { .flags = TASK_BODY_COORD, .priority = ACTOR_141000_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_COORD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor141000CappedBeamTask,
         .data     = { .value = 0 },
     },
     {
-        .header   = { .fields = { .flags = TASK_BODY_COORD, .priority = ACTOR_141000_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_COORD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor141000SmokeTrailTask,
         .data     = { .value = 0 },
     },
@@ -460,7 +455,7 @@ static AnimationSet** const _gActorMotionAnimBanks19[1] SECTION(".data") = {
 
 TaskDesc gActor141000EveWalkerTaskDesc = {
     .header   = { .fields = { .flags    = TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER,
-                              .priority = ACTOR_141000_TASK_PRIORITY } },
+                              .priority = TASK_PRIORITY_CONTROL } },
     .callback = _actor141000EveWalkerTask,
     .data     = { .model = &_gEveBody },
 };
@@ -477,7 +472,7 @@ static TaskMessageEntry _gActor141000EveMessages[7] = {
     { ACTOR_MESSAGE_SET_MODEL_DRAW, _actor141000SetEveDrawMode },
     { ACTOR_MESSAGE_WALK_TO, _actor141000StartEveWalk },
     { ACTOR_COMMAND_MESSAGE_APPLY, _actor141000SetEveWalkPace },
-    { ACTOR_141000_MESSAGE_SET_TEXTURE_MODE, _actor141000SetEveTextureMode },
+    { ACTOR_MESSAGE_SET_TEXTURE_MODE, _actor141000SetEveTextureMode },
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
@@ -1385,7 +1380,6 @@ static void _actor141000TurnEveToYaw(Task* task)
 /// pending release. The message ID and second payload are ignored.
 static s32 _actor141000SetEveDrawMode(Task* task, s32 messageId, s32 mode, s32 unusedArg)
 {
-    enum { ACTOR_141000_DRAW_SHOW_SKIP_AUTO_BUFFER = 3 };
     TmdObject* model;
     s32        result;
 
@@ -1410,7 +1404,7 @@ static s32 _actor141000SetEveDrawMode(Task* task, s32 messageId, s32 mode, s32 u
             model->flags       |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
         }
-        case ACTOR_141000_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             model->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             model->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

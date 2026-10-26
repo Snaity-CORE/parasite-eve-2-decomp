@@ -11,7 +11,11 @@
 
 #include "shelter_b1_elevator_hall_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_05600.h"
+#include "actors/actor_400600.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -75,9 +79,6 @@ enum {
     SHELTER_B1_ELEVATOR_HALL_SURFACE2_RUN_CUE  = SOUND_SCRIPT_REQUEST_TYPE_1 | 0x5F,
 };
 
-/// Priority shared by the two bodyless departure controllers.
-enum { SHELTER_B1_ELEVATOR_HALL_TRANSITION_TASK_PRIORITY = 32 };
-
 /// One-based endpoint IDs used by the warp table and the action triggers.
 enum {
     SHELTER_B1_ELEVATOR_HALL_WARP_MINE_PASSAGE  = 1,
@@ -122,7 +123,7 @@ enum {
 };
 
 TaskDesc gShelterB1ElevatorHallElevatorTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B1_ELEVATOR_HALL_TRANSITION_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = shelterElevatorTask,
     .data     = { .value = 0 },
 };
@@ -137,7 +138,7 @@ TaskMessageEntry gShelterB1ElevatorHallRoomMessages[6] = {
 };
 
 TaskDesc gShelterB1ElevatorHallMineTransitTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B1_ELEVATOR_HALL_TRANSITION_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = shelterB1ElevatorHallMineTransitTask,
     .data     = { .value = 0 },
 };

@@ -42,9 +42,6 @@
 #include "gameplay/loading.h"
 #include "gameplay/world_collision.h"
 
-/// Vertical spacing of the two 240-row VRAM framebuffers, in rows.
-enum { DISPLAY_FRAMEBUFFER_STRIDE_ROWS = 272 };
-
 /// Ordering-table contents while a mode task owns the frame.
 ///
 /// A view transition also uses this byte as its step selector. Zero skips the
@@ -237,11 +234,11 @@ static TaskDesc _gStageModeControllerTaskDesc = {
 };
 GameDebugState* gGameDebugState    = &_gGameDebugStateStorage;
 TaskDesc        gTaskBank5Descs[5] = {
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskDebugLaunchCallback },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_80701470 },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskDebugLaunchCallback },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_80701470 },
 };
 
 /// Mode-controller phases in unchecked Task state order 0..5.
@@ -379,19 +376,19 @@ static s32 _stageStepFileLoadTransition(Task* unused)
     /// Requires exclusive ownership of both buffers; no configuration binding.
     /// Invoke as a standalone statement in a compound block. The definition
     /// ends after this transition helper.
-#define STAGE_CLEAR_LOAD_FRAMEBUFFERS()                                                  \
-    {                                                                                    \
-        frameRect.x = 0;                                                                 \
-        frameRect.w = FILE_SYSTEM_IMAGE_WIDTH;                                           \
-        frameRect.h = FILE_SYSTEM_IMAGE_HEIGHT;                                          \
-        frameRect.y = (gDisplayState.frameBuffer ^ 1) * DISPLAY_FRAMEBUFFER_STRIDE_ROWS; \
-        ClearImage(&frameRect, 0, 0, 0);                                                 \
-        frameRect.x = 0;                                                                 \
-        frameRect.w = FILE_SYSTEM_IMAGE_WIDTH;                                           \
-        frameRect.h = FILE_SYSTEM_IMAGE_HEIGHT;                                          \
-        frameRect.y = gDisplayState.frameBuffer * DISPLAY_FRAMEBUFFER_STRIDE_ROWS;       \
-        ClearImage(&frameRect, 0, 0, 0);                                                 \
-        DrawSync(0);                                                                     \
+#define STAGE_CLEAR_LOAD_FRAMEBUFFERS()                                             \
+    {                                                                               \
+        frameRect.x = 0;                                                            \
+        frameRect.w = FILE_SYSTEM_IMAGE_WIDTH;                                      \
+        frameRect.h = FILE_SYSTEM_IMAGE_HEIGHT;                                     \
+        frameRect.y = (gDisplayState.frameBuffer ^ 1) * DISPLAY_BUFFER_STRIDE_ROWS; \
+        ClearImage(&frameRect, 0, 0, 0);                                            \
+        frameRect.x = 0;                                                            \
+        frameRect.w = FILE_SYSTEM_IMAGE_WIDTH;                                      \
+        frameRect.h = FILE_SYSTEM_IMAGE_HEIGHT;                                     \
+        frameRect.y = gDisplayState.frameBuffer * DISPLAY_BUFFER_STRIDE_ROWS;       \
+        ClearImage(&frameRect, 0, 0, 0);                                            \
+        DrawSync(0);                                                                \
     }
     enum {
         STAGE_FILE_LOAD_BEGIN        = 0,
@@ -691,7 +688,6 @@ static void _stageProcessTransitionRequests(Task* task)
 /// The argument is ignored; its zero-valued call setup is present in the binary.
 static void _stageFlipOtAndRedraw(s32 unused)
 {
-    enum { STAGE_REDRAW_TASK_PRIORITY = 0x62 };
     DisplayState* display;
     u_long*       savedOt;
     s32           otBuffer;
@@ -716,7 +712,7 @@ static void _stageFlipOtAndRedraw(s32 unused)
             actorRenderComposeAndDrawActiveModels(&gGpuFrameOrderingTables[display->otBuffer]);
             break;
         case STAGE_TRANSITION_FILTERED:
-            taskExecListForPriority(&gTaskDefaultList, STAGE_REDRAW_TASK_PRIORITY);
+            taskExecListForPriority(&gTaskDefaultList, TASK_PRIORITY_REDRAW);
             spriteLinkViewCachedPackets();
             actorRenderComposeAndDrawFlaggedModels(&gGpuFrameOrderingTables[display->otBuffer]);
             break;
@@ -1402,7 +1398,7 @@ static void _mdecStepStandaloneImageDecode(void)
                 frameRect.w = FILE_SYSTEM_IMAGE_STRIP_WIDTH;
                 frameRect.h = FILE_SYSTEM_IMAGE_HEIGHT;
                 // Assemble the decoded columns in the other framebuffer, then read back rows.
-                frameRect.y = (gDisplayState.drawBuffer ^ 1) * DISPLAY_FRAMEBUFFER_STRIDE_ROWS;
+                frameRect.y = (gDisplayState.drawBuffer ^ 1) * DISPLAY_BUFFER_STRIDE_ROWS;
                 do {
                     frameRect.x = stripCursor * FILE_SYSTEM_IMAGE_STRIP_WIDTH;
                     LoadImage(&frameRect, gFsImageWorkspacePtr->strips[stripCursor]);
@@ -1412,14 +1408,14 @@ static void _mdecStepStandaloneImageDecode(void)
                 frameRect.x = 0;
                 frameRect.h = FILE_SYSTEM_IMAGE_HEIGHT;
                 display     = &gDisplayState;
-                frameRect.y = (display->drawBuffer ^ 1) * DISPLAY_FRAMEBUFFER_STRIDE_ROWS;
+                frameRect.y = (display->drawBuffer ^ 1) * DISPLAY_BUFFER_STRIDE_ROWS;
                 StoreImage(&frameRect, gFsImageWorkspacePtr->strips[0]);
                 if (queue->preserveDisplayAfterDecode != 0) {
                     frameRect.x = 0;
                     frameRect.w = MDEC_PRESERVED_DISPLAY_WIDTH;
                     frameRect.h = FILE_SYSTEM_IMAGE_HEIGHT;
-                    frameRect.y = display->drawBuffer * DISPLAY_FRAMEBUFFER_STRIDE_ROWS;
-                    MoveImage(&frameRect, 0, (display->drawBuffer ^ 1) * DISPLAY_FRAMEBUFFER_STRIDE_ROWS);
+                    frameRect.y = display->drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
+                    MoveImage(&frameRect, 0, (display->drawBuffer ^ 1) * DISPLAY_BUFFER_STRIDE_ROWS);
                     queue->preserveDisplayAfterDecode = 0;
                 } else {
                     ClearImage(&frameRect, 0, 0, 0);

@@ -9,7 +9,7 @@
 #include "gte.h"
 
 #include "actors/actor.h"
-#include "actors/task_tables.h"
+#include "actors/actor_403900.h"
 
 #include "gameplay/actor.h"
 #include "gameplay/actor_render.h"
@@ -76,7 +76,7 @@ static AnimationSet _gGolemGrabHoldClip;
 extern AnimationSet gGolemGrabKillClip;
 extern AnimationSet gGolemIdleClip;
 static AnimationSet _gGolemStrikeClip;
-static AnimationSet _gGolemAdvanceClip;
+extern AnimationSet gGolemAdvanceClip;
 static AnimationSet _gGolemChargeClip;
 extern AnimationSet gGolemStaggerClip;
 static AnimationSet _gGolemHeavyFlinchFrontClip;
@@ -588,9 +588,7 @@ static s16 _gGolemKnightBishopBeamQuadCorners[2][4] = {
     { 0, 1, 4, 5 },
 };
 
-enum { ACTOR_403900_TASK_PRIORITY = 96 };
-
-TaskDesc gActor403900GolemTaskDesc = { { { TASK_BODY_TMD, ACTOR_403900_TASK_PRIORITY } }, _actor403900GolemTask, { .model = &_gGolemBody } };
+TaskDesc gActor403900GolemTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor403900GolemTask, { .model = &_gGolemBody } };
 
 /// GOLEM animation bank indexed by `GOLEM_KNIGHT_BISHOP_ANIM_`.
 ///

@@ -6,6 +6,7 @@
 
 #include "main/areas.h"
 #include "main/display.h"
+#include "main/event_flags.h"
 #include "display.h"
 #include "main/display_types.h"
 #include "main/fs.h"
@@ -1888,10 +1889,9 @@ static TextStream _gGameFlowLoadCaptionShelterHeliport = {
 
 /// Boot-image mask colour range and its screen/ordering-table placement.
 enum {
-    FADE_BOOT_IMAGE_MAX_COLOR         = 255,
-    FADE_BOOT_IMAGE_CLEAR_LEVEL       = 256,
-    FADE_BOOT_IMAGE_OT_INDEX          = -16,
-    FADE_BOOT_IMAGE_SECOND_BUFFER_ROW = 272,
+    FADE_BOOT_IMAGE_MAX_COLOR   = 255,
+    FADE_BOOT_IMAGE_CLEAR_LEVEL = 256,
+    FADE_BOOT_IMAGE_OT_INDEX    = -16,
 };
 
 /// Queues a grayscale subtractive mask over the 320x240 loading image.
@@ -1945,7 +1945,7 @@ static s32 _fadeBootImageToBlack(s16 levelStep)
         clearRect.w = FILE_SYSTEM_IMAGE_WIDTH;
         clearRect.h = FILE_SYSTEM_IMAGE_HEIGHT;
         ClearImage(&clearRect, 0, 0, 0);
-        clearRect.y = FADE_BOOT_IMAGE_SECOND_BUFFER_ROW;
+        clearRect.y = DISPLAY_BUFFER_STRIDE_ROWS;
         ClearImage(&clearRect, 0, 0, 0);
         gDisplayState.control.flags.imageSource = DISPLAY_IMAGE_NONE;
         return 1;
@@ -2013,7 +2013,7 @@ static void _gameFlowSelectAcropolisLoadScreenAssets(u8* imageFileIndex)
             *imageFileIndex      = GAME_FLOW_LOAD_IMAGE_ACROPOLIS_OTHER;
             break;
         case GAME_AREA_MIST_PARKING:
-            if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) == GAME_FLOW_LOAD_CHAPTER_MIST_ARRIVAL) {
+            if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) == GAME_FLOW_LOAD_CHAPTER_MIST_ARRIVAL) {
                 gGameFlowLoadCaption = &_gGameFlowLoadCaptionMistArrival;
                 *imageFileIndex      = GAME_FLOW_LOAD_IMAGE_MIST_ARRIVAL;
             } else {
@@ -2078,7 +2078,7 @@ static void _gameFlowSelectDryfieldNightLoadScreenAssets(u8* imageFileIndex)
 {
     u16 storyChapter;
 
-    storyChapter = gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER);
+    storyChapter = gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER);
     switch (gGameFlowLoadScreenDestination.area) {
         case GAME_AREA_DRYFIELD_NIGHT_MOTEL_LOBBY:
             switch (storyChapter) {
@@ -2145,7 +2145,7 @@ static void _gameFlowSelectMineShelterLoadScreenAssets(u8* imageFileIndex)
 {
     u16 storyChapter;
 
-    storyChapter = gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER);
+    storyChapter = gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER);
     switch (gGameFlowLoadScreenDestination.area) {
         case GAME_AREA_MINE_MESA:
             gGameFlowLoadCaption                = &_gGameFlowLoadCaptionDryfieldMesaNight;
@@ -2277,7 +2277,7 @@ static inline void _gameFlowPrepareLoadScreenDisplay(RECT* clearRect)
     clearRect->w = FILE_SYSTEM_IMAGE_WIDTH;
     clearRect->h = FILE_SYSTEM_IMAGE_HEIGHT;
     ClearImage(clearRect, 0, 0, 0);
-    clearRect->y = FADE_BOOT_IMAGE_SECOND_BUFFER_ROW;
+    clearRect->y = DISPLAY_BUFFER_STRIDE_ROWS;
     ClearImage(clearRect, 0, 0, 0);
     gDisplayState.control.flags.imageSource = DISPLAY_IMAGE_NONE;
     SetDispMask(false);
@@ -2312,7 +2312,7 @@ void gameFlowStartLoadScreenImage(void)
         case GAME_STAGE_SHELTER_NEO_ARK:
         default:
             // Retain the story-flag read even though this stage does not branch on it.
-            gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER);
+            gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER);
             switch (gGameFlowLoadScreenDestination.area) {
                 case GAME_AREA_NEO_ARK_SHRINE:
                 default:

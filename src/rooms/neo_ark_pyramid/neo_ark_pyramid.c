@@ -9,7 +9,12 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_02600.h"
+#include "actors/actor_03800.h"
+#include "actors/actor_05700.h"
+#include "actors/actor_401300.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -70,9 +75,6 @@ static s32  _neoArkPyramidResolveRoomVariant(Task* unusedTask, s32 unusedMessage
 static s32  _neoArkPyramidIgnoreRoomCommand(Task* task, s32 messageId, s32 commandId, s32 unusedArg);
 static s32  _neoArkPyramidHandleRoomAction(Task* unusedTask, s32 unusedMessageId, const DirectionActionRequest* request, s32 unusedSecondArg);
 
-/// Room message carrying the integer item ID selected in the key-item menu.
-enum { NEO_ARK_PYRAMID_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static WorldCollisionGrid     _gNeoArkPyramidCollisionGrid;
 static WorldCollisionOccluder _gNeoArkPyramidSightOccluders[3];
 static WorldCollisionTrigger  _gNeoArkPyramidViewBoundaryTriggers[6];
@@ -86,13 +88,11 @@ static WorldCoordRoomLights   _gNeoArkPyramidRoomLights;
 /// read-only table; its storage and callbacks must outlive the room receiver.
 static const TaskMessageEntry _gNeoArkPyramidRoomMessages[5] __attribute__((section(".data"))) = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _neoArkPyramidResolveRoomVariant },
-    { NEO_ARK_PYRAMID_MESSAGE_USE_KEY_ITEM, _neoArkPyramidRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _neoArkPyramidRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _neoArkPyramidHandleRoomAction },
     { ROOM_MESSAGE_COMMAND, _neoArkPyramidIgnoreRoomCommand },
     { TASK_MESSAGE_TABLE_END, NULL },
 };
-
-enum { NEO_ARK_PYRAMID_ROTATION_TASK_PRIORITY = 32 };
 
 /// Bodyless rotation-puzzle task recipe, started with zero spawn arguments.
 ///
@@ -100,7 +100,7 @@ enum { NEO_ARK_PYRAMID_ROTATION_TASK_PRIORITY = 32 };
 /// matches the room controller; the callback must remain loaded until the
 /// puzzle restores control and exits.
 static TaskDesc _gNeoArkPyramidRotationPuzzleTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = NEO_ARK_PYRAMID_ROTATION_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_SCENE } },
     .callback = _neoArkPyramidRotationPuzzleTask,
     .data     = { .value = 0 },
 };

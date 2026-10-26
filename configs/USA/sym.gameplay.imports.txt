@@ -326,7 +326,7 @@ m4a1HammerAttackState = 0x8011E710; // type:func absolute:True owner=m4a1_hammer
 m4a1JavelinAttackState = 0x8011F5D4; // type:func absolute:True owner=m4a1_javelin
 hypervelocityAttackState = 0x8011F724; // type:func absolute:True owner=hypervelocity
 gShelterB6NurseryModel07BAC = 0x801852D0; // absolute:True owner=shelter_b6_nursery
-gAkropolisCafeteriaAcropolisCafeteriaModel077D8 = 0x80184E5C; // absolute:True owner=acropolis_cafeteria
+gAkropolisCafeteriaWanderingCreatureModel = 0x80184E5C; // absolute:True owner=akropolis_cafeteria
 
 // Map UI tables selected by the resident gameplay map screen.
 gMapAkropolisAreaNames = 0x8017A3BC; // absolute:True owner=map_akropolis
@@ -370,7 +370,7 @@ gMapDryfieldHardBattleRewards = 0x8017BD80; // absolute:True owner=map_dryfield 
 gMapDryfieldFullHardBattleRewards = 0x8017D1CC; // absolute:True owner=map_dryfield_full
 gMapShelterHardBattleRewards = 0x8017BD8C; // absolute:True owner=map_shelter shared=mapui
 gMapNeoArkHardBattleRewards = 0x8017CB0C; // absolute:True owner=map_neo_ark
-acropolisEastElevatorHallPointTileTask = 0x8017FAAC; // type:func absolute:True owner=acropolis_east_elevator_hall shared=rooms
+akropolisEastElevatorHallPointTileTask = 0x8017FAAC; // type:func absolute:True owner=akropolis_east_elevator_hall shared=rooms
 func_8011D1E0 = 0x8011D1E0; // type:func absolute:True shared=weapons effect-bank slots 0xBB/0xBD, owner unproven
 gMapAkropolisRoomTaskDescriptors = 0x8017A8AC; // absolute:True owner=map_akropolis
 gMapDryfieldRoomTaskDescriptors = 0x8017A6A4; // absolute:True owner=map_dryfield
@@ -417,7 +417,7 @@ gMapDryfieldSurfacePropertiesByArea = 0x8017AC9C; // absolute:True owner=map_dry
 gMapDryfieldFullSurfacePropertiesByArea = 0x8017ABB0; // absolute:True owner=map_dryfield_full
 gMapShelterSurfacePropertiesByArea = 0x8017B614; // absolute:True owner=map_shelter
 gMapNeoArkSurfacePropertiesByArea = 0x8017AE3C; // absolute:True owner=map_neo_ark shared=mapui
-gAcropolisBridgePlacementVariants = 0x8019004C; // absolute:True owner=acropolis_bridge
+gAkropolisBridgePlacementVariants = 0x8019004C; // absolute:True owner=akropolis_bridge
 gMistParkingAreaVariants = 0x801951B4; // absolute:True owner=mist_parking
 gDryfieldNightGasStationAreaVariants = 0x80190624; // absolute:True owner=dryfield_night_gas_station
 gMapAkropolisObjectRooms = 0x8017A7FC; // absolute:True owner=map_akropolis
@@ -496,7 +496,7 @@ shelterB6NurserySparkShowerShardTask = 0x80182730; // type:func absolute:True ow
 
 gShelterB2BreedingRoomAreaVariants = 0x80183EEC; // absolute:True owner=shelter_b2_breeding_room shared=rooms
 
-gAcropolisPlazaAreaVariants = 0x80199390; // absolute:True owner=acropolis_plaza
+gAkropolisPlazaAreaVariants = 0x80199390; // absolute:True owner=akropolis_plaza
 
 gDryfieldMotelRoom6ReflectionTaskDescs = 0x80182D0C; // absolute:True owner=dryfield_motel_room_6
 
@@ -525,135 +525,135 @@ gShelterB1ControlRoomMirrorTaskDesc = 0x80181B88; // absolute:True owner=shelter
 gShelterR48WaterRefractionTaskDesc = 0x80182FAC; // absolute:True owner=shelter_r48 shared=rooms
 
 
-acropolisBridgeAmbientEffectsTask = 0x8017F868; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeAmbientEffectsTask = 0x8017F868; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeFallingStreakTask = 0x80180320; // type:func absolute:True owner=acropolis_bridge shared=rooms
+akropolisBridgeFallingStreakTask = 0x80180320; // type:func absolute:True owner=akropolis_bridge shared=rooms
 
-acropolisBridgeMidDustStreakTask = 0x8018063C; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeMidDustStreakTask = 0x8018063C; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeLowDustStreakTask = 0x8018099C; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeLowDustStreakTask = 0x8018099C; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeTallDustStreakTask = 0x80180CC0; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeTallDustStreakTask = 0x80180CC0; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeParticleStreakTask = 0x80180FF0; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeParticleStreakTask = 0x80180FF0; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeGlowStarTask = 0x801812F4; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeGlowStarTask = 0x801812F4; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeGroundGlowTask = 0x801819C8; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeGroundGlowTask = 0x801819C8; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeGlowLampTask = 0x80181D28; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeGlowLampTask = 0x80181D28; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeDustMoteTask = 0x80182394; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeDustMoteTask = 0x80182394; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeWaterRippleTask = 0x80182694; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeWaterRippleTask = 0x80182694; // type:func absolute:True owner=akropolis_bridge
 
-acropolisBridgeEffectSpriteDebrisTask = 0x80182AF8; // type:func absolute:True owner=acropolis_bridge
+akropolisBridgeEffectSpriteDebrisTask = 0x80182AF8; // type:func absolute:True owner=akropolis_bridge
 
-acropolisCafeteriaInitRoomEffectsTask = 0x8017E708; // type:func absolute:True owner=acropolis_cafeteria
+akropolisCafeteriaInitRoomEffectsTask = 0x8017E708; // type:func absolute:True owner=akropolis_cafeteria
 
-acropolisCafeteriaPuffEmitterTask = 0x8017E89C; // type:func absolute:True owner=acropolis_cafeteria
+akropolisCafeteriaPuffEmitterTask = 0x8017E89C; // type:func absolute:True owner=akropolis_cafeteria
 
-acropolisCafeteriaModelWanderTask = 0x8017F390; // type:func absolute:True owner=acropolis_cafeteria
+akropolisCafeteriaModelWanderTask = 0x8017F390; // type:func absolute:True owner=akropolis_cafeteria
 
-acropolisCafeteriaRoomVisualEffectsFlashTask = 0x8017F948; // type:func absolute:True owner=acropolis_cafeteria shared=rooms
+akropolisCafeteriaRoomVisualEffectsFlashTask = 0x8017F948; // type:func absolute:True owner=akropolis_cafeteria shared=rooms
 
-acropolisCafeteriaRoomVisualEffectsTwinTrailTask = 0x801803AC; // type:func absolute:True owner=acropolis_cafeteria
+akropolisCafeteriaRoomVisualEffectsTwinTrailTask = 0x801803AC; // type:func absolute:True owner=akropolis_cafeteria
 
-acropolisCafeteriaRoomVisualEffectsSparkBurstTask = 0x80180C94; // type:func absolute:True owner=acropolis_cafeteria
+akropolisCafeteriaRoomVisualEffectsSparkBurstTask = 0x80180C94; // type:func absolute:True owner=akropolis_cafeteria
 
-acropolisEastElevatorHallReflectionsAndBeaconsTask = 0x8017F5B4; // type:func absolute:True owner=acropolis_east_elevator_hall
+akropolisEastElevatorHallReflectionsAndBeaconsTask = 0x8017F5B4; // type:func absolute:True owner=akropolis_east_elevator_hall
 
-acropolisEastElevatorHallRedBeaconTask = 0x8017F77C; // type:func absolute:True owner=acropolis_east_elevator_hall shared=rooms
+akropolisEastElevatorHallRedBeaconTask = 0x8017F77C; // type:func absolute:True owner=akropolis_east_elevator_hall shared=rooms
 
-acropolisFireEscapeFlickerLightTask = 0x80180154; // type:func absolute:True owner=acropolis_fire_escape
+akropolisFireEscapeFlickerLightTask = 0x80180154; // type:func absolute:True owner=akropolis_fire_escape
 
-acropolisFireEscapeFlareTask = 0x80180B20; // type:func absolute:True owner=acropolis_fire_escape
+akropolisFireEscapeFlareTask = 0x80180B20; // type:func absolute:True owner=akropolis_fire_escape
 
-acropolisForkedRoadInitializeRoomEffectsTask = 0x8017E298; // type:func absolute:True owner=acropolis_forked_road
+akropolisForkedRoadInitializeRoomEffectsTask = 0x8017E298; // type:func absolute:True owner=akropolis_forked_road
 
-acropolisForkedRoadWallLampTask = 0x8017E410; // type:func absolute:True owner=acropolis_forked_road
+akropolisForkedRoadWallLampTask = 0x8017E410; // type:func absolute:True owner=akropolis_forked_road
 
-acropolisForkedRoadRoomVisualEffectsFlashTask = 0x8017EF80; // type:func absolute:True owner=acropolis_forked_road
+akropolisForkedRoadRoomVisualEffectsFlashTask = 0x8017EF80; // type:func absolute:True owner=akropolis_forked_road
 
-acropolisForkedRoadRoomVisualEffectsTwinTrailTask = 0x8017F9E4; // type:func absolute:True owner=acropolis_forked_road
+akropolisForkedRoadRoomVisualEffectsTwinTrailTask = 0x8017F9E4; // type:func absolute:True owner=akropolis_forked_road
 
-acropolisForkedRoadRoomVisualEffectsSparkBurstTask = 0x801802CC; // type:func absolute:True owner=acropolis_forked_road
+akropolisForkedRoadRoomVisualEffectsSparkBurstTask = 0x801802CC; // type:func absolute:True owner=akropolis_forked_road
 
-acropolisFountainSprayTask = 0x8017DD44; // type:func absolute:True owner=acropolis_fountain shared=rooms
+akropolisFountainSprayTask = 0x8017DD44; // type:func absolute:True owner=akropolis_fountain shared=rooms
 
-acropolisHelicopterLandingPadEmberTask = 0x8017FA30; // type:func absolute:True owner=acropolis_helicopter_landing_pad
+akropolisHelicopterLandingPadEmberTask = 0x8017FA30; // type:func absolute:True owner=akropolis_helicopter_landing_pad
 
-acropolisHelicopterLandingPadFlareEmitterTask = 0x80180E40; // type:func absolute:True owner=acropolis_helicopter_landing_pad
+akropolisHelicopterLandingPadFlareEmitterTask = 0x80180E40; // type:func absolute:True owner=akropolis_helicopter_landing_pad
 
-acropolisHelicopterLandingPadLensFlareTask = 0x80181064; // type:func absolute:True owner=acropolis_helicopter_landing_pad
+akropolisHelicopterLandingPadLensFlareTask = 0x80181064; // type:func absolute:True owner=akropolis_helicopter_landing_pad
 
-acropolisHelicopterLandingPadPerimeterLightsTask = 0x801818F0; // type:func absolute:True owner=acropolis_helicopter_landing_pad
+akropolisHelicopterLandingPadPerimeterLightsTask = 0x801818F0; // type:func absolute:True owner=akropolis_helicopter_landing_pad
 
-acropolisObservatoryAmbientGlowTask = 0x8017E424; // type:func absolute:True owner=acropolis_observatory shared=rooms
+akropolisObservatoryAmbientGlowTask = 0x8017E424; // type:func absolute:True owner=akropolis_observatory shared=rooms
 
-acropolisObservatoryLensFlareEmitterTask = 0x8017E6F8; // type:func absolute:True owner=acropolis_observatory
+akropolisObservatoryLensFlareEmitterTask = 0x8017E6F8; // type:func absolute:True owner=akropolis_observatory
 
-acropolisPatioSpawnLightEffectsTask = 0x8017E100; // type:func absolute:True owner=acropolis_patio
+akropolisPatioSpawnLightEffectsTask = 0x8017E100; // type:func absolute:True owner=akropolis_patio
 
-acropolisPatioFountainJetTask = 0x8017E324; // type:func absolute:True owner=acropolis_patio
+akropolisPatioLightGlowTask = 0x8017E324; // type:func absolute:True owner=akropolis_patio
 
-acropolisPatioFountainMistTask = 0x8017E730; // type:func absolute:True owner=acropolis_patio
+akropolisPatioLightMoteTask = 0x8017E730; // type:func absolute:True owner=akropolis_patio
 
-acropolisPlazaSirenLightTask = 0x801802C0; // type:func absolute:True owner=acropolis_plaza shared=rooms
+akropolisPlazaSirenLightTask = 0x801802C0; // type:func absolute:True owner=akropolis_plaza shared=rooms
 
-acropolisPlazaLightFlareTask = 0x801811D0; // type:func absolute:True owner=acropolis_plaza
+akropolisPlazaLightFlareTask = 0x801811D0; // type:func absolute:True owner=akropolis_plaza
 
-acropolisPlazaLightGlowTask = 0x80182054; // type:func absolute:True owner=acropolis_plaza
+akropolisPlazaLightGlowTask = 0x80182054; // type:func absolute:True owner=akropolis_plaza
 
-acropolisPlazaSpawnAmbientLightsTask = 0x8018251C; // type:func absolute:True owner=acropolis_plaza
+akropolisPlazaSpawnAmbientLightsTask = 0x8018251C; // type:func absolute:True owner=akropolis_plaza
 
-acropolisPromenadeRoomEffectTask = 0x8017E03C; // type:func absolute:True owner=acropolis_promenade
+akropolisPromenadeRoomEffectTask = 0x8017E03C; // type:func absolute:True owner=akropolis_promenade
 
-acropolisPromenadeScreenDripTask = 0x8017E394; // type:func absolute:True owner=acropolis_promenade shared=rooms
+akropolisPromenadeScreenDripTask = 0x8017E394; // type:func absolute:True owner=akropolis_promenade shared=rooms
 
-acropolisPromenadeGlowStarTask = 0x8017E634; // type:func absolute:True owner=acropolis_promenade
+akropolisPromenadeGlowStarTask = 0x8017E634; // type:func absolute:True owner=akropolis_promenade
 
-acropolisPromenadeGroundGlowTask = 0x8017ED44; // type:func absolute:True owner=acropolis_promenade
+akropolisPromenadeGroundGlowTask = 0x8017ED44; // type:func absolute:True owner=akropolis_promenade
 
-acropolisPromenadeGlowLampTask = 0x8017F0BC; // type:func absolute:True owner=acropolis_promenade
+akropolisPromenadeGlowLampTask = 0x8017F0BC; // type:func absolute:True owner=akropolis_promenade
 
-acropolisRoofGardenAmbientEffectsTask = 0x8017DCDC; // type:func absolute:True owner=acropolis_roof_garden
+akropolisRoofGardenAmbientEffectsTask = 0x8017DCDC; // type:func absolute:True owner=akropolis_roof_garden
 
-acropolisRoofGardenLightGlowTask = 0x8017DE90; // type:func absolute:True owner=acropolis_roof_garden
+akropolisRoofGardenLightGlowTask = 0x8017DE90; // type:func absolute:True owner=akropolis_roof_garden
 
-acropolisRoofGardenFlareTask = 0x8017E29C; // type:func absolute:True owner=acropolis_roof_garden
+akropolisRoofGardenFlareTask = 0x8017E29C; // type:func absolute:True owner=akropolis_roof_garden
 
-acropolisRoofGardenLeafFallTask = 0x8017F10C; // type:func absolute:True owner=acropolis_roof_garden
+akropolisRoofGardenLeafFallTask = 0x8017F10C; // type:func absolute:True owner=akropolis_roof_garden
 
-acropolisSanctuaryRoomEffectTask = 0x8017E00C; // type:func absolute:True owner=acropolis_sanctuary
+akropolisSanctuaryRoomEffectTask = 0x8017E00C; // type:func absolute:True owner=akropolis_sanctuary
 
-acropolisSanctuaryMosaicTask = 0x8017E134; // type:func absolute:True owner=acropolis_sanctuary
+akropolisSanctuaryMosaicTask = 0x8017E134; // type:func absolute:True owner=akropolis_sanctuary
 
-acropolisSanctuaryMosaicTileTask = 0x8017E338; // type:func absolute:True owner=acropolis_sanctuary shared=rooms
+akropolisSanctuaryMosaicTileTask = 0x8017E338; // type:func absolute:True owner=akropolis_sanctuary shared=rooms
 
-acropolisSanctuaryMosaicShardTask = 0x8017EC90; // type:func absolute:True owner=acropolis_sanctuary shared=rooms
+akropolisSanctuaryMosaicShardTask = 0x8017EC90; // type:func absolute:True owner=akropolis_sanctuary shared=rooms
 
-acropolisSanctuaryFlameTask = 0x8017F4E8; // type:func absolute:True owner=acropolis_sanctuary
+akropolisSanctuaryFlameTask = 0x8017F4E8; // type:func absolute:True owner=akropolis_sanctuary
 
-acropolisSecurityRoomMonitorFeedsTask = 0x801805A4; // type:func absolute:True owner=acropolis_security_room
+akropolisSecurityRoomLockLampsTask = 0x801805A4; // type:func absolute:True owner=akropolis_security_room
 
-acropolisSecurityRoomMonitorFeedTask = 0x80180E34; // type:func absolute:True owner=acropolis_security_room
+akropolisSecurityRoomLockLampTask = 0x80180E34; // type:func absolute:True owner=akropolis_security_room
 
-acropolisSecurityRoomFallingQuadTask = 0x80181108; // type:func absolute:True owner=acropolis_security_room
+akropolisSecurityRoomFallingQuadTask = 0x80181108; // type:func absolute:True owner=akropolis_security_room
 
-acropolisSecurityRoomMonitorGlowTask = 0x801817A4; // type:func absolute:True owner=acropolis_security_room
+akropolisSecurityRoomLockLampGlowTask = 0x801817A4; // type:func absolute:True owner=akropolis_security_room
 
 akropolisSquareRoomEffectTask = 0x801823DC; // type:func absolute:True owner=akropolis_square
 
 akropolisSquareTelephoneLightTask = 0x801825DC; // type:func absolute:True owner=akropolis_square
 
-acropolisWestElevatorHallBayLightingTask = 0x8017F990; // type:func absolute:True owner=acropolis_west_elevator_hall
+akropolisWestElevatorHallBayLightingTask = 0x8017F990; // type:func absolute:True owner=akropolis_west_elevator_hall
 
-acropolisWestElevatorHallRedBeaconTask = 0x8017FAE8; // type:func absolute:True owner=acropolis_west_elevator_hall
+akropolisWestElevatorHallRedBeaconTask = 0x8017FAE8; // type:func absolute:True owner=akropolis_west_elevator_hall
 
-acropolisWestElevatorHallScanlineDistortionTask = 0x8017FE18; // type:func absolute:True owner=acropolis_west_elevator_hall
+akropolisWestElevatorHallScanlineDistortionTask = 0x8017FE18; // type:func absolute:True owner=akropolis_west_elevator_hall
 
-acropolisWestElevatorHallLightGlowTask = 0x8017FFE4; // type:func absolute:True owner=acropolis_west_elevator_hall shared=rooms
+akropolisWestElevatorHallLightGlowTask = 0x8017FFE4; // type:func absolute:True owner=akropolis_west_elevator_hall shared=rooms
 
 dryfieldBackStreetRoomVisualEffectsFlashTask = 0x8017D9D0; // type:func absolute:True owner=dryfield_back_street shared=rooms
 
@@ -1375,11 +1375,11 @@ shelterR48ShockwaveRingsTask = 0x8018147C; // type:func absolute:True owner=shel
 
 shelterR48PinkRingFlashTask = 0x80181704; // type:func absolute:True owner=shelter_r48
 
-gAcropolisBridgeStairSurfaceRows = 0x80189A9C; // absolute:True owner=acropolis_bridge
+gAkropolisBridgeStairSurfaceRows = 0x80189A9C; // absolute:True owner=akropolis_bridge
 
 gShelterB4WaterSupplyStairSurfaceRows = 0x801826FC; // absolute:True owner=shelter_b4_water_supply
 
-gAcropolisPlazaSequenceTaskDescriptors = 0x80183824; // absolute:True owner=acropolis_plaza
+gAkropolisPlazaSequenceTaskDescriptors = 0x80183824; // absolute:True owner=akropolis_plaza
 
 gDryfieldNightGarageShopSessionTaskDesc = 0x80181C2C; // absolute:True owner=dryfield_night_garage
 
@@ -1393,31 +1393,31 @@ gShelter1fHeliportShopSessionTaskDesc = 0x80181188; // absolute:True owner=shelt
 
 gShelterB1ArmoryShopSessionTaskDesc = 0x801824D0; // absolute:True owner=shelter_b1_armory
 
-gAcropolisCafeteriaAreaVariants = 0x80189DCC; // absolute:True owner=acropolis_cafeteria
+gAkropolisCafeteriaAreaVariants = 0x80189DCC; // absolute:True owner=akropolis_cafeteria
 
-gAcropolisEastElevatorHallAreaVariants = 0x80186C50; // absolute:True owner=acropolis_east_elevator_hall
+gAkropolisEastElevatorHallAreaVariants = 0x80186C50; // absolute:True owner=akropolis_east_elevator_hall
 
-gAcropolisFireEscapeAreaVariants = 0x8018294C; // absolute:True owner=acropolis_fire_escape
+gAkropolisFireEscapeAreaVariants = 0x8018294C; // absolute:True owner=akropolis_fire_escape
 
-gAcropolisForkedRoadAreaVariants = 0x801831C4; // absolute:True owner=acropolis_forked_road
+gAkropolisForkedRoadAreaVariants = 0x801831C4; // absolute:True owner=akropolis_forked_road
 
-gAcropolisFountainAreaVariants = 0x8017FC9C; // absolute:True owner=acropolis_fountain
+gAkropolisFountainAreaVariants = 0x8017FC9C; // absolute:True owner=akropolis_fountain
 
-gAcropolisHallwayAreaVariants = 0x8017EA3C; // absolute:True owner=acropolis_hallway
+gAkropolisHallwayAreaVariants = 0x8017EA3C; // absolute:True owner=akropolis_hallway
 
-gAcropolisHelicopterLandingPadAreaVariants = 0x801861E8; // absolute:True owner=acropolis_helicopter_landing_pad
+gAkropolisHelicopterLandingPadAreaVariants = 0x801861E8; // absolute:True owner=akropolis_helicopter_landing_pad
 
-gAcropolisObservatoryAreaVariants = 0x80181264; // absolute:True owner=acropolis_observatory
+gAkropolisObservatoryAreaVariants = 0x80181264; // absolute:True owner=akropolis_observatory
 
-gAcropolisPatioAreaVariants = 0x80184A90; // absolute:True owner=acropolis_patio
+gAkropolisPatioAreaVariants = 0x80184A90; // absolute:True owner=akropolis_patio
 
-gAcropolisPromenadeAreaVariants = 0x80183020; // absolute:True owner=acropolis_promenade shared=rooms
+gAkropolisPromenadeAreaVariants = 0x80183020; // absolute:True owner=akropolis_promenade shared=rooms
 
-gAcropolisRoofGardenAreaVariants = 0x80185934; // absolute:True owner=acropolis_roof_garden
+gAkropolisRoofGardenAreaVariants = 0x80185934; // absolute:True owner=akropolis_roof_garden
 
-gAcropolisSanctuaryAreaVariants = 0x8018402C; // absolute:True owner=acropolis_sanctuary shared=rooms
+gAkropolisSanctuaryAreaVariants = 0x8018402C; // absolute:True owner=akropolis_sanctuary shared=rooms
 
-gAcropolisSecurityRoomAreaVariants = 0x80184088; // absolute:True owner=acropolis_security_room
+gAkropolisSecurityRoomAreaVariants = 0x80184088; // absolute:True owner=akropolis_security_room
 
 gAkropolisSquareAreaVariants = 0x80185E50; // absolute:True owner=akropolis_square
 
@@ -1689,7 +1689,7 @@ gMistShootingGalleryResultPanelDesc = 0x80185000; // absolute:True owner=mist_sh
 
 akropolisSquareTelephoneMenuTask = 0x80180804; // type:func absolute:True owner=akropolis_square
 
-acropolisFireEscapeTelephoneMenuTask = 0x8017EA68; // type:func absolute:True owner=acropolis_fire_escape
+akropolisFireEscapeTelephoneMenuTask = 0x8017EA68; // type:func absolute:True owner=akropolis_fire_escape
 
 mistParkingTelephoneMenuTask = 0x80181468; // type:func absolute:True owner=mist_parking
 
@@ -1729,17 +1729,17 @@ mistShootingGalleryOpenCarryoverModeMenu = 0x8017FBD8; // type:func absolute:Tru
 
 akropolisSquarePlayerReflectionTask = 0x8017F41C; // type:func absolute:True owner=akropolis_square
 
-acropolisEastElevatorHallPlayerReflectionTask = 0x8017F2F8; // type:func absolute:True owner=acropolis_east_elevator_hall
+akropolisEastElevatorHallPlayerReflectionTask = 0x8017F2F8; // type:func absolute:True owner=akropolis_east_elevator_hall
 
-acropolisWestElevatorHallPlayerReflectionTask = 0x8017F304; // type:func absolute:True owner=acropolis_west_elevator_hall
+akropolisWestElevatorHallPlayerReflectionTask = 0x8017F304; // type:func absolute:True owner=akropolis_west_elevator_hall
 
 dryfieldMotelRoom6PlayerReflectionTask = 0x80181184; // type:func absolute:True owner=dryfield_motel_room_6
 
 dryfieldNightMotelRoom6PlayerReflectionTask = 0x801811A0; // type:func absolute:True owner=dryfield_night_motel_room_6
 
-acropolisFountainStartClimb = 0x8017DA78; // type:func absolute:True owner=acropolis_fountain
+akropolisFountainStartClimb = 0x8017DA78; // type:func absolute:True owner=akropolis_fountain
 
-acropolisHelicopterLandingPadStartExit = 0x8017EF60; // type:func absolute:True owner=acropolis_helicopter_landing_pad
+akropolisHelicopterLandingPadStartExit = 0x8017EF60; // type:func absolute:True owner=akropolis_helicopter_landing_pad
 
 gMistShootingGalleryWeaponSelectPanelDesc = 0x80184F70; // absolute:True owner=mist_shooting_gallery
 
@@ -1749,19 +1749,19 @@ gShelter1fParkingGarageAreaVariants = 0x801818D8; // absolute:True owner=shelter
 
 gShelterB1UndergroundParkingShopSessionTaskDescStorage = 0x801871F0; // absolute:True owner=shelter_b1_underground_parking
 
-acropolisWestElevatorHallViewEffectsTask = 0x8017F7D4; // type:func absolute:True owner=acropolis_west_elevator_hall shared=rooms
+akropolisWestElevatorHallViewEffectsTask = 0x8017F7D4; // type:func absolute:True owner=akropolis_west_elevator_hall shared=rooms
 
-acropolisFountainViewEffectsTask = 0x8017E014; // type:func absolute:True owner=acropolis_fountain
+akropolisFountainViewEffectsTask = 0x8017E014; // type:func absolute:True owner=akropolis_fountain
 
 neoArkSubstationDrawLightGlowsTask = 0x8017D874; // type:func absolute:True owner=neo_ark_substation
 
 mistParkingDrawGlowsTask = 0x80184728; // type:func absolute:True owner=mist_parking
 
-acropolisFireEscapeLightEmitterTask = 0x8017FF7C; // type:func absolute:True owner=acropolis_fire_escape shared=rooms
+akropolisFireEscapeLightEmitterTask = 0x8017FF7C; // type:func absolute:True owner=akropolis_fire_escape shared=rooms
 
-acropolisCafeteriaPuffTask = 0x8017EA90; // type:func absolute:True owner=acropolis_cafeteria shared=rooms
+akropolisCafeteriaPuffTask = 0x8017EA90; // type:func absolute:True owner=akropolis_cafeteria shared=rooms
 
-acropolisHallwayEffectControlTask84 = 0x8017D828; // type:func absolute:True owner=acropolis_hallway
+akropolisHallwayRoomEffectTask = 0x8017D828; // type:func absolute:True owner=akropolis_hallway
 
 dryfieldToiletSprayEmitterTask = 0x8017DCF0; // type:func absolute:True owner=dryfield_toilet
 
@@ -1945,9 +1945,9 @@ shelterB1SleepingQuartersRoomVisualEffectsFlyingSparkTask = 0x8017EC34; // type:
 
 shelterB1ElevatorHallRoomVisualEffectsHaloOrangeBurstTask = 0x8017F7D4; // type:func absolute:True owner=shelter_b1_elevator_hall shared=rooms
 
-acropolisForkedRoadLeafFallTask = 0x8017E81C; // type:func absolute:True owner=acropolis_forked_road shared=rooms
+akropolisForkedRoadLeafFallTask = 0x8017E81C; // type:func absolute:True owner=akropolis_forked_road shared=rooms
 
-acropolisHelicopterLandingPadDamagedLightSparksTask = 0x801802E0; // type:func absolute:True owner=acropolis_helicopter_landing_pad
+akropolisHelicopterLandingPadDamagedLightSparksTask = 0x801802E0; // type:func absolute:True owner=akropolis_helicopter_landing_pad
 
 neoArkForestZoneLeafFallTask = 0x8017DC20; // type:func absolute:True owner=neo_ark_forest_zone shared=rooms
 
@@ -2003,19 +2003,19 @@ p229MuzzleFlashTask = 0x8011D1DC; // type:func absolute:True owner=p229 shared=w
 
 mp5a5MuzzleFlashTask = 0x8011D1E0; // type:func absolute:True owner=mp5a5 shared=weapons
 
-actor510900FlameJetTask = 0x80131F24; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9FlameJetTask = 0x80131F24; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
-actor510900MuzzleFlashTask44 = 0x801340E8; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9MuzzleFlashTask = 0x801340E8; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
-actor510900FlameSpriteTask45 = 0x80132D4C; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9GolemFlameTask = 0x80132D4C; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
-actor510900FlameSpriteTask4C = 0x801332EC; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9FlameTongueTask = 0x801332EC; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
-actor510900FlameSpriteTask52 = 0x8013371C; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9FlameSpriteTask = 0x8013371C; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
-actor510900FlameSpriteTask59 = 0x80133C84; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9GunfireParticleTask = 0x80133C84; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
-actor510900DebrisStreakTask = 0x80134284; // type:func absolute:True owner=actor_510900 shared=actors
+helicopterLandingPadNo9DebrisStreakTask = 0x80134284; // type:func absolute:True owner=helicopter_landing_pad_no_9 shared=actors
 
 pyrokinesisFlamePuffTask = 0x80130C54; // type:func absolute:True owner=pyrokinesis
 
@@ -2055,9 +2055,9 @@ m4a1HammerImpactFlashTask = 0x8011DD08; // type:func absolute:True owner=m4a1_ha
 
 m4a1JavelinContactFlashTask = 0x8011F4E8; // type:func absolute:True owner=m4a1_javelin
 
-actor510900ExplosionFireballTask184 = 0x8013482C; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9ExplosionFireballTask = 0x8013482C; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
-actor510900ExplosionTask185 = 0x801346D4; // type:func absolute:True owner=actor_510900
+helicopterLandingPadNo9ImpactBurstTask = 0x801346D4; // type:func absolute:True owner=helicopter_landing_pad_no_9
 
 gunbladeTrailTask = 0x8011D1E4; // type:func absolute:True owner=gunblade shared=weapons
 

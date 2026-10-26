@@ -48,8 +48,11 @@
 #include "main/wipsys_types.h"
 
 #include "overlay.h"
+#include "../../shared/screen/screen_fade.h"
 #include "../../shared/screen/screen_wave.h"
 #include "../../shared/actor/actor_messages.h"
+#include "../../shared/screen/screen_fade_step_down.inc.c"
+#include "../../shared/screen/screen_fade_step_up.inc.c"
 
 /// Work block of one light quad, a gradient quad the cutscene blends
 /// additively over the scene.
@@ -247,7 +250,7 @@ enum {
 /// Bodyless, priority 192. Spawn argument 2 borrows the cutscene's
 /// `ScreenWaveCtx`; it must outlive the wave task. Argument 1 is unused.
 static TaskDesc _gActor160900ScreenWaveTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, 192 } }, _screenWaveTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -546,14 +549,14 @@ static EvsCommand _gActor160900SkipScript[7] = {
 };
 
 TaskDesc gActor160900TaskDescriptors[8] = {
-    { { { TASK_BODY_NONE, 192 } }, _actor160900CutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _actor160900FadeInTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _actor160900FadeOutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor160900CutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor160900FadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor160900FadeOutTask, { .value = 0 } },
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _actor160900KyleBodyTask, { .model = &gKyleBody } },
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _actor160900KyleAttachmentTask, { .model = &gKyleP229 } },
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _actor160900KyleAttachmentTask, { .model = &gKyleHandLeft2 } },
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _actor160900KyleAttachmentTask, { .model = &gKyleHandRight } },
-    { { { TASK_BODY_COORD, 192 } }, _actor160900DrawLightQuadTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _actor160900DrawLightQuadTask, { .value = 0 } },
 };
 
 /// Borrowed context of this renderer's active wave task.
@@ -1330,10 +1333,10 @@ static void _actor160900SpawnDriftingSprites(const SVECTOR* points)
         spawnArgument = ACTOR_160900_DRIFT_SPAWN_ARGUMENT;
         do {
             // Draw sign and magnitude separately; the LCG and sum wrap as unsigned words.
-            seed            = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            seed            = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = seed;
-            jitteredX       = points->vx + (((seed >> 16) & 1) ? ((gRandomLcgState = seed * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & ACTOR_160900_DRIFT_JITTER_MASK
-                                                               : -(((gRandomLcgState = seed * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & ACTOR_160900_DRIFT_JITTER_MASK)) *
+            jitteredX       = points->vx + (((seed >> 16) & 1) ? ((gRandomLcgState = RANDOM_LCG_NEXT(seed)) >> 16) & ACTOR_160900_DRIFT_JITTER_MASK
+                                                               : -(((gRandomLcgState = RANDOM_LCG_NEXT(seed)) >> 16) & ACTOR_160900_DRIFT_JITTER_MASK)) *
                                          ACTOR_160900_DRIFT_JITTER_STEP;
             spawnOffset.vx = jitteredX;
             spawnOffset.vy = points->vy;
@@ -1728,7 +1731,6 @@ static void _actor160900FadeOutTask(Task* task)
     enum {
         ACTOR_160900_FADE_OUT_INITIALIZE = 0,
         ACTOR_160900_FADE_OUT_RAMP       = 1,
-        ACTOR_160900_FADE_MAX_INTENSITY  = 255,
     };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
@@ -1751,13 +1753,11 @@ static void _actor160900FadeOutTask(Task* task)
             /* fallthrough */
         case ACTOR_160900_FADE_OUT_RAMP:
             fadeDrawOverlay(fade->r, fade->g, fade->r, GPU_BLEND_SUBTRACT);
-            fade->r += task->spawnArg1.halves.low;
-            fade->g += task->spawnArg1.halves.low;
-            fade->b += task->spawnArg1.halves.low;
-            if (fade->r > ACTOR_160900_FADE_MAX_INTENSITY) {
-                fade->b = ACTOR_160900_FADE_MAX_INTENSITY;
-                fade->g = ACTOR_160900_FADE_MAX_INTENSITY;
-                fade->r = ACTOR_160900_FADE_MAX_INTENSITY;
+            _screenFadeStepUp(fade, task);
+            if (fade->r > SCREEN_FADE_FULL_INTENSITY) {
+                fade->b = SCREEN_FADE_FULL_INTENSITY;
+                fade->g = SCREEN_FADE_FULL_INTENSITY;
+                fade->r = SCREEN_FADE_FULL_INTENSITY;
             }
             break;
     }
@@ -1780,7 +1780,6 @@ static void _actor160900FadeInTask(Task* task)
         ACTOR_160900_FADE_IN_WAIT_SECOND    = 2,
         ACTOR_160900_FADE_IN_ENABLE_DISPLAY = 3,
         ACTOR_160900_FADE_IN_RAMP           = 4,
-        ACTOR_160900_FADE_MAX_INTENSITY     = 255,
     };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
@@ -1795,9 +1794,9 @@ static void _actor160900FadeInTask(Task* task)
                 return;
             }
             fade         = allocatedFade;
-            fade->b      = ACTOR_160900_FADE_MAX_INTENSITY;
-            fade->g      = ACTOR_160900_FADE_MAX_INTENSITY;
-            fade->r      = ACTOR_160900_FADE_MAX_INTENSITY;
+            fade->b      = SCREEN_FADE_FULL_INTENSITY;
+            fade->g      = SCREEN_FADE_FULL_INTENSITY;
+            fade->r      = SCREEN_FADE_FULL_INTENSITY;
             task->state += 1;
             break;
         case ACTOR_160900_FADE_IN_ENABLE_DISPLAY:
@@ -1814,9 +1813,7 @@ static void _actor160900FadeInTask(Task* task)
     }
     // Fade progress continues while the display is masked.
     fadeDrawOverlay(fade->r, fade->g, fade->r, GPU_BLEND_SUBTRACT);
-    fade->r -= task->spawnArg1.halves.low;
-    fade->g -= task->spawnArg1.halves.low;
-    fade->b -= task->spawnArg1.halves.low;
+    _screenFadeStepDown(fade, task);
     if (fade->r < 0) {
         taskKill(task);
     }

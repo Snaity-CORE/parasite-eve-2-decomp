@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_02000.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -52,9 +52,6 @@
 #include "../../shared/actor/player_detection.h"
 #include "../../shared/creatures/golem/golem_pawn_rook.h"
 
-/// Execution priority shared by the Pawn body and attached sword descriptors.
-enum { ACTOR_02000_TASK_PRIORITY = 96 };
-
 /// Area sound selector that suppresses the group-10 file request and animation cues.
 enum { ACTOR_02000_SOUND_SET_NONE = 0 };
 
@@ -74,11 +71,11 @@ static AnimationSet _gGolemTurnClip;
 
 static AnimationSet _gGolemListenClip;
 
-static AnimationSet _gGolemPawnBeamSwordChargeWindupClip;
+extern AnimationSet gGolemPawnBeamSwordChargeWindupClip;
 
-static AnimationSet _gGolemPawnBeamSwordChargeRunClip;
+extern AnimationSet gGolemPawnBeamSwordChargeRunClip;
 
-static AnimationSet _gGolemPawnBeamSwordChargeSlashClip;
+extern AnimationSet gGolemPawnBeamSwordChargeSlashClip;
 
 extern AnimationSet gGolemSwingRecoverClip;
 
@@ -86,13 +83,13 @@ extern AnimationSet gGolemSwordSwingClip;
 
 extern AnimationSet gGolemStaggerClip;
 
-static AnimationSet _gGolemRecoilFrontClip;
+extern AnimationSet gGolemRecoilFrontClip;
 
-static AnimationSet _gGolemRecoilBehindClip;
+extern AnimationSet gGolemRecoilBehindClip;
 
-static AnimationSet _gGolemBuildupClip;
+extern AnimationSet gGolemBuildupClip;
 
-static AnimationSet _gGolemScreamRecoverClip;
+extern AnimationSet gGolemScreamRecoverClip;
 
 static AnimationSet _gGolemFallBehindClip;
 
@@ -175,8 +172,8 @@ static s16 _gGolemPawnRookAnimBlendFrames[32] = {
 /// 3 is the grenade and 4 is the launcher strike. Unused weapon rows remain
 /// present so every carrier uses the same attack indices.
 static DamageAttack _gGolemPawnRookAttacks[5] = {
-    { 28, 5 },
-    { 24, 5 },
+    { 28, GAME_ACTOR_REACTION_HIT_FLASHES },
+    { 24, GAME_ACTOR_REACTION_HIT_FLASHES },
     { 0, GAME_ACTOR_REACTION_SILENCE },
     { 15, GAME_ACTOR_REACTION_PARALYSIS },
     { 5, GAME_ACTOR_REACTION_ORDINARY },
@@ -607,8 +604,8 @@ static u16* _gActor02000StageAreaSoundSets[6] = {
 };
 
 TaskDesc gActor02000PawnGolemTasks[2] = {
-    { { { TASK_BODY_TMD, ACTOR_02000_TASK_PRIORITY } }, _actor02000BodyTask, { .model = &_gGolemPawnBody } },
-    { { { TASK_BODY_TMD, ACTOR_02000_TASK_PRIORITY } }, _actor02000SwordTask, { .model = &_gGolemBeamSword } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor02000BodyTask, { .model = &_gGolemPawnBody } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor02000SwordTask, { .model = &_gGolemBeamSword } },
 };
 
 /// Animation request bank borrowed by the Beam Sword Pawn GOLEM body rig.

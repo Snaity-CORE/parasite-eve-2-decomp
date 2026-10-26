@@ -124,15 +124,12 @@ static AnimationSet _gStrangerOddGrabStrikeClip;
 static AnimationSet _gStrangerOddGrabReleaseClip;
 static AnimationSet _gStrangerOddGrabReachClip;
 
-/// Player hit presentation used by the grab: one spark and accompanying puffs.
-enum { ACTOR_401000_GRAB_HIT_REACTION = 7 };
-
 /// Two attack definitions belonging to this Odd Stranger enemy kind.
 ///
 /// Entry 0 supplies the grab strike's 20-power reaction-7 hit. Entry 1 is
 /// an 18-power ordinary hit with no recovered attacker selecting it.
 static DamageAttack _gActor401000Attacks[2] = {
-    { 20, ACTOR_401000_GRAB_HIT_REACTION },
+    { 20, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 18, GAME_ACTOR_REACTION_ORDINARY },
 };
 
@@ -1197,8 +1194,8 @@ static void _actor401000Dormant(Task* task)
     }
     // Long-idle throttling also skips awareness and animation work on this tick.
     if (work->stateTimer > ACTOR_401000_DORMANT_QUIET_TICKS) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (!((gRandomLcgState >> 16) & ACTOR_401000_DORMANT_SKIP_MASK)) {
+        RANDOM_LCG_ADVANCE();
+        if (!(RANDOM_LCG_DRAW() & ACTOR_401000_DORMANT_SKIP_MASK)) {
             return;
         }
     } else {
@@ -1218,8 +1215,8 @@ static void _actor401000Dormant(Task* task)
     }
     _oddStrangerDriveAnimation(task);
     if (work->animId == ACTOR_401000_DORMANT_IDLE_ANIM && (work->rig.slots[1].status.fields.flags & ANIMATION_SLOT_FOLLOWED_JUMP)) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             work->animId      = ACTOR_401000_DORMANT_SHIFT_ANIM;
             work->animRequest = ODD_STRANGER_ANIM_REQUEST_BLEND;
             _oddStrangerDriveAnimation(task);

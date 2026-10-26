@@ -9,7 +9,7 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_400500.h"
 
 #include "gameplay/display.h"
 #include "gameplay/animation.h"
@@ -68,9 +68,6 @@ static s32  _dryfieldUnderpassRejectKeyItemUse(Task* unusedTask, s32 messageId, 
 static void _dryfieldUnderpassIdleTask(Task* unusedTask);
 static s32  _dryfieldUnderpassHandleRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedSecondArg);
 
-/// Inventory's request to use a key item in this room.
-enum { DRYFIELD_UNDERPASS_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static AnimationPackedPose _gDryfieldUnderpassAnimation00E64Bank1[10] = {
 #include "assets/dryfield_underpass_animation_00E64_bank1.inc"
 };
@@ -115,15 +112,13 @@ static AnimationSet _gDryfieldUnderpassAnimation01230 = {
     { NULL, _gDryfieldUnderpassAnimation01230Bank1, NULL, NULL, _gDryfieldUnderpassAnimation01230Bank4, NULL, NULL, NULL },
 };
 
-enum { UNDERPASS_SWITCH_TASK_PRIORITY = 32 };
-
 /// Bodyless switch-prompt recipe at index zero, followed by the descriptor end marker.
 ///
 /// The command handler supplies a flag nibble index and CAP command in the
 /// two spawn words. Spawning reads the recipe synchronously; the room and CAP
 /// resources must remain loaded until the prompt task completes.
 static TaskDesc _gUnderpassSwitchTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, UNDERPASS_SWITCH_TASK_PRIORITY } }, _underpassSwitchTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _underpassSwitchTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -1198,9 +1193,7 @@ static void _glowDrawFlareLocal(const GfxCoord* coord, const SVECTOR* localPoint
 /// inventory item's integer ID; all callback arguments are ignored.
 static s32 _dryfieldUnderpassRejectKeyItemUse(Task* unusedTask, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_UNDERPASS_KEY_ITEM_USE_REJECTED = 0 };
-
-    return DRYFIELD_UNDERPASS_KEY_ITEM_USE_REJECTED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Starts the underpass's one-shot event for direction action 1 in placement variant 1.

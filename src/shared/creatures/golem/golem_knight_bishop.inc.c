@@ -283,7 +283,7 @@ static inline void _golemKnightBishopEmitAimBeamSegment(const _GolemKnightBishop
         setRGB1(ribbon, 0xFF, 0, 0);
         setRGB2(ribbon, 0, 0, 0);
         setRGB3(ribbon, 0, 0, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(beam->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), ribbon);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(beam->depth), ribbon);
     }
     line           = gGpuPrimCursor;
     gGpuPrimCursor = line + 1;
@@ -294,13 +294,13 @@ static inline void _golemKnightBishopEmitAimBeamSegment(const _GolemKnightBishop
     line->x1   = beam->vertexX[1];
     line->y1   = beam->vertexY[1];
     setRGB0(line, 0xFF, 0, 0);
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(beam->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), line);
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(beam->depth), line);
     // Prepending the draw mode last makes it execute before the additive packets.
     drawMode       = gGpuPrimCursor;
     gGpuPrimCursor = drawMode + 1;
     setlen(drawMode, sizeof(*drawMode) / sizeof(u32) - 1);
     drawMode->code[0] = GOLEM_KNIGHT_BISHOP_BEAM_DRAW_MODE;
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(beam->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), drawMode);
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(beam->depth), drawMode);
 }
 
 /// Draws the red aim beam from the work block's projected endpoints.
@@ -543,7 +543,7 @@ static void _golemKnightBishopDeadState(Enemy* enemy, Task* task)
             if (!(work->animFrame & GOLEM_KNIGHT_BISHOP_CORPSE_FLASH_FRAME_MASK)) {
                 flashOffset->vx = 0;
                 flashOffset->vz = 0;
-                randomDraw      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                randomDraw      = RANDOM_LCG_NEXT(gRandomLcgState);
                 flashOffset->vy = -((randomDraw >> 16) & GOLEM_KNIGHT_BISHOP_CORPSE_FLASH_OFFSET_MASK);
                 gRandomLcgState = randomDraw;
                 effectSpawn(EFFECT_FLASH_BURST, &task->extra.tmd->coords[3], GOLEM_KNIGHT_BISHOP_CORPSE_FLASH_SIZE, flashOffset);

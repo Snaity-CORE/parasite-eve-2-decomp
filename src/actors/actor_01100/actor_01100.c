@@ -421,8 +421,6 @@ static void _actor01100Task(Task* task);
 static void _actor01100SpitGlobTask(Task* task);
 static void _actor01100SpitCloudTask(Task* task);
 
-enum { ACTOR_01100_PUNCH_PLAYER_REACTION = 7 };
-
 /// Standard-placement Mossback attack damage and player reactions.
 ///
 /// Slots 1/2 are idle left/right hand contacts, 3/4 the punches, and 5 the
@@ -433,8 +431,8 @@ static DamageAttack _gActor01100MossbackAttacks[6] = {
     { 0, GAME_ACTOR_REACTION_ORDINARY },
     [ACTOR_01100_ATTACK_IDLE_LEFT]   = { 8, GAME_ACTOR_REACTION_ORDINARY },
     [ACTOR_01100_ATTACK_IDLE_RIGHT]  = { 8, GAME_ACTOR_REACTION_ORDINARY },
-    [ACTOR_01100_ATTACK_PUNCH_LEFT]  = { 20, ACTOR_01100_PUNCH_PLAYER_REACTION },
-    [ACTOR_01100_ATTACK_PUNCH_RIGHT] = { 20, ACTOR_01100_PUNCH_PLAYER_REACTION },
+    [ACTOR_01100_ATTACK_PUNCH_LEFT]  = { 20, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    [ACTOR_01100_ATTACK_PUNCH_RIGHT] = { 20, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     [ACTOR_01100_SPIT_ATTACK_INDEX]  = { 10, GAME_ACTOR_REACTION_POISON },
 };
 
@@ -463,8 +461,8 @@ static DamageAttack _gActor01100BruteMossbackAttacks[6] = {
     { 0, GAME_ACTOR_REACTION_ORDINARY },
     [ACTOR_01100_ATTACK_IDLE_LEFT]   = { 10, GAME_ACTOR_REACTION_ORDINARY },
     [ACTOR_01100_ATTACK_IDLE_RIGHT]  = { 10, GAME_ACTOR_REACTION_ORDINARY },
-    [ACTOR_01100_ATTACK_PUNCH_LEFT]  = { 30, ACTOR_01100_PUNCH_PLAYER_REACTION },
-    [ACTOR_01100_ATTACK_PUNCH_RIGHT] = { 30, ACTOR_01100_PUNCH_PLAYER_REACTION },
+    [ACTOR_01100_ATTACK_PUNCH_LEFT]  = { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    [ACTOR_01100_ATTACK_PUNCH_RIGHT] = { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     [ACTOR_01100_SPIT_ATTACK_INDEX]  = { 15, GAME_ACTOR_REACTION_DARKNESS },
 };
 
@@ -495,9 +493,9 @@ static EnemyParams _gActor01100BruteMossbackParams = {
 #include "assets/encounters/brute_and_mossback/package_1_clips.inc"
 
 TaskDesc gActor01100Tasks[3] = {
-    { { { TASK_BODY_TMD, 96 } }, _actor01100Task, { .model = &_gBruteAndMossbackBody } },
-    { { { TASK_BODY_COORD, 96 } }, _actor01100SpitGlobTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, 96 } }, _actor01100SpitCloudTask, { .value = 0 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor01100Task, { .model = &_gBruteAndMossbackBody } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _actor01100SpitGlobTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _actor01100SpitCloudTask, { .value = 0 } },
 };
 
 /// Mossback clip bank shared by the body rig and directional flinch rig.
@@ -1287,7 +1285,6 @@ static void _actor01100UpdateAwareness(Enemy* enemy, Task* task, _Actor01100Work
         ACTOR_01100_AWARENESS_ACTION_RUN_RANGE_SQUARED = 2000 * 2000,
         ACTOR_01100_AWARENESS_RUN_RANGE_SQUARED        = 4000 * 4000,
         ACTOR_01100_AWARENESS_WALK_RANGE_SQUARED       = 1000 * 1000,
-        ACTOR_01100_PLAYER_MOVEMENT_RUN                = 3
     };
 
     WorldTargetNode* targetNode;
@@ -1317,7 +1314,7 @@ static void _actor01100UpdateAwareness(Enemy* enemy, Task* task, _Actor01100Work
 
         if (playerTask != NULL) {
             playerWork = playerTask->work;
-            if (((gSceneCombatState.signals.bytes.actionFlags ^ 1) == 0) || (((u16)playerWork->movementMode == ACTOR_01100_PLAYER_MOVEMENT_RUN) && distanceSquared <= ACTOR_01100_AWARENESS_ACTION_RUN_RANGE_SQUARED - 1)) {
+            if (((gSceneCombatState.signals.bytes.actionFlags ^ 1) == 0) || (((u16)playerWork->movementMode == GAME_ACTOR_MOVEMENT_RUN) && distanceSquared <= ACTOR_01100_AWARENESS_ACTION_RUN_RANGE_SQUARED - 1)) {
                 engage = 1;
             }
         }
@@ -1327,7 +1324,7 @@ static void _actor01100UpdateAwareness(Enemy* enemy, Task* task, _Actor01100Work
 
         if (playerTask != NULL) {
             playerWork = playerTask->work;
-            if ((((u16)playerWork->movementMode == ACTOR_01100_PLAYER_MOVEMENT_RUN) && distanceSquared <= ACTOR_01100_AWARENESS_RUN_RANGE_SQUARED - 1) || distanceSquared <= ACTOR_01100_AWARENESS_WALK_RANGE_SQUARED - 1) {
+            if ((((u16)playerWork->movementMode == GAME_ACTOR_MOVEMENT_RUN) && distanceSquared <= ACTOR_01100_AWARENESS_RUN_RANGE_SQUARED - 1) || distanceSquared <= ACTOR_01100_AWARENESS_WALK_RANGE_SQUARED - 1) {
                 engage = 1;
             }
         }
@@ -1682,8 +1679,8 @@ static void _actor01100Tick(Enemy* enemy, Task* task, _Actor01100Work* work, _Ac
                 PARENT_OF(targetNode, Enemy, node)->coord      = modelCoords + ACTOR_01100_PART_CHEST;
                 if (_actor01100ProcessHits(enemy, task, work, scratch) == 0 && task->spawnArg1.value == 0 && work->prevMode == ACTOR_01100_MODE_ENGAGED && work->motionEnded == 1 && _actor01100MeasurePlayerDistanceSquared(task->extra.tmd->coords) > ACTOR_01100_PUNCH_RANGE_SQUARED) {
                     _actor01100DisableHandBodies(work);
-                    work->mode      = ACTOR_01100_MODE_UNAWARE;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    work->mode = ACTOR_01100_MODE_UNAWARE;
+                    RANDOM_LCG_ADVANCE();
                     if (((gRandomLcgState >> 0x10) & 0xF) < 0xC) {
                         work->state = ACTOR_01100_STATE_IDLE_REST;
                     } else {
@@ -1918,7 +1915,7 @@ static void _actor01100IdleTurn(Enemy* unusedEnemy, Task* task, _Actor01100Work*
 
     root = task->extra.tmd->coords;
     if (work->stateStep == 0) {
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         turnChoice      = (randomState >> 0x10) & 0xF;
         if (turnChoice < 3) {
@@ -2068,8 +2065,8 @@ static void _actor01100NoticePlayer(Enemy* unusedEnemy, Task* task, _Actor01100W
     if (work->stateStep == 0) {
         work->motion        = ACTOR_01100_MOTION_IDLE;
         work->playerBearing = _actor01100BearingToPlayer(task->extra.tmd->coords);
-        gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->stateCounter  = ((gRandomLcgState >> 0x10) & 0x1F) + 2;
+        RANDOM_LCG_ADVANCE();
+        work->stateCounter = ((gRandomLcgState >> 0x10) & 0x1F) + 2;
         work->stateStep++;
     }
 
@@ -2139,8 +2136,8 @@ static void _actor01100NoticePlayer(Enemy* unusedEnemy, Task* task, _Actor01100W
 
         if ((u16)(work->playerBearing + (ACTOR_01100_FACING_TOLERANCE - 1)) < (ACTOR_01100_FACING_TOLERANCE * 2 - 1)) {
             if (task->spawnArg1.value != 0) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                attackChoice    = (u16)((gRandomLcgState >> 0x10) % 3);
+                RANDOM_LCG_ADVANCE();
+                attackChoice = (u16)((gRandomLcgState >> 0x10) % 3);
                 if (attackChoice <= 0) {
                     work->state = ACTOR_01100_STATE_PUNCH_LEFT;
                 } else if (attackChoice < 2) {
@@ -2206,7 +2203,7 @@ static void _actor01100FacePlayer(Enemy* enemy, Task* task, _Actor01100Work* wor
     root->composeStamp = GRAPHICS_COORD_DIRTY;
 
     if (work->playerBearing > -ACTOR_01100_FACING_TOLERANCE && work->playerBearing < ACTOR_01100_FACING_TOLERANCE) {
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         work->state     = ((randomState >> 0x10) & 4) ? ACTOR_01100_STATE_PUNCH_LEFT : ACTOR_01100_STATE_PUNCH_RIGHT;
         sceneEngageBattle(1);
@@ -2371,7 +2368,7 @@ static void _actor01100PunchLeft(Enemy* enemy, Task* task, _Actor01100Work* work
             work->field_BAA = (u8)work->field_BAA + 1;
             return;
         }
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         if (!((randomState >> 0x10) & 3)) {
             work->state = ACTOR_01100_STATE_ADVANCE;
@@ -2522,7 +2519,7 @@ static void _actor01100PunchRight(Enemy* enemy, Task* task, _Actor01100Work* wor
             work->field_BAA = (u8)work->field_BAA + 1;
             return;
         }
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         if (!((randomState >> 0x10) & 3)) {
             work->state = ACTOR_01100_STATE_ADVANCE;
@@ -2787,7 +2784,7 @@ static void _actor01100Advance(Enemy* enemy, Task* task, _Actor01100Work* work, 
             work->stateStep = 0;
             return;
         }
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         work->motion    = ACTOR_01100_MOTION_ADVANCE;
         strideChoice    = (randomState >> 16) & 0xF;
@@ -3153,25 +3150,25 @@ static void _actor01100SpitGlobInit(Task* task)
     task->killCountdown = ACTOR_01100_SPIT_LIFETIME_TICKS;
 
     // Build velocity in the launch frame before resetting the projectile rotation.
-    launchVector     = SCRATCH_STACK_RESERVE_BLOCK(SVECTOR);
-    gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    launchVector->vy = ACTOR_01100_SPIT_LAUNCH_Y_BITS - ((gRandomLcgState >> 16) & ACTOR_01100_SPIT_LAUNCH_Y_JITTER_MASK);
+    launchVector = SCRATCH_STACK_RESERVE_BLOCK(SVECTOR);
+    RANDOM_LCG_ADVANCE();
+    launchVector->vy = ACTOR_01100_SPIT_LAUNCH_Y_BITS - (RANDOM_LCG_DRAW() & ACTOR_01100_SPIT_LAUNCH_Y_JITTER_MASK);
     launchVector->vx = rsin(launchYaw);
     launchVector->vz = rcos(launchYaw);
 
     _gfxRotateSv(&coord->coord, launchVector);
 
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    gte_lddp(((gRandomLcgState >> 16) & ACTOR_01100_SPIT_LAUNCH_SCALE_JITTER_MASK) + ACTOR_01100_SPIT_LAUNCH_SCALE_MIN);
+    RANDOM_LCG_ADVANCE();
+    gte_lddp((RANDOM_LCG_DRAW() & ACTOR_01100_SPIT_LAUNCH_SCALE_JITTER_MASK) + ACTOR_01100_SPIT_LAUNCH_SCALE_MIN);
     gte_ldsv(launchVector);
     gte_gpf12();
     gte_stsv(&work->velocity);
 
     gfxSetRotIdentity(&coord->coord);
 
-    coord->coord.t[0]  += work->velocity.vx;
-    gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    coord->coord.t[1]  += (gRandomLcgState >> 16) & ACTOR_01100_SPIT_INITIAL_Y_JITTER_MASK;
+    coord->coord.t[0] += work->velocity.vx;
+    RANDOM_LCG_ADVANCE();
+    coord->coord.t[1]  += RANDOM_LCG_DRAW() & ACTOR_01100_SPIT_INITIAL_Y_JITTER_MASK;
     coord->coord.t[2]  += work->velocity.vz;
     coord->composeStamp = GRAPHICS_COORD_DIRTY;
 
@@ -3615,8 +3612,8 @@ static void _actor01100UpdateEngaged(Enemy* enemy, Task* task, _Actor01100Work* 
         if ((previousMode == ACTOR_01100_MODE_ENGAGED) && (work->motionEnded == previousMode)) {
             if (_actor01100MeasurePlayerDistanceSquared(task->extra.tmd->coords) > ACTOR_01100_PUNCH_RANGE_SQUARED) {
                 _actor01100DisableHandBodies(work);
-                work->mode      = ACTOR_01100_MODE_UNAWARE;
-                gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                work->mode = ACTOR_01100_MODE_UNAWARE;
+                RANDOM_LCG_ADVANCE();
                 if (((gRandomLcgState >> 0x10) & ACTOR_01100_DISENGAGE_RANDOM_MASK) < ACTOR_01100_DISENGAGE_REST_THRESHOLD) {
                     work->state = ACTOR_01100_STATE_IDLE_REST;
                 } else {
@@ -3695,8 +3692,8 @@ static void _actor01100Idle(Enemy* unusedEnemy, Task* unusedTask, _Actor01100Wor
     s16 framesLeft;
 
     if (work->stateStep == 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        waitChoice      = (gRandomLcgState >> 0x10) & 0xF;
+        RANDOM_LCG_ADVANCE();
+        waitChoice = (gRandomLcgState >> 0x10) & 0xF;
         if (waitChoice < 4) {
             work->stateCounter = ACTOR_01100_IDLE_WAIT_BRIEF;
         } else if (waitChoice < 8) {
@@ -3712,8 +3709,8 @@ static void _actor01100Idle(Enemy* unusedEnemy, Task* unusedTask, _Actor01100Wor
     framesLeft         = (u16)work->stateCounter - 1;
     work->stateCounter = framesLeft;
     if (framesLeft == 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        gestureChoice   = (gRandomLcgState >> 0x10) & 0xF;
+        RANDOM_LCG_ADVANCE();
+        gestureChoice = (gRandomLcgState >> 0x10) & 0xF;
         if (gestureChoice < 3) {
             work->state = ACTOR_01100_STATE_IDLE_SWING_LEFT;
         } else if (gestureChoice < 6) {

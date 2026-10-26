@@ -8,7 +8,9 @@
 
 #include "dryfield_water_tower_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_421600.h"
 
 #include "gameplay/area.h"
 #include "gameplay/areaplace.h"
@@ -60,6 +62,8 @@
 #include "mapui/map_dryfield.h"
 
 #include "../../shared/room/room_events.h"
+
+#include "assets/engine/animation/player_schema.h"
 
 static void _screenFadeInTask(Task* task);
 /// Binds the shared fade-in declaration and definition to this file's private task.
@@ -397,7 +401,7 @@ enum { DRYFIELD_WATER_TOWER_SKIP_SOUND_FADE_TICKS = 10 };
 
 static s32 _dryfieldWaterTowerApplyPropCommand(Task* task, s32 messageId, const ActorCommand* command, s32 unusedSecondArg);
 
-TaskDesc gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+TaskDesc gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 TaskMessageEntry gDryfieldWaterTowerRoomMessages[7] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, roomVariantWaterTowerMsg },
@@ -410,7 +414,7 @@ TaskMessageEntry gDryfieldWaterTowerRoomMessages[7] = {
 };
 
 TaskDesc gDryfieldWaterTowerMechanismPromptTasks[2] = {
-    { { { TASK_BODY_NONE, 32 } }, dryfieldWaterTowerMechanismPromptTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, dryfieldWaterTowerMechanismPromptTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -753,7 +757,7 @@ static TaskMessageEntry _gDryfieldWaterTowerPropSceneMessages[2] = {
 };
 
 TaskDesc gDryfieldWaterTowerPropSceneTasks[3] = {
-    { { { TASK_BODY_NONE, 192 } }, _dryfieldWaterTowerPropSceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldWaterTowerPropSceneTask, { .value = 0 } },
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _dryfieldWaterTowerSlidingPropTask, { .model = &_gDryfieldWaterTowerDryfieldWaterTankModel020D4 } },
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _dryfieldWaterTowerFallingPropTask, { .model = &_gDryfieldWaterTowerModel03D14 } },
 };
@@ -866,9 +870,9 @@ static EvsCommand _gDryfieldWaterTowerActorSceneSkipScript[11] = {
 /// is stored. The scene spawns slot 2 with an eight-frame fade; slot 1 has no
 /// recovered spawn. Tasks borrow this room's callbacks through teardown.
 static TaskDesc _gDryfieldWaterTowerActorSceneTasks[3] = {
-    { { { TASK_BODY_NONE, 192 } }, _dryfieldWaterTowerActorSceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _screenFadeOutTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _screenFadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldWaterTowerActorSceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeOutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeInTask, { .value = 0 } },
 };
 
 /// Ambient-effect gates for mapped views 1..21, indexed by view minus one.
@@ -3108,23 +3112,16 @@ static void _dryfieldWaterTowerPropSceneTask(Task* task)
 /// synchronously consumes the stack request.
 static void _dryfieldWaterTowerRestorePlayerWeaponAnimation(s32 blendFrames)
 {
-    enum {
-        DRYFIELD_WATER_TOWER_PRIMARY_CHARACTER          = 1,
-        DRYFIELD_WATER_TOWER_PRIMARY_WEAPON_BANK_BASE   = 1,
-        DRYFIELD_WATER_TOWER_ALTERNATE_WEAPON_BANK_BASE = 0x22,
-        DRYFIELD_WATER_TOWER_WEAPON_ANIMATION_SET       = 1
-    };
-
     AnimationPlayRequest request;
     s32                  weaponId;
     s32                  bankIndex;
     s32                  durationFrames;
 
     weaponId                     = gPlayerStatus.weapon;
-    bankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_WATER_TOWER_PRIMARY_CHARACTER) ? weaponId + DRYFIELD_WATER_TOWER_PRIMARY_WEAPON_BANK_BASE : weaponId + DRYFIELD_WATER_TOWER_ALTERNATE_WEAPON_BANK_BASE;
+    bankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     durationFrames               = blendFrames & 0xFFFF;
     request.source.index         = bankIndex;
-    request.animationId          = DRYFIELD_WATER_TOWER_WEAPON_ANIMATION_SET;
+    request.animationId          = PLAYER_ANIMATION_IDLE;
     request.blend                = durationFrames != 0 ? ANIMATION_BLEND_INTERPOLATE : ANIMATION_BLEND_RESET;
     request.blendFrames          = durationFrames;
     request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -3362,20 +3359,16 @@ static void _dryfieldWaterTowerDispatchActorSceneRequest(Task* task)
 static inline void _dryfieldWaterTowerStartActorSceneWeaponPose(void)
 {
     enum {
-        DRYFIELD_WATER_TOWER_ACTOR_SCENE_PRIMARY_CHARACTER          = 1,
-        DRYFIELD_WATER_TOWER_ACTOR_SCENE_PRIMARY_WEAPON_BANK_BASE   = 1,
-        DRYFIELD_WATER_TOWER_ACTOR_SCENE_ALTERNATE_WEAPON_BANK_BASE = 0x22,
-        DRYFIELD_WATER_TOWER_ACTOR_SCENE_WEAPON_ANIMATION_SET       = 1,
-        DRYFIELD_WATER_TOWER_ACTOR_SCENE_WEAPON_BLEND_FRAMES        = 10,
+        DRYFIELD_WATER_TOWER_ACTOR_SCENE_WEAPON_BLEND_FRAMES = 10,
     };
     AnimationPlayRequest animationRequest;
     s32                  weaponIndex;
     s32                  bankIndex;
 
     weaponIndex                           = gPlayerStatus.weapon;
-    bankIndex                             = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_WATER_TOWER_ACTOR_SCENE_PRIMARY_CHARACTER) ? weaponIndex + DRYFIELD_WATER_TOWER_ACTOR_SCENE_PRIMARY_WEAPON_BANK_BASE : weaponIndex + DRYFIELD_WATER_TOWER_ACTOR_SCENE_ALTERNATE_WEAPON_BANK_BASE;
+    bankIndex                             = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponIndex);
     animationRequest.source.index         = bankIndex;
-    animationRequest.animationId          = DRYFIELD_WATER_TOWER_ACTOR_SCENE_WEAPON_ANIMATION_SET;
+    animationRequest.animationId          = PLAYER_ANIMATION_IDLE;
     animationRequest.blend                = ANIMATION_BLEND_INTERPOLATE;
     animationRequest.blendFrames          = DRYFIELD_WATER_TOWER_ACTOR_SCENE_WEAPON_BLEND_FRAMES;
     animationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;

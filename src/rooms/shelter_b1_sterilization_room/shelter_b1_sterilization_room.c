@@ -57,8 +57,6 @@
 
 #include "mapui/map_shelter.h"
 
-#include "rooms/akropolis_square.h"
-
 #include "rooms/room.h"
 
 #include "rooms/room_common.h"
@@ -119,9 +117,6 @@ enum {
 /// Door room actions 3..10 map to zero-based destination entries 0..7.
 enum { SHELTER_B1_STERILIZATION_ROOM_FIRST_DOOR_ACTION = 3 };
 
-/// Priority of the room's bodyless event and presentation tasks.
-enum { SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY = 192 };
-
 /// Actor 0's command word for latching its smoking behavior.
 enum { SHELTER_B1_STERILIZATION_ROOM_ACTOR_START_SMOKING = 1 };
 
@@ -140,37 +135,8 @@ enum {
 
 #include "../../shared/room/telephone_data.inc.c"
 
-static TmdBone _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Skeleton[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_skeleton.inc"
-};
-
-static u32 _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0PartVerts[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_partVerts.inc"
-};
-
-static SVECTOR _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Verts[56] = {
-#include "assets/acropolis_sanctuary_model_090F0_verts.inc"
-};
-
-static SVECTOR _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Normals[6] = {
-#include "assets/acropolis_sanctuary_model_090F0_normals.inc"
-};
-
-static u32 _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Stream[215] = {
-#include "assets/acropolis_sanctuary_model_090F0_stream.inc"
-};
-
-TmdSource gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0 = {
-    0,
-    1768,
-    0,
-    3,
-    _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0PartVerts,
-    _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Verts,
-    _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Normals,
-    _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Skeleton,
-    _gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0Stream,
-};
+#include "assets/rooms/item_box/model.inc"
+DEFINE_ALIAS(_gItemBoxModel, gShelterB1SterilizationRoomItemBoxModel);
 
 /// This carrier's bodyless scene runner and timed sound task, followed by END.
 ///
@@ -179,8 +145,8 @@ TmdSource gShelterB1SterilizationRoomAcropolisSanctuaryModel090F0 = {
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -201,7 +167,7 @@ static TaskMessageEntry _gShelterB1SterilizationRoomMessageTable[] = {
 ///
 /// Spawn at index zero with the CAP command in spawnArg1 and player control held.
 static TaskDesc _gShelterB1SterilizationRoomScriptedPresentationTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _shelterB1SterilizationRoomScriptedPresentationTask,
     .data     = { .value = 0 },
 };
@@ -425,15 +391,15 @@ static AnimationSet _gShelterB1SterilizationRoomAnimation0AF1C = {
 };
 
 TaskDesc gShelterB1SterilizationRoomEventTaskDescs[SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_DESC_COUNT] = {
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, _shelterB1SterilizationRoomCrossfadeTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, shelterB1SterilizationRoomTrapEscapePromptTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, _shelterB1SterilizationRoomDoorPassageTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, shelterB1SterilizationRoomSwitchRoomTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, shelterB1SterilizationRoomDoorNoticeTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, _shelterB1SterilizationRoomTrapDamageTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, shelterB1SterilizationRoomResetSpawnMaskTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, shelterB1SterilizationRoomTrapDialogueTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B1_STERILIZATION_ROOM_EVENT_TASK_PRIORITY } }, shelterB1SterilizationRoomSceneDialogueTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB1SterilizationRoomCrossfadeTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterB1SterilizationRoomTrapEscapePromptTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB1SterilizationRoomDoorPassageTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterB1SterilizationRoomSwitchRoomTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterB1SterilizationRoomDoorNoticeTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB1SterilizationRoomTrapDamageTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterB1SterilizationRoomResetSpawnMaskTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterB1SterilizationRoomTrapDialogueTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterB1SterilizationRoomSceneDialogueTask, { .value = 0 } },
 };
 
 /// Null clip 47 followed by the trap-entry, escape and damage clips 48..54.
@@ -1050,17 +1016,15 @@ static void _shelterB1SterilizationRoomUpdateEventActorVisibility(void)
     enum {
         SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_VIEW_2 = 2,
         SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_VIEW_3 = 3,
-        SHELTER_B1_STERILIZATION_ROOM_ACTOR_HIDDEN       = 0,
-        SHELTER_B1_STERILIZATION_ROOM_ACTOR_VISIBLE      = 1,
     };
     s32 view;
 
     view = gGameSession->location.view;
     if ((gameFlagGetNibble(GAME_FLAG_STERILIZATION_ROOM_EVENT_STATE) == SHELTER_B1_STERILIZATION_ROOM_ACTOR_EVENT_ACTIVE) && (gGameSession->eventState == 0)) {
         if (view == SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_VIEW_2 || view == SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_VIEW_3) {
-            sceneSetPlacedActorDrawMode(SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_PLACEMENT, SHELTER_B1_STERILIZATION_ROOM_ACTOR_VISIBLE);
+            sceneSetPlacedActorDrawMode(SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_PLACEMENT, ACTOR_MESSAGE_DRAW_SHOW);
         } else {
-            sceneSetPlacedActorDrawMode(SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_PLACEMENT, SHELTER_B1_STERILIZATION_ROOM_ACTOR_HIDDEN);
+            sceneSetPlacedActorDrawMode(SHELTER_B1_STERILIZATION_ROOM_EVENT_ACTOR_PLACEMENT, ACTOR_MESSAGE_DRAW_HIDE);
         }
     }
 }
@@ -1165,12 +1129,11 @@ static void _shelterB1SterilizationRoomRebuildActorObstacle(const GfxCoord* mode
 static void _shelterB1SterilizationRoomCaptureCrossfadeState(Task* task)
 {
     enum {
-        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_LOWER_BUFFER_Y = 272,
-        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_LEFT_VRAM_X    = 832,
-        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_RIGHT_VRAM_X   = 384,
-        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_RIGHT_VRAM_Y   = 256,
-        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_MASK_OFF       = 0,
-        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_MASK_ON        = 1,
+        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_LEFT_VRAM_X  = 832,
+        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_RIGHT_VRAM_X = 384,
+        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_RIGHT_VRAM_Y = 256,
+        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_MASK_OFF     = 0,
+        SHELTER_B1_STERILIZATION_ROOM_CAPTURE_MASK_ON      = 1,
     };
     RECT     rect;
     DR_STP*  maskPacket;
@@ -1183,7 +1146,7 @@ static void _shelterB1SterilizationRoomCaptureCrossfadeState(Task* task)
         sourceY = 0;
     } else {
         sourceX = 0;
-        sourceY = SHELTER_B1_STERILIZATION_ROOM_CAPTURE_LOWER_BUFFER_Y;
+        sourceY = DISPLAY_BUFFER_STRIDE_ROWS;
     }
 
     // Head insertion runs the last mask packet first and this one after both copies.
@@ -1197,7 +1160,7 @@ static void _shelterB1SterilizationRoomCaptureCrossfadeState(Task* task)
     rect.x         = sourceX;
     rect.y         = sourceY;
     rect.w         = CROSSFADE_BACKDROP_LEFT_WIDTH;
-    rect.h         = CROSSFADE_BACKDROP_HEIGHT;
+    rect.h         = DISPLAY_SCREEN_HEIGHT;
     SetDrawMove(copyPacket, &rect, SHELTER_B1_STERILIZATION_ROOM_CAPTURE_LEFT_VRAM_X, 0);
     addPrim(gGpuCurrentOt + CROSSFADE_ORDERING_TABLE_SLOT, copyPacket);
 
@@ -1205,8 +1168,8 @@ static void _shelterB1SterilizationRoomCaptureCrossfadeState(Task* task)
     gGpuPrimCursor = copyPacket + 1;
     rect.x         = sourceX + CROSSFADE_BACKDROP_LEFT_WIDTH;
     rect.y         = sourceY;
-    rect.w         = CROSSFADE_BACKDROP_WIDTH - CROSSFADE_BACKDROP_LEFT_WIDTH;
-    rect.h         = CROSSFADE_BACKDROP_HEIGHT;
+    rect.w         = DISPLAY_SCREEN_WIDTH - CROSSFADE_BACKDROP_LEFT_WIDTH;
+    rect.h         = DISPLAY_SCREEN_HEIGHT;
     SetDrawMove(copyPacket, &rect, SHELTER_B1_STERILIZATION_ROOM_CAPTURE_RIGHT_VRAM_X, SHELTER_B1_STERILIZATION_ROOM_CAPTURE_RIGHT_VRAM_Y);
     addPrim(gGpuCurrentOt + CROSSFADE_ORDERING_TABLE_SLOT, copyPacket);
 
@@ -1258,22 +1221,22 @@ static void _crossfadeDrawBackdrop(s32 shade)
     CROSSFADE_ALLOCATE_BACKDROP_SPRITE(sprite, shade);
     sprite->u0   = 0;
     sprite->v0   = 0;
-    sprite->x0   = -CROSSFADE_BACKDROP_WIDTH / 2;
-    sprite->y0   = -CROSSFADE_BACKDROP_HEIGHT / 2;
+    sprite->x0   = -DISPLAY_SCREEN_WIDTH / 2;
+    sprite->y0   = -DISPLAY_SCREEN_HEIGHT / 2;
     sprite->clut = 0;
     sprite->w    = CROSSFADE_BACKDROP_LEFT_WIDTH;
-    sprite->h    = CROSSFADE_BACKDROP_HEIGHT;
+    sprite->h    = DISPLAY_SCREEN_HEIGHT;
     addPrim(gGpuCurrentOt + CROSSFADE_ORDERING_TABLE_SLOT, sprite);
     _crossfadeSetTpage(CROSSFADE_STERILIZATION_LEFT_VRAM_X, 0);
 
     CROSSFADE_ALLOCATE_BACKDROP_SPRITE(sprite, shade);
     sprite->u0   = 0;
     sprite->v0   = 0;
-    sprite->x0   = CROSSFADE_BACKDROP_LEFT_WIDTH - CROSSFADE_BACKDROP_WIDTH / 2;
-    sprite->y0   = -CROSSFADE_BACKDROP_HEIGHT / 2;
+    sprite->x0   = CROSSFADE_BACKDROP_LEFT_WIDTH - DISPLAY_SCREEN_WIDTH / 2;
+    sprite->y0   = -DISPLAY_SCREEN_HEIGHT / 2;
     sprite->clut = 0;
-    sprite->w    = CROSSFADE_BACKDROP_WIDTH - CROSSFADE_BACKDROP_LEFT_WIDTH;
-    sprite->h    = CROSSFADE_BACKDROP_HEIGHT;
+    sprite->w    = DISPLAY_SCREEN_WIDTH - CROSSFADE_BACKDROP_LEFT_WIDTH;
+    sprite->h    = DISPLAY_SCREEN_HEIGHT;
     addPrim(gGpuCurrentOt + CROSSFADE_ORDERING_TABLE_SLOT, sprite);
     _crossfadeSetTpage(CROSSFADE_STERILIZATION_RIGHT_VRAM_X, CROSSFADE_STERILIZATION_RIGHT_VRAM_Y);
 #undef CROSSFADE_ALLOCATE_BACKDROP_SPRITE

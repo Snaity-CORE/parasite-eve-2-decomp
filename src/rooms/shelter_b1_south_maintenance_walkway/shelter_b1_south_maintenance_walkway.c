@@ -9,7 +9,12 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00700.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_02600.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -76,14 +81,12 @@ static s32                    _shelterB1SouthMaintenanceWalkwayRejectKeyItem(Tas
 static s32                    _shelterB1SouthMaintenanceWalkwayIgnoreRoomCommand(Task* task, s32 messageId, s32 commandId, s32 commandArg);
 static s32                    _shelterB1SouthMaintenanceWalkwayIgnoreRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedArg);
 
-enum { SHELTER_B1_SOUTH_MAINTENANCE_WALKWAY_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Bodyless priority-32 recipe for this room's staged departure task.
 ///
 /// The gate reads index 0 synchronously with zero metadata and unused payloads.
 /// The deferred task borrows the latched event and destination through CAP,
 /// optional sound/fade and reload; retain them and the loaded room throughout.
-static TaskDesc _gShelterB1SouthMaintenanceWalkwayStagedEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gShelterB1SouthMaintenanceWalkwayStagedEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Room-message routes: stage eligible departures, refuse key items, ignore actions and commands.
 ///
@@ -92,7 +95,7 @@ static TaskDesc _gShelterB1SouthMaintenanceWalkwayStagedEventTaskDesc = { { { TA
 /// Keep the room overlay and callback code loaded while the receiver is live.
 static TaskMessageEntry _gShelterB1SouthMaintenanceWalkwayRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB1SouthMaintenanceWalkwayResolveDepartureMessage },
-    { SHELTER_B1_SOUTH_MAINTENANCE_WALKWAY_MESSAGE_USE_KEY_ITEM, _shelterB1SouthMaintenanceWalkwayRejectKeyItem },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB1SouthMaintenanceWalkwayRejectKeyItem },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB1SouthMaintenanceWalkwayIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _shelterB1SouthMaintenanceWalkwayIgnoreRoomCommand },
     { TASK_MESSAGE_TABLE_END, NULL },

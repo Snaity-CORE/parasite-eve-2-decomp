@@ -9,7 +9,7 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_503500.h"
 #include "actors/actor_403600.h"
 #include "actors/actor_503500.h"
 
@@ -98,9 +98,8 @@ static WorldCollisionTrigger _gShelterR48ViewBoundaryTriggers[16];
 static WorldCollisionTrigger _gShelterR48ActionTriggers[5];
 static WorldCoordRoomLights  _gShelterR48RoomLights;
 enum {
-    SHELTER_R48_MESSAGE_USE_KEY_ITEM = 0x13F1,
-    SHELTER_R48_CARD_USE_READY       = 1,
-    SHELTER_R48_CARD_USE_STARTED     = 2
+    SHELTER_R48_CARD_USE_READY   = 1,
+    SHELTER_R48_CARD_USE_STARTED = 2
 };
 
 static s32 _shelterR48UseStaffCard(Task* task, s32 messageId, s32 itemId, s32 unusedArg);
@@ -152,7 +151,7 @@ TaskDesc gShelterR48WaterRefractionTaskDesc = { { { (TASK_BODY_TMD | TASK_DESC_S
 /// requires. The final marker makes unsupported message IDs return zero.
 static TaskMessageEntry _gShelterR48RoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterR48ResolveTransitionMessage },
-    { SHELTER_R48_MESSAGE_USE_KEY_ITEM, _shelterR48UseStaffCard },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterR48UseStaffCard },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterR48RoomActionMsg },
     { ROOM_MESSAGE_COMMAND, _shelterR48IgnoreRoomCommand },
     { ROOM_MESSAGE_ACTOR_EVENT, _shelterR48AdvanceBossSceneMsg },
@@ -2610,7 +2609,7 @@ void shelterR48InitRingsAndDrawGlowTask(Task* task)
         gRoomEffectState->groundTraceEnabled = false;
         for (bandIndex = 0; bandIndex < ARRAY_SIZE(_gShelterR48RingTexturePhases); bandIndex++) {
             for (segmentIndex = 0; segmentIndex < ARRAY_SIZE(_gShelterR48RingTexturePhases[bandIndex]); segmentIndex++) {
-                _gShelterR48RingTexturePhases[bandIndex][segmentIndex] = (gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16;
+                _gShelterR48RingTexturePhases[bandIndex][segmentIndex] = (RANDOM_LCG_ADVANCE()) >> 16;
             }
         }
         task->state = SHELTER_R48_GLOW_STATE_RUNNING;
@@ -3093,7 +3092,7 @@ static void _shelterR48DrawRingBand(const EffectWork* work, const GfxCoord* coor
             quad->y2 = (u16)scratch->sxy2.vy;
             quad->x3 = (u16)scratch->sxy3.vx;
             quad->y3 = (u16)scratch->sxy3.vy;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz),
                     quad);
         }
     }
@@ -3190,7 +3189,7 @@ static void _waterDrawSpinU16(const GfxCoord* coord, u16 textureColumn, s16 radi
         quad->x2 = projection->screenX - (u16)projection->extent.corner.x;
         quad->y1 = projection->screenY - (u16)projection->extent.corner.y;
         quad->y2 = projection->screenY + (u16)projection->extent.corner.y;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK_AT(scratchCursor, EffectShapeScratch);
@@ -3273,7 +3272,7 @@ static void _waterDrawTileU16(const GfxCoord* coord, s32 textureCell, s32 radius
         setUV4(quad, firstU, firstV, lastU, firstV, firstU, lastV, lastU, lastV);
         projection->screenExtent = ((s16)radiusScale * WATER_TILE_U16_PERSPECTIVE_SCALE) / projection->depth;
         _waterSetUprightSpriteCorners(quad, projection);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectCentreScratch);
@@ -3444,7 +3443,7 @@ static void _shelterR48DrawBankedDriftSprite(const GfxCoord* coord, u16 frameAnd
         quad->y1 = projection->screenY - (u16)projection->extent.corner.y;
         quad->y2 = projection->screenY + (u16)projection->extent.corner.y;
         // Sort by projection depth; the GPU consumes a complete textured-quad packet.
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -3538,7 +3537,7 @@ static void _shelterR48DrawAlternateDriftSprite(const GfxCoord* coord, u16 frame
         quad->y1 = projection->screenY - (u16)projection->extent.corner.y;
         quad->y2 = projection->screenY + (u16)projection->extent.corner.y;
         // Sort by projection depth; the GPU consumes a complete textured-quad packet.
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -3966,7 +3965,7 @@ static void _shelterR48DrawGlowBeam(const GfxCoord* coord, s16 radiusScale, s32 
                         quad->y2 = scratch->pair.sy1;
                         quad->x3 = scratch->pair.sx1 + ((scratch->pair.radius1 * rsin(sweepAngle + SHELTER_R48_GLOW_HALF_TURN + SHELTER_R48_GLOW_QUARTER_TURN)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
                         quad->y3 = scratch->pair.sy1 + ((scratch->pair.radius1 * rcos(sweepAngle + SHELTER_R48_GLOW_HALF_TURN + SHELTER_R48_GLOW_QUARTER_TURN)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
-                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz1),
                                 quad);
                         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz1);
 
@@ -3982,7 +3981,7 @@ static void _shelterR48DrawGlowBeam(const GfxCoord* coord, s16 radiusScale, s32 
                         quad->y2       = scratch->pair.sy0;
                         quad->x3       = scratch->pair.sx0 + ((scratch->pair.radius0 * rsin(nextSweepAngle)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
                         quad->y3       = scratch->pair.sy0 + ((scratch->pair.radius0 * rcos(nextSweepAngle)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
-                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz0 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz0),
                                 quad);
                         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz0);
 
@@ -4002,7 +4001,7 @@ static void _shelterR48DrawGlowBeam(const GfxCoord* coord, s16 radiusScale, s32 
                         quad->y2 = scratch->pair.sy0;
                         quad->x3 = scratch->pair.sx1;
                         quad->y3 = scratch->pair.sy1;
-                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz1),
                                 quad);
                         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz1);
                         sweepAngle = nextSweepAngle;
@@ -4109,7 +4108,7 @@ static void _shelterR48DrawRoomGlow(const SVECTOR* worldPoint, s32 radiusScale, 
             quad->y2      = scratch->sy;
             quad->x3      = scratch->sx + ((scratch->outerRadius * rsin(nextAngle)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
             quad->y3      = scratch->sy + ((scratch->outerRadius * rcos(nextAngle)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz);
 
@@ -4125,7 +4124,7 @@ static void _shelterR48DrawRoomGlow(const SVECTOR* worldPoint, s32 radiusScale, 
             quad->x3 = scratch->sx + ((scratch->outerRadius * rsin(nextAngle)) >> (SHELTER_R48_GLOW_TRIG_SHIFT + 1));
             quad->y3 = scratch->sy + ((scratch->outerRadius * rcos(nextAngle)) >> (SHELTER_R48_GLOW_TRIG_SHIFT + 1));
             angle    = nextAngle;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz);
         } while (angle < SHELTER_R48_GLOW_FULL_TURN);
@@ -4149,7 +4148,7 @@ static void _shelterR48DrawRoomGlow(const SVECTOR* worldPoint, s32 radiusScale, 
             quad->y2          = scratch->sy;
             quad->x3          = scratch->sx + ((scratch->innerRadius * rsin(nextShoulderAngle)) >> (SHELTER_R48_GLOW_TRIG_SHIFT + 1));
             quad->y3          = scratch->sy + ((scratch->innerRadius * rcos(nextShoulderAngle)) >> (SHELTER_R48_GLOW_TRIG_SHIFT + 1));
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz);
 
@@ -4166,7 +4165,7 @@ static void _shelterR48DrawRoomGlow(const SVECTOR* worldPoint, s32 radiusScale, 
             quad->x3      = scratch->sx + ((scratch->innerRadius * rsin(oppositeAngle)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
             quad->y3      = scratch->sy + ((scratch->innerRadius * rcos(oppositeAngle)) >> SHELTER_R48_GLOW_TRIG_SHIFT);
             angle         = oppositeAngle;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz);
         } while (angle < SHELTER_R48_GLOW_FULL_TURN);

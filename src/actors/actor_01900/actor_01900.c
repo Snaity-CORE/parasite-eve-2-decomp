@@ -283,9 +283,8 @@ static s32       _actor01900AcknowledgeHoldRelease(Task* task, s32 messageId, s3
 static s32       _actor01900IgnoreMessage2015(Task* task, s32 messageId, s32 unusedPayload, s32 unused);
 static void      _actor01900Task(Task* task);
 
-/// Distinct, status-free player hit presentation selected by the Stranger strike.
+/// Row of the Stranger strike.
 enum {
-    ACTOR_01900_STRIKE_HIT_REACTION = 7,
     ACTOR_01900_STRIKE_ATTACK_INDEX = 0
 };
 
@@ -294,7 +293,7 @@ enum {
 /// The strike sphere uses row 0. Row 1 retains an ordinary 22-power attack;
 /// no recovered code selects it.
 static DamageAttack _gActor01900Attacks[2] = {
-    { 16, ACTOR_01900_STRIKE_HIT_REACTION },
+    { 16, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 22, GAME_ACTOR_REACTION_ORDINARY },
 };
 
@@ -443,9 +442,7 @@ static ActorHeightClamp _gActor01900RoomHeightClamps[3] = {
 /// coordinate units, retaining signed-halfword wrapping. No recovered code reads it.
 static s16 _gActor01900CircleTravel = 0;
 
-enum { ACTOR_01900_TASK_PRIORITY = 96 };
-
-TaskDesc gActor01900GrinningStrangerTaskDesc = { { { TASK_BODY_TMD, ACTOR_01900_TASK_PRIORITY } }, _actor01900Task, { .model = &_gStrangerGrinningBody } };
+TaskDesc gActor01900GrinningStrangerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor01900Task, { .model = &_gStrangerGrinningBody } };
 
 static SVECTOR ActorContact_ScratchPosition = { 0 };
 
@@ -1111,8 +1108,8 @@ static void _actor01900SpawnHitEffect(Task* task, s16 hitYaw, s32 attackKey)
     yawMagnitude = (hitYaw >= 0) ? hitYaw : -hitYaw;
     work         = task->work;
     if (yawMagnitude < (ACTOR_TRANSFORM_ANGLE_TURN / 8)) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        switch ((s32)(gRandomLcgState >> 16) & 3) {
+        RANDOM_LCG_ADVANCE();
+        switch ((s32)RANDOM_LCG_DRAW() & 3) {
             case 0:
                 *hitAnchor = _gActor01900HitAnchors[0];
                 break;
@@ -1130,8 +1127,8 @@ static void _actor01900SpawnHitEffect(Task* task, s16 hitYaw, s32 attackKey)
                 break;
         }
     } else if (yawMagnitude > (3 * ACTOR_TRANSFORM_ANGLE_TURN / 8)) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        switch ((s32)(gRandomLcgState >> 16) & 2) {
+        RANDOM_LCG_ADVANCE();
+        switch ((s32)RANDOM_LCG_DRAW() & 2) {
             case 0:
                 *hitAnchor = _gActor01900HitAnchors[5];
                 break;
@@ -1143,15 +1140,15 @@ static void _actor01900SpawnHitEffect(Task* task, s16 hitYaw, s32 attackKey)
                 break;
         }
     } else if (hitYaw > 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             *hitAnchor = _gActor01900HitAnchors[8];
         } else {
             *hitAnchor = _gActor01900HitAnchors[9];
         }
     } else {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             *hitAnchor = _gActor01900HitAnchors[10];
         } else {
             *hitAnchor = _gActor01900HitAnchors[11];
@@ -1217,8 +1214,8 @@ static void _actor01900TakeHit(Task* task)
         ACTOR_01900_CRITICAL_EFFECT_NONE      = -1,
         ACTOR_01900_CRITICAL_EFFECT_ROLLED    = 0,
         ACTOR_01900_CRITICAL_EFFECT_BEHIND    = 4,
-        ACTOR_01900_SOUND_HURT                = SOUND_CHARACTER(SOUND_BANK_ACTOR_311500, 7),
-        ACTOR_01900_SOUND_DEATH               = SOUND_CHARACTER(SOUND_BANK_ACTOR_311500, 8)
+        ACTOR_01900_SOUND_HURT                = SOUND_CHARACTER(SOUND_BANK_LESSER_STRANGER, 7),
+        ACTOR_01900_SOUND_DEATH               = SOUND_CHARACTER(SOUND_BANK_LESSER_STRANGER, 8)
     };
 
     PlayerStatus*    playerStatus = &gPlayerStatus;
@@ -1336,7 +1333,7 @@ static void _actor01900TakeHit(Task* task)
                 effectSpawn(EFFECT_CRITICAL_HIT, &task->extra.tmd->coords[2], (s32)criticalEffectKind, NULL);
             }
             if (work->state == ACTOR_01900_STATE_DORMANT_SCRIPTED) {
-                sndEvtRequestScriptStop(SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
+                sndEvtRequestScriptStop(SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
             }
             if ((work->state == ACTOR_01900_STATE_UNUSED_0C || work->state == ACTOR_01900_STATE_UNUSED_0D) && playerStatus->hp > 0 && work->playerHeld == 1) {
                 taskMessageDispatch(gameGetTaskSlot(GAME_TASK_SLOT_PLAYER), GAME_ACTOR_MESSAGE_END_SCRIPTED, 0, 0);
@@ -1936,8 +1933,8 @@ static void _actor01900StateChase(Task* task)
         chase->turn         = _actorAngleNormalizeYaw(ratan2(chase->delta.vx, chase->delta.vz) - ratan2(-rootCoord->coord.m[2][0], rootCoord->coord.m[2][2]));
         work->lookYawTarget = chase->turn;
         if (work->sidestepSide == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
                 work->sidestepSide = -1;
             } else {
                 work->sidestepSide = 1;
@@ -2256,8 +2253,8 @@ static void _actor01900StateSidestep(Task* task)
         _actorPositionDeltaToPlayer(&gPlayerStatus, task->extra.tmd->coords, &sidestepScratch->delta);
         sidestepScratch->turn = ratan2(scratchEnd[-1].delta.vx, sidestepScratch->delta.vz);
         if (work->sidestepSide == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
                 work->sidestepSide = 1;
             } else {
                 work->sidestepSide = -1;
@@ -2607,9 +2604,9 @@ static void _actor01900StateDormantScripted(Task* task)
     // Edge-trigger cues on the low ten bits of the pose record index.
     if ((work->rig.slots[1].currentPose.indices.recordIndex & ANIMATION_POSE_CUE_INDEX_MASK) == ACTOR_01900_DORMANT_SOUND_CUE && work->dormantAnimFrame != (work->rig.slots[1].currentPose.indices.recordIndex & ANIMATION_POSE_CUE_INDEX_MASK) &&
         (GAME_LOCATION_WORD(gGameSession->location) & GAME_LOCATION_STAGE_AREA_MASK) == GAME_LOCATION_KEY(GAME_STAGE_AKROPOLIS, GAME_AREA_AKROPOLIS_FORKED_ROAD, 0, 0)) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        sound           = ACTOR_01900_DORMANT_SOUND_B;
-        if ((u16)((gRandomLcgState >> 16) % 3) == 0) {
+        RANDOM_LCG_ADVANCE();
+        sound = ACTOR_01900_DORMANT_SOUND_B;
+        if ((u16)(RANDOM_LCG_DRAW() % 3) == 0) {
             sound = ACTOR_01900_DORMANT_SOUND_A;
         }
         switch ((u8)viewGetMappedIndex()) {
@@ -2640,7 +2637,7 @@ static void _actor01900StateDormantScripted(Task* task)
     playerOffset->vy       = gPlayerStatus.coordMtx->t[1] - rootCoord->coord.t[1];
     playerOffset->vz       = gPlayerStatus.coordMtx->t[2] - rootCoord->coord.t[2];
     if (!_actorRangeOutsideRadiusXZ(playerOffset, work->noticeRange)) {
-        sndEvtRequestScriptStop(SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
+        sndEvtRequestScriptStop(SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
         if (_actor01900EngageBattleIfPlayerLevel(task) == 1) {
             work->state = ACTOR_01900_STATE_ALERT;
         }
@@ -3883,7 +3880,7 @@ static void _actor01900StateDown(Task* task)
     work  = task->work;
     enemy = task->spawnArg2.pointer;
     if (work->stateEntered != 0) {
-        randomState      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState      = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState  = randomState;
         work->stateTimer = ((randomState >> 16) & ACTOR_01900_DOWN_RANDOM_FRAME_MASK) + work->downFramesBase;
     }

@@ -11,7 +11,9 @@
 #include "gte.h"
 
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_03800.h"
+#include "actors/actor_05700.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -86,9 +88,6 @@ extern RoomFadeStorage gRoomEventFade;
 static RoomEventMsg     _gRoomEventStagedMsg;
 extern RoomLatchedEvent gRoomEventLatched;
 
-/// Room-local key-item-use request; its first payload is an inventory item ID.
-enum { NEO_ARK_PAVILION_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static s32 _neoArkPavilionRejectKeyItem(Task* task, s32 messageId, s32 itemId, s32 unusedMessageArg);
 static s32 _neoArkPavilionResolveRoomTransition(Task* unusedTask, s32 unusedMessageId, RoomEventMsg* request, RoomEventMsg* reply);
 static s32 _neoArkPavilionHandleCapCommand(Task* unusedTask, s32 unusedMessageId, s32 commandIndex, s32 unusedSecondArg);
@@ -101,25 +100,19 @@ static WorldCollisionTrigger  _gNeoArkPavilionRoom1ActionTriggers[4];
 static WorldCollisionTrigger  _gNeoArkPavilionRoom2ActionTriggers[4];
 static WorldCoordRoomLights   _gNeoArkPavilionRoomLights;
 
-/// Scheduler priorities of the bodyless water drawers and staged room controller.
-enum {
-    NEO_ARK_PAVILION_WATER_TASK_PRIORITY = 192,
-    NEO_ARK_PAVILION_EVENT_TASK_PRIORITY = 32
-};
-
-TaskDesc gNeoArkPavilionWaterRefractionTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_PAVILION_WATER_TASK_PRIORITY } }, waterRefractionTask, { .value = 0 } };
+TaskDesc gNeoArkPavilionWaterRefractionTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterRefractionTask, { .value = 0 } };
 
 /// Retained bodyless, priority-192 water-band distortion recipe without a caller.
 ///
 /// Its callback draws only submarine-tunnel and submarine-gallery views;
 /// pavilion setup spawns the separate refraction recipe at index 0.
-static TaskDesc _gNeoArkPavilionWaterDistortionTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_PAVILION_WATER_TASK_PRIORITY } }, waterDistortBandTask, { .value = 0 } };
+static TaskDesc _gNeoArkPavilionWaterDistortionTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterDistortBandTask, { .value = 0 } };
 
 /// Bodyless, priority-32 controller for the latched pavilion departure scene.
 ///
 /// Spawn index 0 with zero arguments after storing the destination and event.
 /// The snapshots, CAP resources and room overlay remain live through reload.
-static TaskDesc _gNeoArkPavilionStagedEventTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_PAVILION_EVENT_TASK_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gNeoArkPavilionStagedEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Room-message dispatch for transition resolution, key items, actions and CAP commands.
 ///
@@ -127,7 +120,7 @@ static TaskDesc _gNeoArkPavilionStagedEventTaskDesc = { { { TASK_BODY_NONE, NEO_
 /// is loaded. Key-item and room-action requests are refused with a zero reply.
 static TaskMessageEntry _gNeoArkPavilionRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _neoArkPavilionResolveRoomTransition },
-    { NEO_ARK_PAVILION_MESSAGE_USE_KEY_ITEM, _neoArkPavilionRejectKeyItem },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _neoArkPavilionRejectKeyItem },
     { DIRECTION_MESSAGE_ROOM_ACTION, _neoArkPavilionIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _neoArkPavilionHandleCapCommand },
     { TASK_MESSAGE_TABLE_END, NULL },

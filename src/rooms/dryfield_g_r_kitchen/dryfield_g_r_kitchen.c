@@ -9,7 +9,8 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00700.h"
+#include "actors/actor_01500.h"
 
 #include "gameplay/display.h"
 #include "gameplay/area.h"
@@ -78,9 +79,6 @@ static s32 _dryfieldGRKitchenRejectKeyItemUse(Task* task, s32 messageId, s32 ite
 static s32 _dryfieldGRKitchenIgnoreCommand(Task* task, s32 messageId, s32 commandId, s32 commandMode);
 static s32 _dryfieldGRKitchenIgnoreActionRequest(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedSecondArg);
 
-/// Inventory request to use a key item in this room.
-enum { DRYFIELD_G_R_KITCHEN_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static WorldCollisionGrid    _gDryfieldGRKitchenCollisionGrid;
 static WorldCollisionTrigger _gDryfieldGRKitchenViewBoundaryTriggers[2];
 static WorldCollisionTrigger _gDryfieldGRKitchenActionTriggers[7];
@@ -92,7 +90,7 @@ static WorldCoordRoomLights  _gDryfieldGRKitchenRoomLights;
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// The room receiver's four message bindings and final unsupported-message marker.
 ///
@@ -409,9 +407,7 @@ static const TaskFuncTable3 _gDryfieldGRKitchenRoomTaskStates = {
 /// notice without consuming the item or starting a room event.
 static s32 _dryfieldGRKitchenRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_G_R_KITCHEN_KEY_ITEM_REFUSED = 0 };
-
-    return DRYFIELD_G_R_KITCHEN_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 #include "../../shared/g_r_kitchen_door_msg.inc.c"
@@ -546,7 +542,7 @@ static void _dryfieldGRKitchenDrawDimTaperedBeam(const GfxCoord* coord, const SV
             quad->y2 = scratch->sy0;
             quad->x3 = scratch->sx0 + ((scratch->radius0 * rsin(angle)) >> GLOW_TRIG_SHIFT);
             quad->y3 = scratch->sy0 + ((scratch->radius0 * rcos(angle)) >> GLOW_TRIG_SHIFT);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz0 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz0),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz0);
 
@@ -565,7 +561,7 @@ static void _dryfieldGRKitchenDrawDimTaperedBeam(const GfxCoord* coord, const SV
             quad->y2 = scratch->sy0;
             quad->x3 = scratch->sx1;
             quad->y3 = scratch->sy1;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz0 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz0),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz0);
 
@@ -581,7 +577,7 @@ static void _dryfieldGRKitchenDrawDimTaperedBeam(const GfxCoord* coord, const SV
             quad->x3 = scratch->sx1 + ((scratch->radius1 * rsin(GLOW_HALF_TURN - angle)) >> GLOW_TRIG_SHIFT);
             quad->y3 = scratch->sy1 + ((scratch->radius1 * rcos(GLOW_HALF_TURN - angle)) >> GLOW_TRIG_SHIFT);
             angle   += GLOW_QUARTER_TURN;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz1),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz1);
         } while (angle < GLOW_HALF_TURN);

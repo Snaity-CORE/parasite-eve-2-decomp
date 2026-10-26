@@ -7,7 +7,10 @@
 
 #include "dryfield_motel_room_1_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01200.h"
+#include "actors/actor_04000.h"
+#include "actors/actor_123200.h"
+#include "actors/actor_401800.h"
 
 #include "gameplay/area.h"
 #include "gameplay/areaplace.h"
@@ -45,6 +48,8 @@
 #include "main/wipsys_types.h"
 
 #include "mapui/map_dryfield.h"
+
+#include "assets/engine/animation/player_schema.h"
 
 /// Commands in the motel room 1 actors' stage/area namespace.
 ///
@@ -130,7 +135,6 @@ static WorldCoordRoomLights   _gDryfieldMotelRoom1RoomLights;
 enum {
     DRYFIELD_MOTEL_ROOM_1_OPENING_CAP_COMMAND       = 5,
     DRYFIELD_MOTEL_ROOM_1_OPENING_SKIP_VIEW         = 5,
-    DRYFIELD_MOTEL_ROOM_1_OPENING_TASK_PRIORITY     = 192,
     DRYFIELD_MOTEL_ROOM_1_LOGICAL_VIEW_COUNT        = 9,
     DRYFIELD_MOTEL_ROOM_1_WARP_INITIAL_VIEW         = 2,
     DRYFIELD_MOTEL_ROOM_1_WARP_MAP_FLAG             = 487,
@@ -223,7 +227,7 @@ static EvsCommand _gDryfieldMotelRoom1OpeningSkipScript[13] = {
 };
 
 TaskDesc gDryfieldMotelRoom1OpeningEventTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = DRYFIELD_MOTEL_ROOM_1_OPENING_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
     .callback = _dryfieldMotelRoom1OpeningEventTask,
     .data     = { .value = 0 },
 };
@@ -1287,15 +1291,12 @@ static inline void _dryfieldMotelRoom1BroadcastActorCommand(u16 command)
 /// remain borrowed through playback.
 static inline void _dryfieldMotelRoom1PlayPlayerAnimation(u16 animationId, u16 blend, u16 blendFrames)
 {
-    enum { DRYFIELD_MOTEL_ROOM_1_PLAYER_PRIMARY_CHARACTER    = 1,
-           DRYFIELD_MOTEL_ROOM_1_PRIMARY_WEAPON_BANK_FIRST   = 1,
-           DRYFIELD_MOTEL_ROOM_1_OTHER_CHARACTER_BANK_OFFSET = 0x22 };
 
     AnimationPlayRequest request;
     s32                  weaponSlot;
 
     weaponSlot                   = gPlayerStatus.weapon;
-    request.source.index         = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_MOTEL_ROOM_1_PLAYER_PRIMARY_CHARACTER) ? weaponSlot + DRYFIELD_MOTEL_ROOM_1_PRIMARY_WEAPON_BANK_FIRST : weaponSlot + DRYFIELD_MOTEL_ROOM_1_OTHER_CHARACTER_BANK_OFFSET;
+    request.source.index         = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponSlot);
     request.animationId          = animationId;
     request.blend                = blend;
     request.blendFrames          = blendFrames;
@@ -1315,9 +1316,6 @@ static inline void _dryfieldMotelRoom1PlayPlayerAnimation(u16 animationId, u16 b
 static void _dryfieldMotelRoom1ExecuteEventAction(Task* task)
 {
     enum { DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_STAND       = 1,
-           DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_TURN_UP     = 5,
-           DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_TURN_DOWN   = 6,
-           DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_AFTER_TURN  = 9,
            DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_BLEND       = 5,
            DRYFIELD_MOTEL_ROOM_1_EVENT_STAND_BLEND      = 3,
            DRYFIELD_MOTEL_ROOM_1_EVENT_AFTER_TURN_BLEND = 10,
@@ -1334,7 +1332,7 @@ static void _dryfieldMotelRoom1ExecuteEventAction(Task* task)
             break;
         case DRYFIELD_MOTEL_ROOM_1_EVENT_ACTION_SECOND_STAGING:
             _dryfieldMotelRoom1BroadcastActorCommand(DRYFIELD_MOTEL_ROOM_1_ACTOR_COMMAND_SECOND_STAGING);
-            taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, true, 0);
+            taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO, 0);
             TASK_MESSAGE_DISPATCH_POINTER(work->stagedSucklerTasks[0], ACTOR_MESSAGE_PLACE, &_gDryfieldMotelRoom1SecondStagingPlacements[0], 0);
             TASK_MESSAGE_DISPATCH_POINTER(work->stagedSucklerTasks[1], ACTOR_MESSAGE_PLACE, &_gDryfieldMotelRoom1SecondStagingPlacements[1], 0);
             break;
@@ -1359,11 +1357,11 @@ static void _dryfieldMotelRoom1ExecuteEventAction(Task* task)
                     work->turnYaw =
                         (((GameActor*)work->playerTask->work)->rotation.vy + (ACTOR_TRANSFORM_ANGLE_TURN - DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_FACING_YAW)) % ACTOR_TRANSFORM_ANGLE_TURN;
                     if (work->turnYaw > ACTOR_TRANSFORM_ANGLE_HALF_TURN) {
-                        _dryfieldMotelRoom1PlayPlayerAnimation(DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_TURN_UP, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_BLEND);
+                        _dryfieldMotelRoom1PlayPlayerAnimation(PLAYER_ANIMATION_TURN_LEFT, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_BLEND);
                         taskMessageDispatch(work->playerTask, ANIMATION_MESSAGE_SET_RATE, DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_RATE, 0);
                         work->actionStep += 1;
                     } else {
-                        _dryfieldMotelRoom1PlayPlayerAnimation(DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_TURN_DOWN, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_BLEND);
+                        _dryfieldMotelRoom1PlayPlayerAnimation(PLAYER_ANIMATION_TURN_RIGHT, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_BLEND);
                         taskMessageDispatch(work->playerTask, ANIMATION_MESSAGE_SET_RATE, DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_RATE, 0);
                         work->actionStep += 2;
                     }
@@ -1372,7 +1370,7 @@ static void _dryfieldMotelRoom1ExecuteEventAction(Task* task)
                     work->turnYaw               += DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_YAW_STEP;
                     work->playerPlacement.rot.vy = work->turnYaw + DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_FACING_YAW;
                     if (work->turnYaw > ACTOR_TRANSFORM_ANGLE_TURN) {
-                        _dryfieldMotelRoom1PlayPlayerAnimation(DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_STAND, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_STAND_BLEND);
+                        _dryfieldMotelRoom1PlayPlayerAnimation(PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_STAND_BLEND);
                         work->settleFrames = 0;
                         work->actionStep   = DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_SETTLE;
                         return;
@@ -1383,7 +1381,7 @@ static void _dryfieldMotelRoom1ExecuteEventAction(Task* task)
                     work->turnYaw               -= DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_YAW_STEP;
                     work->playerPlacement.rot.vy = work->turnYaw + DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_FACING_YAW;
                     if (work->turnYaw < 0) {
-                        _dryfieldMotelRoom1PlayPlayerAnimation(DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_STAND, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_STAND_BLEND);
+                        _dryfieldMotelRoom1PlayPlayerAnimation(PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_STAND_BLEND);
                         work->settleFrames = 0;
                         work->actionStep   = DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_SETTLE;
                         return;
@@ -1393,7 +1391,7 @@ static void _dryfieldMotelRoom1ExecuteEventAction(Task* task)
                 case DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_SETTLE:
                     work->settleFrames += 1;
                     if (work->settleFrames >= DRYFIELD_MOTEL_ROOM_1_EVENT_TURN_SETTLE_FRAMES) {
-                        _dryfieldMotelRoom1PlayPlayerAnimation(DRYFIELD_MOTEL_ROOM_1_EVENT_CLIP_AFTER_TURN, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_AFTER_TURN_BLEND);
+                        _dryfieldMotelRoom1PlayPlayerAnimation(PLAYER_ANIMATION_AIM_IDLE, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_EVENT_AFTER_TURN_BLEND);
                         work->action = DRYFIELD_MOTEL_ROOM_1_EVENT_ACTION_NONE;
                     }
                     return;
@@ -1456,14 +1454,13 @@ static void _dryfieldMotelRoom1OpeningEventTask(Task* task)
     enum { DRYFIELD_MOTEL_ROOM_1_OPENING_START            = 0,
            DRYFIELD_MOTEL_ROOM_1_OPENING_WAIT_SCRIPT      = 1,
            DRYFIELD_MOTEL_ROOM_1_OPENING_WAIT_COMBAT_VIEW = 2,
-           DRYFIELD_MOTEL_ROOM_1_OPENING_PLAYER_CLIP      = 1,
            DRYFIELD_MOTEL_ROOM_1_OPENING_BLEND_FRAMES     = 5 };
 
     switch (task->state) {
         case DRYFIELD_MOTEL_ROOM_1_OPENING_START:
             if ((gAttachmentState.mode != ATTACHMENT_MODE_WHEEL) && (gDisplayState.pendingMode == DISPLAY_MODE_NONE)) {
                 _dryfieldMotelRoom1InitializeOpeningEvent(task);
-                _dryfieldMotelRoom1PlayPlayerAnimation(DRYFIELD_MOTEL_ROOM_1_OPENING_PLAYER_CLIP, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_OPENING_BLEND_FRAMES);
+                _dryfieldMotelRoom1PlayPlayerAnimation(PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, DRYFIELD_MOTEL_ROOM_1_OPENING_BLEND_FRAMES);
                 evsStartScriptWithSkip(_gDryfieldMotelRoom1OpeningScript, EVENT_SCRIPT_HUD_HIDE_RESTORE,
                                        _gDryfieldMotelRoom1OpeningSkipScript);
                 task->state = task->state + 1;
@@ -1530,14 +1527,13 @@ static void _dryfieldMotelRoom1RequestEventAction(s16 action)
 static void _dryfieldMotelRoom1RestorePlayerAfterSkip(void)
 {
     enum {
-        DRYFIELD_MOTEL_ROOM_1_SKIP_FINAL_POSE_CLIP = 9,
-        DRYFIELD_MOTEL_ROOM_1_SKIP_PLAYER_YAW      = ACTOR_TRANSFORM_ANGLE_TURN * 5 / 16,
+        DRYFIELD_MOTEL_ROOM_1_SKIP_PLAYER_YAW = ACTOR_TRANSFORM_ANGLE_TURN * 5 / 16,
     };
     _DryfieldMotelRoom1EventWork* work;
     PlayerStatus*                 playerStatus;
 
     work = _gDryfieldMotelRoom1OpeningEventTask->work;
-    _dryfieldMotelRoom1PlayPlayerAnimation(DRYFIELD_MOTEL_ROOM_1_SKIP_FINAL_POSE_CLIP, ANIMATION_BLEND_RESET, 0);
+    _dryfieldMotelRoom1PlayPlayerAnimation(PLAYER_ANIMATION_AIM_IDLE, ANIMATION_BLEND_RESET, 0);
     playerStatus                 = &gPlayerStatus;
     work->playerPlacement.pos.vx = playerStatus->coordMtx->t[0];
     work->playerPlacement.pos.vy = playerStatus->coordMtx->t[1];

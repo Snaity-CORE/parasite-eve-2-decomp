@@ -63,7 +63,7 @@ chunk = "package"
 chunk = "bundle"
 
 [no_9]
-type = "pe2pkg"
+type = "package"
 embedded = [
     { asset = "enemies/golem/no_9/body_akropolis", offset = 0x00300, size = 0x56CC, address = 0x80132120 },
     { name = "no_9_attack_rupert", offset = 0x059CC, size = 0x3C0, address = 0x801377EC },
@@ -73,8 +73,11 @@ embedded = [
     { name = "no9_golem_anim_05", offset = 0x0873C, size = 0x1A38, address = 0x8013A55C },
     { name = "no_9_bank", offset = 0x0A1A0, size = 0x18, address = 0x8013BFC0 },
 ]
-package_name = "actor_110700"
+exports = { tasks = { at = 0x0A174, symbol = "gSanctuaryNo9TaskDesc" } }
+load = { slot = "actor_1" }
+package_name = "sanctuary_no_9"
 required = true
+requires = ["gameplay"]
 sha1 = "0e9e9b3f5609545a85e397e98152df642939551e"
 
 [bundle]
@@ -109,7 +112,7 @@ variants = ["flame_0", "flame_1", "flame_2"]
 width = 256
 
 [rupert]
-type = "pe2pkg"
+type = "package"
 embedded = [
     { name = "player_sanctuary_arrival_7", offset = 0x00750, size = 0x1704, address = 0x8014A570 },
     { name = "player_sanctuary_arrival_11", offset = 0x01E54, size = 0x9CC, address = 0x8014BC74 },
@@ -131,22 +134,28 @@ embedded = [
     "characters/rupert/eyes_closed",
     { name = "rupert_bank", offset = 0x0E78C, size = 0x1C, address = 0x801585AC },
 ]
+exports = { tasks = { at = 0x0E7AC, symbol = "gActor210700RupertBroderickTaskDesc" } }
+load = { slot = "actor_2" }
 package_name = "actor_210700"
 required = true
+requires = ["gameplay"]
 sha1 = "672c188bf5dd3c02d031ea77ad11c6cacddd23e4"
 
 [package]
-type = "room"
+type = "package"
 embedded = [
     { asset = "rooms/akropolis/cafeteria/rupert_arrive", offset = 0x02D88, size = 0x4D4, address = 0x80180348 },
-    { name = "acropolis_sanctuary_cutscene_player_anim_00", offset = 0x0435C, size = 0x3D4, address = 0x8018191C },
+    { name = "cutscene_player_anim_00", offset = 0x0435C, size = 0x3D4, address = 0x8018191C },
     { name = "extra_anim", offset = 0x04730, size = 0x3F4, address = 0x80181CF0 },
-    { name = "acropolis_sanctuary_cutscene_player_bank", offset = 0x04B24, size = 0x4, address = 0x801820E4 },
-    "acropolis_sanctuary_model_090F0",
-    { name = "acropolis_sanctuary_model_09584", offset = 0x0946C, size = 0x260, address = 0x80186A2C },
+    { name = "cutscene_player_bank", offset = 0x04B24, size = 0x4, address = 0x801820E4 },
+    { asset = "rooms/item_box/model", offset = 0x08E84, size = 0x5E8, address = 0x80186444 },
+    { name = "red_key_pickup", offset = 0x0946C, size = 0x260, address = 0x80186A2C },
 ]
-package_name = "acropolis_sanctuary"
+load = { slot = "room" }
+package_name = "akropolis_sanctuary"
 required = true
+requires = ["gameplay", "rooms/akropolis/stage"]
+slots = { no_9 = "rooms/akropolis/sanctuary/no_9", rupert = "rooms/akropolis/sanctuary/rupert" }
 sha1 = "a3feb1e2773f95a09666e3065547f31d41ed53a3"
 
 [package.entries]
@@ -209,7 +218,7 @@ radio_click = 8
 [no_9_bank]
 type = "animation_bank"
 schema = "rooms/akropolis/sanctuary/no_9_schema"
-symbol = "_gActor110700No9GolemAnimationSets"
+symbol = "_gSanctuaryNo9AnimationSets"
 
 [no_9_bank.clips]
 attack_rupert = "rooms/akropolis/sanctuary/no_9_attack_rupert"
@@ -1228,6 +1237,12 @@ rig = "enemies/golem/no_9/rig"
 type = "clip"
 rig = "enemies/golem/no_9/rig"
 
+[red_key_pickup]
+type = "model"
+slots = ["mosaic_page_1_row_263"]
+symbol = "gAkropolisSanctuaryRedKeyPickupModel"
+sha1 = "84f8329521147a448c08e6a3b77daac38f130510"
+
 [radio_chatter_2]
 type = "sound"
 sha1 = "ffb9733ace8535529fd9e24c4832188eaa91f958"
@@ -1338,6 +1353,12 @@ rig = "enemies/golem/no_9/rig"
 type = "sound"
 sha1 = "e8b48909dbea8a8272fd02ef78114fe239484738"
 
+[cutscene_player_bank]
+type = "animation_bank"
+clips = { slot_0 = "rooms/akropolis/sanctuary/cutscene_player_anim_00" }
+schema = "rooms/akropolis/sanctuary/cutscene_player_schema"
+symbol = "_gAkropolisSanctuaryCutscenePlayerAnimationSets"
+
 [promenade_door_close]
 type = "sound"
 sha1 = "67892103e7b3993c9a50ea7d04fb906b4c11b7c3"
@@ -1351,14 +1372,27 @@ symbol = "gAkropolisSanctuaryPlayerSanctuaryTalkClip"
 type = "sound"
 sha1 = "6d4e79f0a49f2a7fb627823f7698b261f7c2b311"
 
+[cutscene_player_schema]
+type = "animation_schema"
+slots = ["slot_0"]
+
 [player_sanctuary_reply]
 type = "clip"
 rig = "characters/aya/rig"
 symbol = "gAkropolisSanctuaryPlayerSanctuaryReplyClip"
 
+[red_key_pickup_binding]
+type = "binding"
+model = "rooms/akropolis/sanctuary/red_key_pickup"
+textures = { mosaic_page_1_row_263 = "rooms/akropolis/sanctuary/mosaic_page_1.row_263" }
+
 [roof_garden_door_close]
 type = "sound"
 sha1 = "a74f19fef3e8cc0a34bd87432019c099c932f5b9"
+
+[cutscene_player_anim_00]
+type = "clip"
+rig = "characters/aya/rig"
 
 [player_sanctuary_listen]
 type = "clip"
@@ -1389,28 +1423,3 @@ symbol = "gAkropolisSanctuaryPlayerSanctuaryArrival26Clip"
 type = "clip"
 rig = "characters/aya/rig"
 symbol = "gAkropolisSanctuaryPlayerSanctuaryArrival27Clip"
-
-[acropolis_sanctuary_model_09584]
-type = "model"
-slots = ["mosaic_page_1_row_263"]
-symbol = "gAkropolisSanctuaryAcropolisSanctuaryModel09584"
-sha1 = "84f8329521147a448c08e6a3b77daac38f130510"
-
-[acropolis_sanctuary_model_09584_binding]
-type = "binding"
-model = "rooms/akropolis/sanctuary/acropolis_sanctuary_model_09584"
-textures = { mosaic_page_1_row_263 = "rooms/akropolis/sanctuary/mosaic_page_1.row_263" }
-
-[acropolis_sanctuary_cutscene_player_bank]
-type = "animation_bank"
-clips = { slot_0 = "rooms/akropolis/sanctuary/acropolis_sanctuary_cutscene_player_anim_00" }
-schema = "rooms/akropolis/sanctuary/acropolis_sanctuary_cutscene_player_schema"
-symbol = "_gAcropolisSanctuaryCutscenePlayerAnimationSets"
-
-[acropolis_sanctuary_cutscene_player_schema]
-type = "animation_schema"
-slots = ["slot_0"]
-
-[acropolis_sanctuary_cutscene_player_anim_00]
-type = "clip"
-rig = "characters/aya/rig"

@@ -77,12 +77,9 @@ static void _actor151000BlackoutTask(Task* task);
 
 /// Selectors and flags used by the garden arrival data.
 enum {
-    ACTOR_151000_GARDEN_TASK_PRIORITY      = 192,
     ACTOR_151000_GARDEN_CAP_ARRIVAL        = 2,
     ACTOR_151000_GARDEN_RETURN_VIEW        = 3,
     ACTOR_151000_GARDEN_ENABLE_FOOTSTEPS   = 1,
-    ACTOR_151000_GARDEN_WALKER_DRAW_HIDE   = 0,
-    ACTOR_151000_GARDEN_WALKER_DRAW_SHOW   = 1,
     ACTOR_151000_GARDEN_WEAPONS_PLAYER     = 0,
     ACTOR_151000_GARDEN_BLACKOUT_OFF       = 0,
     ACTOR_151000_GARDEN_BLACKOUT_ON        = 1,
@@ -109,7 +106,7 @@ enum {
 ///
 /// Spawn arguments and descriptor metadata are unused. The actor package's
 /// callback must remain loaded until the switch is cleared and the task exits.
-static TaskDesc _gActor151000BlackoutTaskDesc = { { { TASK_BODY_NONE, ACTOR_151000_GARDEN_TASK_PRIORITY } }, _actor151000BlackoutTask, { .value = 0 } };
+static TaskDesc _gActor151000BlackoutTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor151000BlackoutTask, { .value = 0 } };
 
 /// Three player clips installed at equipped-bank indices 47..49 for the garden scene.
 ///
@@ -219,7 +216,7 @@ EvsCommand gActor151000GardenArrivalScript[47] = {
     // CAP cues coordinate the clips, sound pair and two fade ramps.
     { EVENT_SCRIPT_OPCODE_SET_AMBIENT_RGB, { .value = 100 }, { .value = 100 }, { .value = 100 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = ACTOR_151000_GARDEN_WEAPONS_PLAYER }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_151000_GARDEN_WALKER_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gActor151000PlayerAnimation47 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor151000WalkerAnimation16 } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -251,7 +248,7 @@ EvsCommand gActor151000GardenArrivalScript[47] = {
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = ACTOR_151000_GARDEN_RETURN_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CLEAR_AMBIENT_RGB, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor151000WalkerAnimation16 } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_151000_GARDEN_WALKER_DRAW_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gActor151000PlayerAnimation1 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RESTORE_WEAPONS, { .value = ACTOR_151000_GARDEN_WEAPONS_PLAYER }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RETURN_SECONDARY_FADE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -271,7 +268,7 @@ EvsCommand gActor151000GardenArrivalSkipScript[15] = {
     { EVENT_SCRIPT_OPCODE_RESTORE_WEAPONS, { .value = ACTOR_151000_GARDEN_WEAPONS_PLAYER }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CLEAR_AMBIENT_RGB, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gActor151000PlayerAnimation1 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_151000_GARDEN_WALKER_DRAW_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor151000PlayerReturnPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RETURN_PRIMARY_FADE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 8 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -306,7 +303,7 @@ static TaskMessageEntry _gFootstepWalkMessageTable[6] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-TaskDesc gActor151000WalkerTaskDesc = { { { TASK_BODY_TMD, ACTOR_151000_GARDEN_TASK_PRIORITY } }, _actor151000WalkerTask, { .model = &_gEveBody } };
+TaskDesc gActor151000WalkerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor151000WalkerTask, { .model = &_gEveBody } };
 
 /// Native clip-index table borrowed by the sound walker's animation context.
 ///
@@ -343,7 +340,6 @@ static s16 _gFootstepWalkMode;
 static inline void _actor151000DrawBlackoutTile(void)
 {
     enum {
-        ACTOR_151000_BLACKOUT_WIDTH_PIXELS  = 320,
         ACTOR_151000_BLACKOUT_HEIGHT_PIXELS = 256,
         ACTOR_151000_BLACKOUT_OT_TAG        = 10
     };
@@ -356,9 +352,9 @@ static inline void _actor151000DrawBlackoutTile(void)
     tile->r0 = 0;
     tile->g0 = 0;
     tile->b0 = 0;
-    tile->x0 = -ACTOR_151000_BLACKOUT_WIDTH_PIXELS / 2;
+    tile->x0 = -DISPLAY_SCREEN_WIDTH / 2;
     tile->y0 = -ACTOR_151000_BLACKOUT_HEIGHT_PIXELS / 2;
-    tile->w  = ACTOR_151000_BLACKOUT_WIDTH_PIXELS;
+    tile->w  = DISPLAY_SCREEN_WIDTH;
     tile->h  = ACTOR_151000_BLACKOUT_HEIGHT_PIXELS;
     addPrim(gGpuCurrentOt + ACTOR_151000_BLACKOUT_OT_TAG, tile);
 }

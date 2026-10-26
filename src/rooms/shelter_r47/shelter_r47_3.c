@@ -10,7 +10,7 @@
 
 #include "shelter_r47_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_443500.h"
 
 #include "gameplay/action_prompt.h"
 #include "gameplay/captions.h"
@@ -114,9 +114,6 @@ enum {
     SHELTER_R47_MAP_STATE_BEGIN_FADE_OUT = 9,
     SHELTER_R47_MAP_STATE_FADE_OUT       = 10,
 };
-
-/// Scheduling priority shared by the terminal and its separately spawned cursor.
-enum { SHELTER_R47_MAP_TASK_PRIORITY = 192 };
 
 /// Room-bank sounds of the sole warp endpoint.
 enum {
@@ -224,13 +221,13 @@ static const TaskFuncTable11 _gShelterR47MapTerminalStateHandlers = {
 /// and both otherwise. Runs at the terminal's priority with zero metadata;
 /// its returned handle is retained in the terminal's spawn argument 2.
 static TaskDesc _gShelterR47MapTerminalPromptTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_R47_MAP_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _shelterR47MapTerminalPromptTask,
     .data     = { .value = 0 },
 };
 
 TaskDesc gShelterR47MapTerminalTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_R47_MAP_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _shelterR47MapTerminalTask,
     .data     = { .value = 0 },
 };

@@ -10,7 +10,13 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
+#include "actors/actor_01500.h"
+#include "actors/actor_01600.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_03700.h"
+#include "actors/actor_05700.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/animation.h"
@@ -120,7 +126,6 @@ enum {
     MINE_MESA_SCENE_TASK_FADE_FROM_BLACK,
     MINE_MESA_SCENE_TASK_RUN_SOUND_CUES,
     MINE_MESA_SCENE_TASK_COUNT,
-    MINE_MESA_SCENE_TASK_PRIORITY = 192,
 };
 static Task* _gMineMesaPlayerHeadTask;
 
@@ -247,22 +252,18 @@ static void       _mineMesaSpawnEnemyWaveState(Task* task);
 
 static s32 _mineMesaRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unused);
 
-/// The room's key-item request; zero replies leave the item unused.
-enum { MINE_MESA_MESSAGE_USE_KEY_ITEM = 0x13F1 };
 static s32 _mineMesaResolveRoomEventMsg(Task* task, s32 messageId, RoomEventMsg* request, RoomEventMsg* reply);
 static s32 _mineMesaRoomCommandMsg(Task* task, s32 messageId, s32 commandId, s32 unused);
 static s32 _mineMesaRoomActionMsg(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unused);
 static s32 _mineMesaActorEventMsg(Task* task, s32 messageId, s32 slotIndex, s32 secondArg);
 
-enum { MINE_MESA_STAGED_EVENT_TASK_PRIORITY = 32 };
-
 /// Bodyless task recipe for a latched departure's CAP, sound and session reload.
 ///
-/// Priority 32 runs the staged transition on the ordinary task list. Spawning
+/// Priority `TASK_PRIORITY_SCENE` runs the staged transition on the ordinary task list. Spawning
 /// consumes the descriptor synchronously; the room's destination, event and
 /// fade storage must remain loaded until the old session is discarded.
 static TaskDesc _gMineMesaStagedEventTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, MINE_MESA_STAGED_EVENT_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = roomEventStagedTask,
     .data     = { .value = 0 },
 };
@@ -275,7 +276,7 @@ static TaskDesc _gMineMesaStagedEventTaskDesc = {
 /// IDs return zero. Keep this table and its handlers loaded with the room task.
 static TaskMessageEntry _gMineMesaRoomMessages[] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _mineMesaResolveRoomEventMsg },
-    { MINE_MESA_MESSAGE_USE_KEY_ITEM, _mineMesaRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _mineMesaRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _mineMesaRoomActionMsg },
     { ROOM_MESSAGE_COMMAND, _mineMesaRoomCommandMsg },
     { ROOM_MESSAGE_ACTOR_EVENT, _mineMesaActorEventMsg },
@@ -346,8 +347,8 @@ static EvsCommand _gMineMesaEnableDisplayScript[2] = {
 /// task list; it starts entry 1 on the display list before retiring. Descriptor
 /// storage is consumed at spawn; playback code remains live through restoration.
 static TaskDesc _gMineMesaMovieTaskDescs[] = {
-    { .header = { .fields = { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, .callback = _mineMesaStartMovieTask, .data = { .value = 0 } },
-    { .header = { .fields = { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, .callback = streamedScenePlay, .data = { .value = 0 } },
+    { .header = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, .callback = _mineMesaStartMovieTask, .data = { .value = 0 } },
+    { .header = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, .callback = streamedScenePlay, .data = { .value = 0 } },
 };
 
 /// Retained, unreferenced bodyless task recipe for the room's 64-tick black hold.
@@ -355,7 +356,7 @@ static TaskDesc _gMineMesaMovieTaskDescs[] = {
 /// Runs at scene priority. A fresh task's zero timer gives the full hold;
 /// descriptor storage is consumed at spawn and no model or work is attached.
 static TaskDesc _gMineMesaHoldBlackScreenTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _mineMesaHoldBlackScreenTask,
     .data     = { .value = 0 },
 };
@@ -599,15 +600,15 @@ static void _mineMesaRunSoundCuesTask(Task* task);
 ///
 /// Entries select player path, retained player head aim, retained companion
 /// head aim, direct player head blend, fade from black and run sound cues.
-/// All run at priority 192, start at state zero and receive both launcher
+/// All run at priority `TASK_PRIORITY_CONTROL`, start at state zero and receive both launcher
 /// arguments unchanged. Callbacks and borrowed scene resources must stay loaded.
 static TaskDesc _gMineMesaSceneTaskDescriptors[MINE_MESA_SCENE_TASK_COUNT] = {
-    { { { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, _mineMesaPlayerPathTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, _mineMesaPlayerHeadAimTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, _mineMesaCompanionHeadAimTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, _mineMesaPlayerHeadBlendTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, _mineMesaFadeFromBlackTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, MINE_MESA_SCENE_TASK_PRIORITY } }, _mineMesaRunSoundCuesTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineMesaPlayerPathTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineMesaPlayerHeadAimTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineMesaCompanionHeadAimTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineMesaPlayerHeadBlendTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineMesaFadeFromBlackTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineMesaRunSoundCuesTask, { .value = 0 } },
 };
 
 /// Player scene sets copied into extension indices 47 and 48 of the equipped-weapon bank.
@@ -3429,15 +3430,13 @@ static TaskMessageEntry _gMineMesaEnemyWaveMessages[2] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { MINE_MESA_ENEMY_WAVE_TASK_PRIORITY = 32 };
-
 /// Bodyless task recipe for the room's two-slot, ten-kill enemy-wave controller.
 ///
-/// Priority 32 puts the controller on the ordinary task list. Spawn arguments
+/// Priority `TASK_PRIORITY_SCENE` puts the controller on the ordinary task list. Spawn arguments
 /// are unused; descriptor storage is consumed synchronously. The callback and
 /// room/actor resources must remain loaded until the controller and enemies retire.
 static TaskDesc _gMineMesaEnemyWaveTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, MINE_MESA_ENEMY_WAVE_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = _mineMesaEnemyWaveTask,
     .data     = { .value = 0 },
 };
@@ -3554,7 +3553,7 @@ static void _mineMesaUpdateRoomEventsState(Task* task)
             if (gameGetTaskSlot(GAME_TASK_SLOT_COMPANION) != NULL) {
                 evsStartScriptWithSkip(_gMineMesaArrivalScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gMineMesaArrivalSkipScript);
             }
-            gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_MESA_ARRIVAL);
+            gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_MESA_ARRIVAL);
             gameFlagSetNibble(GAME_FLAG_MINE_MESA_ARRIVAL_SEEN, ARRIVAL_SEEN);
             return;
         }
@@ -3683,7 +3682,7 @@ static s32 _mineMesaRoomActionMsg(Task* task, s32 messageId, const DirectionActi
                 if (gameGetTaskSlot(GAME_TASK_SLOT_COMPANION) != NULL) {
                     evsStartScript(_gMineMesaBeginBattleScript, EVENT_SCRIPT_HUD_HIDE_RESTORE);
                 }
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_MESA_BATTLE);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_MESA_BATTLE);
                 gameFlagSetNibble(GAME_FLAG_MINE_MESA_TRIGGER_1_SEEN, EVENT_SEEN);
                 _mineMesaUnlinkBattleTriggers();
             }
@@ -4003,10 +4002,10 @@ static void _mineMesaCompanionHeadAimTask(Task* task)
 /// for a TILE and a DR_TPAGE; both packets remain live until GPU drawing ends.
 static inline void _mineMesaDrawBlackOverlay(u8 red, u8 green, u8 blue)
 {
-    enum { OVERLAY_WIDTH        = 320,
-           OVERLAY_HEIGHT       = 240,
-           OVERLAY_OT_INDEX     = 3,
-           OVERLAY_BLEND_PAGE_X = 320 };
+    enum {
+        OVERLAY_OT_INDEX     = 3,
+        OVERLAY_BLEND_PAGE_X = 320
+    };
     TILE*     tile;
     DR_TPAGE* drawMode;
 
@@ -4014,10 +4013,10 @@ static inline void _mineMesaDrawBlackOverlay(u8 red, u8 green, u8 blue)
     gGpuPrimCursor = tile + 1;
     setTile(tile);
     SetSemiTrans(tile, 1);
-    tile->x0 = -OVERLAY_WIDTH / 2;
-    tile->y0 = -OVERLAY_HEIGHT / 2;
-    tile->w  = OVERLAY_WIDTH;
-    tile->h  = OVERLAY_HEIGHT;
+    tile->x0 = -DISPLAY_SCREEN_WIDTH / 2;
+    tile->y0 = -DISPLAY_SCREEN_HEIGHT / 2;
+    tile->w  = DISPLAY_SCREEN_WIDTH;
+    tile->h  = DISPLAY_SCREEN_HEIGHT;
     setRGB0(tile, red, green, blue);
     addPrim(gGpuCurrentOt + OVERLAY_OT_INDEX, tile);
     drawMode       = gGpuPrimCursor;
@@ -4629,7 +4628,7 @@ void mineMesaRoomVisualEffectsTwinTrailTask(Task* task)
         /// Advances `gRandomLcgState` once using unsigned modulo-2^32 arithmetic,
         /// then returns its upper halfword as u32 (0..65535). Each expansion
         /// mutates the resident state; preserve ordering with other random draws.
-#define MINE_MESA_RANDOM_WORD() ((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16)
+#define MINE_MESA_RANDOM_WORD() ((RANDOM_LCG_ADVANCE()) >> 16)
 
         enum { MESA_LEAP_TUNING_ZERO       = (3 << 16) | 2,
                SPAWN_COOLDOWN_TICKS        = 80,

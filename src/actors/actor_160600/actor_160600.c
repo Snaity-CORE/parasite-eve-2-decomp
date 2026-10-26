@@ -1,5 +1,5 @@
 #include "actors/actor_160600.h"
-#include "actors/task_tables.h"
+#include "actors/actor_160600.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -55,7 +55,6 @@ enum {
     ACTOR_160600_COMPANION_EXTENSION_COPY_WORDS = 10,
     ACTOR_160600_PLAYER_UNARMED_WALK_CLIP       = 19,
     ACTOR_160600_PLAYER_OPENING_ARRIVAL_CLIP    = ANIMATION_BANK_BASE_SET_COUNT,
-    ACTOR_160600_PLACED_ACTOR_TASK_PRIORITY     = 96,
 };
 
 /// Player scene clips for extension indices 47..61, with unused holes at 52..55.
@@ -596,7 +595,6 @@ enum {
     ACTOR_160600_COMPANION_ANIMATION_SOUND_SCRIPT = 0x40720009,
     ACTOR_160600_SCENE_RESTORED_VIEW              = 6,
     ACTOR_160600_SCENE_WEAPONS_PLAYER             = 0,
-    ACTOR_160600_PLACED_ACTOR_HIDE                = 0,
 };
 
 /// Shared scene opening that hides weapons, installs clips and stages the actors.
@@ -704,7 +702,7 @@ static EvsCommand _gActor160600SceneCompletionScript[16] = {
     { EVENT_SCRIPT_OPCODE_RESTORE_WEAPONS, { .value = ACTOR_160600_SCENE_WEAPONS_PLAYER }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gActor160600PlayerAnimation1Request }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor160600PlayerRestoredPlacement } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_160600_PLACED_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = ACTOR_160600_SCENE_RESTORED_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callbackNoArg = _actor160600DismissCompanion }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor160600PlacedActorAnimation10Request } }, { .value = 0 } },
@@ -814,7 +812,7 @@ EvsCommand gActor160600SceneSkipScript[16] = {
     { EVENT_SCRIPT_OPCODE_RESTORE_WEAPONS, { .value = ACTOR_160600_SCENE_WEAPONS_PLAYER }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gActor160600PlayerAnimation1Request }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor160600PlayerRestoredPlacement } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_160600_PLACED_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor160600PlacedActorAnimation10Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor160600PlacedActorRestoredPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RETURN_PRIMARY_FADE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -842,7 +840,7 @@ static TaskMessageEntry _gPacedWalkMsgTable[6] = {
 };
 
 TaskDesc gActor160600PlacedActorTask = {
-    .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_160600_PLACED_ACTOR_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_ACTOR } },
     .callback = _pacedWalkTask,
     .data     = { .model = &_gSoldierABody },
 };

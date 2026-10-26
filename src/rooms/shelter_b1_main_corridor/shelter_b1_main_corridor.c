@@ -9,7 +9,13 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_05600.h"
+#include "actors/actor_05700.h"
+#include "actors/actor_400600.h"
+#include "actors/actor_402200.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -39,6 +45,7 @@
 #include "main/coord.h"
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/gameflag.h"
 #include "main/gamemain.h"
 #include "main/gfx.h"
@@ -104,21 +111,19 @@ static s32  _shelterB1MainCorridorIgnoreCommand(Task* task, s32 messageId, s32 c
 static s32  _shelterB1MainCorridorIgnoreRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedArg);
 static s32  _shelterB1MainCorridorHandleSoundMessage(Task* task, s32 messageId, s32 soundId, s32 unusedArg);
 
-enum { SHELTER_B1_MAIN_CORRIDOR_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Bodyless transition task spawned by this room's event gate at priority 32.
 ///
 /// Uses the latched request and destination to play CAP and optional sounds,
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Spawn recipe for the corridor's deferred CAP, sound and room-reload controller.
 ///
 /// No coordinate body or descriptor data; execution priority is 32. The controller
 /// borrows the singleton transition and event snapshots until the room reloads.
-static TaskDesc _gShelterB1MainCorridorStagedEventTaskDesc = { { { TASK_BODY_NONE, 32 } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gShelterB1MainCorridorStagedEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Room-message routes for transitions, key items, direction actions, commands and sounds.
 ///
@@ -127,7 +132,7 @@ static TaskDesc _gShelterB1MainCorridorStagedEventTaskDesc = { { { TASK_BODY_NON
 /// types follow each message's contract rather than one shared pointer type.
 static TaskMessageEntry _gShelterB1MainCorridorRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB1MainCorridorResolveRoomTransition },
-    { SHELTER_B1_MAIN_CORRIDOR_MESSAGE_USE_KEY_ITEM, _shelterB1MainCorridorRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB1MainCorridorRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB1MainCorridorIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _shelterB1MainCorridorIgnoreCommand },
     { ROOM_MESSAGE_SOUND, _shelterB1MainCorridorHandleSoundMessage },
@@ -1020,7 +1025,7 @@ static s32 _shelterB1MainCorridorResolveRoomTransition(Task* task, s32 messageId
         SHELTER_B1_MAIN_CORRIDOR_START_DEPARTURE_SCENE(event, reply, CAP_COMMAND_DEPART_STERILIZATION, GAME_FLAG_B1_CORRIDOR_TO_STERILIZATION_SCENE);
     }
     if (request->areaId == GAME_AREA_SHELTER_B1_ELEVATOR_HALL) {
-        if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) >= ELEVATOR_HALL_BLOCKED_CHAPTER) {
+        if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) >= ELEVATOR_HALL_BLOCKED_CHAPTER) {
             if (request->queryOnly == ROOM_EVENT_EXECUTE) {
                 capRunCommandWithTransition(CAP_COMMAND_LATE_ELEVATOR_HALL);
             }

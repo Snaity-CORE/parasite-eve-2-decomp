@@ -1,5 +1,7 @@
 /* Part of the room cutscene library; see room_cutscene.h. */
 
+#include "main/event_flags.h"
+
 /// Only companion family 1 participates in this runner's scripted-control hold.
 enum { ROOM_CUTSCENE_COMPANION_FAMILY = 1 };
 
@@ -47,7 +49,6 @@ static void _roomCutsceneTask(Task* task)
         ROOM_CUTSCENE_ACROPOLIS_PROGRESS_BEFORE = 2,
         ROOM_CUTSCENE_ACROPOLIS_PROGRESS_AFTER  = 3,
         ROOM_CUTSCENE_POST_SCENE_FLAG_VALUE     = 4,
-        ROOM_CUTSCENE_SQUARE_OBJECTIVE          = 5,
         ROOM_CUTSCENE_DEFAULT_TPAGE_X           = 960,
         ROOM_CUTSCENE_SCENE_VARIANT             = 99,
         ROOM_CUTSCENE_DIALOGUE_COMMAND_BASE     = 16,
@@ -162,7 +163,7 @@ static void _roomCutsceneTask(Task* task)
             if (cutscene->skipScene == 0) {
                 sndEvtRequestScriptStart(cutscene->afterSceneSound, 0, 0);
             }
-            storyChapter = gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER);
+            storyChapter = gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER);
             if (storyChapter > 0) {
                 if (storyChapter >= ROOM_CUTSCENE_ITEM_FOLLOW_UP_CHAPTER) {
                     if (storyChapter == ROOM_CUTSCENE_ITEM_FOLLOW_UP_CHAPTER) {
@@ -181,13 +182,13 @@ static void _roomCutsceneTask(Task* task)
             } else {
                 capRunCommand(cutscene->capSlot, CAP_PLAYBACK_IN_PLACE);
             }
-            if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) == ROOM_CUTSCENE_OPENING_CHAPTER) {
+            if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) == ROOM_CUTSCENE_OPENING_CHAPTER) {
                 if (gameFlagGetNibble(EVENT_FLAG_AKROPOLIS_CAFETERIA_ROUTE_PROGRESS) == ROOM_CUTSCENE_ACROPOLIS_PROGRESS_BEFORE) {
                     gameFlagSetNibble(EVENT_FLAG_AKROPOLIS_CAFETERIA_ROUTE_PROGRESS, ROOM_CUTSCENE_ACROPOLIS_PROGRESS_AFTER);
                     gameFlagSetNibble(EVENT_FLAG_AKROPOLIS_CAFETERIA_BOSS_REPORT, ROOM_CUTSCENE_POST_SCENE_FLAG_VALUE);
                     if ((GAME_LOCATION_WORD(gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location) & GAME_LOCATION_STAGE_AREA_MASK) == GAME_LOCATION_KEY(GAME_STAGE_AKROPOLIS, GAME_AREA_AKROPOLIS_SQUARE, 0, 0)) {
                         areaApplySavedUpdates(gAkropolisSquarePostCutsceneAreaUpdates);
-                        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, ROOM_CUTSCENE_SQUARE_OBJECTIVE);
+                        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, EVENT_FLAG_OBJECTIVE_MIST_CONTACTED);
                     }
                 }
             }

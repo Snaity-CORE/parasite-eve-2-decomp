@@ -158,11 +158,10 @@ static u8 _gMcSavePointTitleTentText[2 * 4 + 1];
 
 static u8 _gMcSavePointTitleWhereAmIText[2 * 11 + 1];
 
-/// Option-dialog row pitch in pixels, ordering-table seed in tags and task priority.
+/// Option-dialog row pitch in pixels and ordering-table seed in tags.
 enum {
     USER_INTERFACE_OPTION_DIALOG_ROW_HEIGHT_PIXELS = 15,
     USER_INTERFACE_OPTION_DIALOG_OT_INDEX          = 32,
-    USER_INTERFACE_OPTION_DIALOG_TASK_PRIORITY     = 192,
 };
 
 static UiListRowCallback _gUiOptionDialogRowCallbacks[];
@@ -234,11 +233,8 @@ enum {
     USER_INTERFACE_FRAME_CLUT               = 0x3C03,
     USER_INTERFACE_FRAME_ATLAS_TOP          = 0x50,
     USER_INTERFACE_FRAME_CORNER_PIXELS      = 8,
-    USER_INTERFACE_PANEL_DRAW_VIEW_WIDTH    = 320,
-    USER_INTERFACE_PANEL_DRAW_VIEW_HEIGHT   = 240,
     USER_INTERFACE_PANEL_DRAW_VIEW_CENTER_X = 160,
     USER_INTERFACE_PANEL_DRAW_VIEW_CENTER_Y = 120,
-    USER_INTERFACE_PANEL_DRAW_BUFFER_STRIDE = 272,
     USER_INTERFACE_PANEL_DITHERED_DRAW_MODE = 0xE1000200,
     USER_INTERFACE_OPENING_CONTROL_SHIFT    = 16
 };
@@ -461,57 +457,57 @@ static void _uiDrawOptionDialogRow(UiList* list, UiObject* object);
 static void _uiUpdateOptionDialogTask(Task* owningTask);
 
 TaskDesc gTaskBank1Descs[TASK_BANK1_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_80714A48 },
-    { { { TASK_BODY_TMD, 0xC0 } }, func_80707534, { &D_8075BED4 } },
-    { { { TASK_BODY_COORD, 0xC0 } }, func_807075A0 },
-    { { { TASK_BODY_TMD, 0xC0 } }, func_807077C0, { &D_8075BED4 } },
-    { { { TASK_BODY_COORD, 0xC0 } }, func_807080C8 },
-    { { { TASK_BODY_COORD, 0xC0 } }, func_80707870 },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_80707980 },
-    { { { TASK_BODY_NONE, 0x60 } }, enemyTeardownDelayTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_80714A48 },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, func_80707534, { &D_8075BED4 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, func_807075A0 },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, func_807077C0, { &D_8075BED4 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, func_807080C8 },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, func_80707870 },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_80707980 },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, enemyTeardownDelayTask },
     { { { TASK_BODY_TMD, 0x40 } }, func_807077C0, { &D_8075BED4 } },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
     { { { TASK_BODY_NONE, 0x41 } }, worldCoordUpdateRoomLightsTask },
     { { { TASK_BODY_NONE, 0x51 } }, worldCoordPlayerLightingTask },
-    { { { TASK_BODY_COORD, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_807146AC },
-    { { { TASK_BODY_TMD, 0xC0 } }, func_8071473C, { &D_8075BED4 } },
-    { { { TASK_BODY_COORD, 0xC0 } }, func_8071489C, { &D_8072C8F0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_807146AC },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, func_8071473C, { &D_8075BED4 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, func_8071489C, { &D_8072C8F0 } },
     { { { TASK_BODY_NONE, 0x0 } }, NULL },
     { { { TASK_BODY_NONE, 0x0 } }, NULL },
-    { { { TASK_BODY_TMD, 0xC0 } }, func_807149F0, { &D_8075BED4 } },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_80707B14 },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, func_807149F0, { &D_8075BED4 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_80707B14 },
     { { { TASK_BODY_NONE, 0x2F } }, fadePulseTask },
-    { { { TASK_BODY_COORD, 0x60 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_80707C38 },
-    { { { TASK_BODY_TMD, 0xC0 } }, func_80707F84, { &D_8075BED4 } },
-    { { { TASK_BODY_COORD, 0xC0 } }, func_80708070 },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_80707C38 },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, func_80707F84, { &D_8075BED4 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, func_80708070 },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
     { { { TASK_BODY_NONE, 0x0 } }, NULL },
     { { { TASK_BODY_NONE, 0x0 } }, NULL },
-    { { { TASK_BODY_NONE, 0xC0 } }, tmdReleaseAttachedBuffersTask },
-    { { { TASK_BODY_NONE, 0xC0 } }, tmdRestoreAttachedBuffersTask },
-    { { { TASK_BODY_NONE, 0x60 } }, sceneManagerTask },
-    { { { TASK_BODY_NONE, 0xC0 } }, _taskNoOpCallback },
-    { { { TASK_BODY_NONE, 0x70 } }, planarReflectionDispatchPlayerTask },
-    { { { TASK_BODY_NONE, 0xC0 } }, itemPickupTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, tmdReleaseAttachedBuffersTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, tmdRestoreAttachedBuffersTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, sceneManagerTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _taskNoOpCallback },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, planarReflectionDispatchPlayerTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, itemPickupTask },
     { { { TASK_BODY_NONE, 0xC2 } }, fadeDisplayTransitionTask },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_807127A8 },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_807127A8 },
     { { { TASK_BODY_NONE, 0x0 } }, NULL },
-    { { { TASK_BODY_NONE, 0x70 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, itemPickupActionPromptTask },
-    { { { TASK_BODY_NONE, 0xC0 } }, displayBlendPreviousFrameTask },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskRunExitCallbackTask },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_8070A6E8 },
-    { { { TASK_BODY_NONE, 0xC0 } }, func_80708778 },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, itemPickupActionPromptTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, displayBlendPreviousFrameTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskRunExitCallbackTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_8070A6E8 },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, func_80708778 },
     { { { TASK_BODY_NONE, 0x2F } }, fadeScreenTask },
-    { { { TASK_BODY_TMD, 0x70 } }, effectBurstModelPartTask },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_EFFECT } }, effectBurstModelPartTask },
 };
 
 /// NUL-terminated ASCII "Where am I?" label in save-preview slot 0.
@@ -702,7 +698,7 @@ static UiList _gUiOptionDialogList = {
 /// and task priority 192. Spawning sizes it from the borrowed request's labels
 /// and row count and selects the untitled panel style when no title is supplied.
 static UiObjectDesc _gUiOptionDialogDesc = {
-    USER_INTERFACE_PANEL_TITLE_STYLE, { -48, -32, 96, 64 }, USER_INTERFACE_OPTION_DIALOG_OT_INDEX, 0, TASK_BODY_NONE, USER_INTERFACE_OPTION_DIALOG_TASK_PRIORITY, _uiUpdateOptionDialogTask, 0
+    USER_INTERFACE_PANEL_TITLE_STYLE, { -48, -32, 96, 64 }, USER_INTERFACE_OPTION_DIALOG_OT_INDEX, 0, TASK_BODY_NONE, TASK_PRIORITY_CONTROL, _uiUpdateOptionDialogTask, 0
 };
 UiObject* gUiPromptObject = NULL;
 
@@ -1049,8 +1045,8 @@ static void _uiDrawPanelFrame(const UiPanel* panel, RECT* outer, const RECT* inn
         screenDimTile->r0 = screenDimLevel;
         screenDimTile->x0 = -USER_INTERFACE_PANEL_DRAW_VIEW_CENTER_X;
         screenDimTile->y0 = -USER_INTERFACE_PANEL_DRAW_VIEW_CENTER_Y;
-        screenDimTile->w  = USER_INTERFACE_PANEL_DRAW_VIEW_WIDTH;
-        screenDimTile->h  = USER_INTERFACE_PANEL_DRAW_VIEW_HEIGHT;
+        screenDimTile->w  = DISPLAY_SCREEN_WIDTH;
+        screenDimTile->h  = DISPLAY_SCREEN_HEIGHT;
         setTile(screenDimTile);
         setSemiTrans(screenDimTile, 1);
         addPrim(gGpuCurrentOt + panel->otIndex.signedValue + USER_INTERFACE_FRAME_OT_OFFSET, screenDimTile);
@@ -1088,7 +1084,7 @@ static void _uiDrawPanel(const UiPanel* panel, RECT* outerRect, const RECT* inne
             areaCommand    = gGpuPrimCursor;
             gGpuPrimCursor = areaCommand + 1;
             setRECT(&frameDrawArea, innerRect->x + USER_INTERFACE_PANEL_DRAW_VIEW_CENTER_X, innerRect->y + USER_INTERFACE_PANEL_DRAW_VIEW_CENTER_Y, innerRect->w, innerRect->h);
-            frameDrawArea.y += gDisplayState.drawBuffer * USER_INTERFACE_PANEL_DRAW_BUFFER_STRIDE;
+            frameDrawArea.y += gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
             SetDrawArea(areaCommand, &frameDrawArea);
             addPrim(gGpuCurrentOt + panel->otIndex.signedValue + USER_INTERFACE_FRAME_OT_OFFSET, areaCommand);
         }
@@ -1098,7 +1094,7 @@ static void _uiDrawPanel(const UiPanel* panel, RECT* outerRect, const RECT* inne
 
             areaCommand    = gGpuPrimCursor;
             gGpuPrimCursor = areaCommand + 1;
-            setRECT(&fullScreenDrawArea, 0, gDisplayState.drawBuffer * USER_INTERFACE_PANEL_DRAW_BUFFER_STRIDE, USER_INTERFACE_PANEL_DRAW_VIEW_WIDTH, USER_INTERFACE_PANEL_DRAW_VIEW_HEIGHT);
+            setRECT(&fullScreenDrawArea, 0, gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS, DISPLAY_SCREEN_WIDTH, DISPLAY_SCREEN_HEIGHT);
             SetDrawArea(areaCommand, &fullScreenDrawArea);
             addPrim(gGpuCurrentOt + panel->otIndex.signedValue + 1, areaCommand);
         }
@@ -1145,10 +1141,7 @@ static void _uiDrawPanel(const UiPanel* panel, RECT* outerRect, const RECT* inne
 static void _uiLayoutHiddenPanel(UiPanel* panel)
 {
     enum {
-        USER_INTERFACE_HIDDEN_CLIP_OT_OFFSET     = 3,
-        USER_INTERFACE_HIDDEN_CLIP_VIEW_WIDTH    = 320,
-        USER_INTERFACE_HIDDEN_CLIP_VIEW_HEIGHT   = 240,
-        USER_INTERFACE_HIDDEN_CLIP_BUFFER_STRIDE = 272
+        USER_INTERFACE_HIDDEN_CLIP_OT_OFFSET = 3,
     };
     RECT     drawArea;
     RECT     contentRect;
@@ -1162,16 +1155,16 @@ static void _uiLayoutHiddenPanel(UiPanel* panel)
     drawArea.x     = 0;
     drawArea.w     = 0;
     drawArea.h     = 0;
-    drawArea.y     = gDisplayState.drawBuffer * USER_INTERFACE_HIDDEN_CLIP_BUFFER_STRIDE;
+    drawArea.y     = gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
     SetDrawArea(areaCommand, &drawArea);
     addPrim(gGpuCurrentOt + panel->otIndex.signedValue + USER_INTERFACE_HIDDEN_CLIP_OT_OFFSET, areaCommand);
 
     areaCommand    = gGpuPrimCursor;
     gGpuPrimCursor = areaCommand + 1;
     drawArea.x     = 0;
-    drawArea.w     = USER_INTERFACE_HIDDEN_CLIP_VIEW_WIDTH;
-    drawArea.h     = USER_INTERFACE_HIDDEN_CLIP_VIEW_HEIGHT;
-    drawArea.y     = gDisplayState.drawBuffer * USER_INTERFACE_HIDDEN_CLIP_BUFFER_STRIDE;
+    drawArea.w     = DISPLAY_SCREEN_WIDTH;
+    drawArea.h     = DISPLAY_SCREEN_HEIGHT;
+    drawArea.y     = gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
     SetDrawArea(areaCommand, &drawArea);
     addPrim(gGpuCurrentOt + panel->otIndex.signedValue, areaCommand);
 }
@@ -1331,11 +1324,8 @@ static void _uiQueueListDrawArea(const UiList* list, const UiPanel* panel, s32 f
     enum {
         USER_INTERFACE_LIST_DRAW_AREA_LAYERS    = 2,
         USER_INTERFACE_LIST_DRAW_AREA_OT_OFFSET = 1,
-        USER_INTERFACE_LIST_VIEW_WIDTH          = 320,
-        USER_INTERFACE_LIST_VIEW_HEIGHT         = 240,
         USER_INTERFACE_LIST_VIEW_CENTER_X       = 160,
         USER_INTERFACE_LIST_VIEW_CENTER_Y       = 120,
-        USER_INTERFACE_LIST_DRAW_BUFFER_STRIDE  = 272
     };
     RECT     drawArea;
     DR_AREA* areaCommand;
@@ -1348,7 +1338,7 @@ static void _uiQueueListDrawArea(const UiList* list, const UiPanel* panel, s32 f
             areaCommand    = gGpuPrimCursor;
             gGpuPrimCursor = areaCommand + 1;
             drawArea.x     = panel->contentOriginX.unsignedValue + (panel->contentLeft.unsignedValue + USER_INTERFACE_LIST_VIEW_CENTER_X);
-            screenTop      = panel->contentOriginY.unsignedValue + (panel->contentTop.unsignedValue + USER_INTERFACE_LIST_VIEW_CENTER_Y) + (gDisplayState.drawBuffer * USER_INTERFACE_LIST_DRAW_BUFFER_STRIDE);
+            screenTop      = panel->contentOriginY.unsignedValue + (panel->contentTop.unsignedValue + USER_INTERFACE_LIST_VIEW_CENTER_Y) + (gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS);
             drawArea.y     = screenTop;
             drawArea.y     = screenTop + list->topInset;
             drawArea.w     = panel->contentRight.unsignedValue - panel->contentLeft.unsignedValue;
@@ -1362,10 +1352,10 @@ static void _uiQueueListDrawArea(const UiList* list, const UiPanel* panel, s32 f
         for (layer = 0; layer < USER_INTERFACE_LIST_DRAW_AREA_LAYERS; layer++) {
             areaCommand    = gGpuPrimCursor;
             gGpuPrimCursor = areaCommand + 1;
-            drawArea.w     = USER_INTERFACE_LIST_VIEW_WIDTH;
+            drawArea.w     = DISPLAY_SCREEN_WIDTH;
             drawArea.x     = 0;
-            drawArea.h     = USER_INTERFACE_LIST_VIEW_HEIGHT;
-            drawArea.y     = gDisplayState.drawBuffer * USER_INTERFACE_LIST_DRAW_BUFFER_STRIDE;
+            drawArea.h     = DISPLAY_SCREEN_HEIGHT;
+            drawArea.y     = gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
             SetDrawArea(areaCommand, &drawArea);
             addPrim(gGpuCurrentOt + (layer + panel->otIndex.signedValue) + USER_INTERFACE_LIST_DRAW_AREA_OT_OFFSET, areaCommand);
         }
@@ -1600,7 +1590,7 @@ void uiFitPanelToList(UiList* list, UiPanel* panel)
     list->scrollPixelsRemaining = 0;
     list->scrollDirection       = USER_INTERFACE_LIST_STEP_NONE;
     list->rowInputEnabled       = USER_INTERFACE_LIST_ROW_INACTIVE;
-    if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.cursorMode != 0) {
+    if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.cursorMode != MEMORY_CARD_OPTION_CURSOR_MEMORY) {
         list->selectedItemIndex                   = 0;
         list->firstVisibleItemIndex.unsignedValue = 0;
     }
@@ -2613,7 +2603,7 @@ void uiInitList(UiList* list, const UiPanel* panel)
     list->scrollPixelsRemaining = 0;
     list->scrollDirection       = USER_INTERFACE_LIST_STEP_NONE;
     list->rowInputEnabled       = USER_INTERFACE_LIST_ROW_INACTIVE;
-    if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.cursorMode != 0) {
+    if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.cursorMode != MEMORY_CARD_OPTION_CURSOR_MEMORY) {
         list->selectedItemIndex                   = 0;
         list->firstVisibleItemIndex.unsignedValue = 0;
     }

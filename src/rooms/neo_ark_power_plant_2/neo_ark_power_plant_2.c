@@ -9,7 +9,10 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_05700.h"
+#include "actors/actor_105300.h"
+#include "actors/actor_403900.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -84,8 +87,6 @@ static WorldCollisionTrigger _gNeoArkPowerPlant2ViewBoundaryTriggers[8];
 static WorldCollisionTrigger _gNeoArkPowerPlant2ActionTriggers[8];
 static WorldCoordRoomLights  _gNeoArkPowerPlant2RoomLights;
 
-enum { NEO_ARK_POWER_PLANT_2_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static s32  _neoArkPowerPlant2RejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg);
 static s32  _neoArkPowerPlant2ResolveRoomVariant(Task* unusedTask, s32 unusedMessageId, RoomEventMsg* request, RoomEventMsg* reply);
 static s32  _neoArkPowerPlant2HandleCapCommand(Task* unusedTask, s32 unusedMessageId, s32 commandIndex, s32 unusedSecondArg);
@@ -143,7 +144,7 @@ static AnimationSet _gNeoArkPowerPlant2Animation02C10 = {
 /// progress-dependent CAP dialogue. The live room task borrows this table.
 static TaskMessageEntry _gNeoArkPowerPlant2RoomMessages[] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _neoArkPowerPlant2ResolveRoomVariant },
-    { NEO_ARK_POWER_PLANT_2_MESSAGE_USE_KEY_ITEM, _neoArkPowerPlant2RejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _neoArkPowerPlant2RejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _neoArkPowerPlant2IgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _neoArkPowerPlant2HandleCapCommand },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -1079,9 +1080,7 @@ static const AreaApplyRec _gNeoArkPowerPlant2GeneratorClearExtraAreaUpdates[] __
 /// Reads no payload, consumes no item and retains no arguments.
 static s32 _neoArkPowerPlant2RejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { KEY_ITEM_UNUSABLE = 0 };
-
-    return KEY_ITEM_UNUSABLE;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Resolves a Neo Ark destination room for a Power Plant 2 transition request.
@@ -1213,7 +1212,7 @@ static void _neoArkPowerPlant2UpdateRoom(Task* unusedTask)
                 areaApplySavedUpdates(_gNeoArkPowerPlant2GeneratorClearExtraAreaUpdates);
             }
             gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = GENERATOR_CLEAR_SCENE_EVENT;
-            gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_AFTER_CLEAR);
+            gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_AFTER_CLEAR);
             gameFlagSetNibble(EVENT_FLAG_TELEPHONE_DIALOGUE_COUNTER, EVENT_FLAG_TELEPHONE_DIALOGUE_UNHEARD);
             gameFlagSetNibble(EVENT_FLAG_STORY_DIALOGUE_INDEX, DIALOGUE_AFTER_CLEAR);
             evsStartScriptWithSkip(_gNeoArkPowerPlant2GeneratorClearScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gNeoArkPowerPlant2GeneratorClearSkipScript);
@@ -1242,7 +1241,7 @@ static inline void _neoArkPowerPlant2EmitGeneratorFlash(void)
     u32 randomWord;
 
     if (gRoomEffectState->effectControl == ROOM_EFFECT_CONTROL_RUNNING && gameFlagGetNibble(GAME_FLAG_NEO_ARK_POWER_PLANT_2_CLEARED) == 0) {
-        randomWord      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomWord      = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomWord;
         if (((randomWord >> 16) & GENERATOR_FLASH_MASK) == 0) {
             effectSpawn(EFFECT_FLASH_BURST, NULL, GENERATOR_FLASH_BASE_SIZE, &_gNeoArkPowerPlant2GeneratorGlowPosition);
@@ -1292,7 +1291,7 @@ void neoArkPowerPlant2UpdateViewLightingTask(Task* task)
             pointLight->inner                                  = BLUE_LIGHT_INNER_RADIUS;
             pointLight->outer                                  = BLUE_LIGHT_OUTER_RADIUS;
             lightSlot->light.head.transform.coord.composeStamp = GRAPHICS_COORD_DIRTY;
-            randomWord                                         = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomWord                                         = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState                                    = randomWord;
             blueIntensityQ12                                   = ((randomWord >> 16) & BLUE_LIGHT_RANDOM_Q12_MASK) + BLUE_LIGHT_BASE_Q12;
             pointLight->head.color.b                           = blueIntensityQ12;

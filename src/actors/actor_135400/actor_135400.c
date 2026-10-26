@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_135400.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -57,9 +57,6 @@ enum {
     ACTOR_135400_GARY_DOUGLAS_DETACH_CARRIED    = 4,
     ACTOR_135400_GARY_DOUGLAS_SET_DOWN_CARRIED  = 5,
 };
-
-/// Fourth draw mode: show the model while disabling automatic buffer recovery.
-enum { ACTOR_135400_DRAW_SHOW_SKIP_AUTO_BUFFER = 3 };
 
 /// Flint's cycle visits clips 1 through 6; -1 means no deferred buffer release.
 enum {
@@ -241,8 +238,8 @@ static AnimationSet** _gActorMotionAnimBanks[1] = {
 
 TaskDesc gActor135400GaryDouglasTasks[3] = {
     { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), 192 } }, _actor135400GaryDouglasTask, { .model = &_gGaryBody } },
-    { { { TASK_BODY_TMD, 192 } }, _actor135400GaryDouglasHeadTask, { .model = &_gGaryHeadHat } },
-    { { { TASK_BODY_TMD, 192 } }, _actor135400GaryDouglasCarriedTask, { .model = &_gActor135400Model071AC } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor135400GaryDouglasHeadTask, { .model = &_gGaryHeadHat } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor135400GaryDouglasCarriedTask, { .model = &_gActor135400Model071AC } },
 };
 
 /// Gary Douglas's body messages for animation, placement, drawing and actor commands.
@@ -293,10 +290,8 @@ static AnimationSet** _gActor135400FlintAnimationBanks[1] = {
     _gActor135400FlintAnimationSets,
 };
 
-enum { ACTOR_135400_FLINT_TASK_PRIORITY = 192 };
-
 TaskDesc gActor135400FlintTaskDesc = {
-    .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = ACTOR_135400_FLINT_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = TASK_PRIORITY_CONTROL } },
     .callback = _actor135400FlintTask,
     .data     = { .model = &gFlintBody },
 };
@@ -641,7 +636,7 @@ static s32 _actor135400GaryDouglasSetDrawMode(Task* task, s32 messageId, s32 mod
             tmdFreePrimitiveBuffer(bodyModel);
             bodyModel->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_135400_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             bodyModel->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             bodyModel->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
@@ -951,7 +946,7 @@ static s32 _actor135400FlintSetDrawMode(Task* task, s32 messageId, s32 mode, s32
             ((_Actor135400FlintWork*)task->work)->freeCountdown = mode;
             model->flags                                       |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_135400_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             model->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             model->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

@@ -185,7 +185,6 @@ enum {
     ACTOR_800100_STATE_COMBAT_ENTRY            = 3,
     ACTOR_800100_STATE_COMBAT_DECISION         = 4,
     ACTOR_800100_STATE_OBSTACLE_SCAN           = 10,
-    ACTOR_800100_MOVEMENT_RUN                  = 3,
     ACTOR_800100_TURN_STOPPED                  = 0,
     ACTOR_800100_MOVE_FORWARD                  = 1,
     ACTOR_800100_TURN_NEGATIVE                 = -1,
@@ -203,7 +202,6 @@ enum {
 /// Selectors shared by the armed companion's weapon attack sequences.
 /// Flash bit 16 suppresses the screen-burst request, independently of collision keys.
 enum {
-    ACTOR_800100_MOVEMENT_STOPPED        = 0,
     ACTOR_800100_ATTACK_ANIMATION        = 10,
     ACTOR_800100_ATTACK_FINISH_ANIMATION = 11,
     ACTOR_800100_ATTACK_COMPLETION_SLOT  = 8,
@@ -778,7 +776,7 @@ static inline void _actor800100RefreshPykeLight(WorldCoordTransientPointLight* t
     transientLight->framesLeft = ACTOR_800100_PYKE_LIGHT_FRAMES;
     pointLight->inner          = innerRadius;
     pointLight->outer          = outerRadius;
-    lightRandom                = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    lightRandom                = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState            = lightRandom;
     // Green halves the unsigned red halfword; blue quarters its signed value.
     pointLight->head.color.r = ((lightRandom >> 16) & ACTOR_800100_PYKE_LIGHT_RANDOM_MASK) + redMinimum;
@@ -1552,7 +1550,6 @@ static void _actor800100TickNativeMode(Task* task)
 static void _actor800100FollowPlayerState(Task* task)
 {
     enum {
-        ACTOR_800100_MOVEMENT_WALK               = 1,
         ACTOR_800100_ANIMATION_WALK              = 2,
         ACTOR_800100_FOLLOW_SELECT_SPEED         = 0,
         ACTOR_800100_FOLLOW_WALK                 = 1,
@@ -1604,14 +1601,14 @@ static void _actor800100FollowPlayerState(Task* task)
             actor->stateTimer = 0;
             if (companionGetPlayerPlanarDistance(rootCoord) >= ACTOR_800100_FOLLOW_RUN_DISTANCE) {
                 actor->statePhase   = ACTOR_800100_FOLLOW_RUN;
-                actor->movementMode = ACTOR_800100_MOVEMENT_RUN;
+                actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
                 setIndex            = ACTOR_800100_ANIMATION_RUN;
             } else {
             selectWalk:
                 if (actor->statePhase != ACTOR_800100_FOLLOW_FORCED_WALK) {
                     actor->statePhase = ACTOR_800100_FOLLOW_WALK;
                 }
-                actor->movementMode = ACTOR_800100_MOVEMENT_WALK;
+                actor->movementMode = GAME_ACTOR_MOVEMENT_WALK;
                 setIndex            = ACTOR_800100_ANIMATION_WALK;
             }
             playerActorPlayChildSlotsWithBlend(task, setIndex, 0, ACTOR_800100_MOVEMENT_BLEND_FRAMES);
@@ -1932,7 +1929,7 @@ static void _actor800100RetreatState(Task* task)
                 yawMagnitude = -yawMagnitude;
             }
             if (yawMagnitude >= retreatYaw) {
-                actor->movementMode = ACTOR_800100_MOVEMENT_RUN;
+                actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
                 actor->statePhase  += 1;
                 actor->stateTimer   = (rand() & ACTOR_800100_RETREAT_TICKS_RANDOM_MASK) + ACTOR_800100_RETREAT_TICKS_MIN;
                 playerActorPlayChildSlotsWithBlend(task, ACTOR_800100_ANIMATION_RUN, 0, ACTOR_800100_MOVEMENT_BLEND_FRAMES);
@@ -2043,7 +2040,7 @@ static void _actor800100ApproachState(Task* task)
     if (planarDistance != 0 && planarDistance < (ACTOR_800100_APPROACH_OBSTACLE_DISTANCE + 1)) {
         obstructionTicks   = actor->actionValue + 1;
         actor->actionValue = obstructionTicks;
-        randomState        = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState        = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState    = randomState;
         if ((s16)obstructionTicks >= (s32)(((randomState >> 16) & ACTOR_800100_APPROACH_SCAN_TICKS_MASK) + ACTOR_800100_APPROACH_SCAN_MIN_TICKS)) {
             _actor800100ApproachStartScan(task);
@@ -2068,7 +2065,7 @@ static void _actor800100ApproachState(Task* task)
         case ACTOR_800100_APPROACH_START:
             actor->statePhase   = ACTOR_800100_APPROACH_MOVE;
             actor->stateTimer   = 0;
-            actor->movementMode = ACTOR_800100_MOVEMENT_RUN;
+            actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
             playerActorPlayChildSlotsWithBlend(task, ACTOR_800100_ANIMATION_APPROACH, 0, ACTOR_800100_MOVEMENT_BLEND_FRAMES);
             /* fallthrough */
         case ACTOR_800100_APPROACH_MOVE:
@@ -2190,7 +2187,6 @@ static void _actor800100ObstacleScanState(Task* task)
         ACTOR_800100_SCAN_WALK_MIN_TICKS    = 40,
         ACTOR_800100_SCAN_OBSTACLE_DISTANCE = 768,
         ACTOR_800100_SCAN_ANIMATION_WALK    = 2,
-        ACTOR_800100_SCAN_MOVEMENT_WALK     = 1,
         ACTOR_800100_SCAN_BLEND_FRAMES      = 3,
     };
     GameActor*     actor;
@@ -2257,15 +2253,15 @@ static void _actor800100ObstacleScanState(Task* task)
                 actor->turnSign    = 0;
                 if (gSceneCombatState.signals.bytes.battlePhase == SCENE_COMBAT_BATTLE_ENGAGED) {
                     moveSet             = ACTOR_800100_ANIMATION_RUN;
-                    actor->movementMode = ACTOR_800100_MOVEMENT_RUN;
-                    randomState         = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
+                    randomState         = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState     = randomState;
                     actor->stateTimer   = ((randomState >> 16) & ACTOR_800100_SCAN_RUN_TICKS_MASK) + ACTOR_800100_SCAN_RUN_MIN_TICKS;
                     playerActorPlayChildSlotsWithBlend(task, moveSet, 0, ACTOR_800100_SCAN_BLEND_FRAMES);
                 } else {
                     moveSet             = ACTOR_800100_SCAN_ANIMATION_WALK;
-                    actor->movementMode = ACTOR_800100_SCAN_MOVEMENT_WALK;
-                    randomState         = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    actor->movementMode = GAME_ACTOR_MOVEMENT_WALK;
+                    randomState         = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState     = randomState;
                     actor->stateTimer   = ((randomState >> 16) & ACTOR_800100_SCAN_WALK_TICKS_MASK) + ACTOR_800100_SCAN_WALK_MIN_TICKS;
                     playerActorPlayChildSlotsWithBlend(task, moveSet, 0, ACTOR_800100_SCAN_BLEND_FRAMES);
@@ -2332,7 +2328,6 @@ static void _actor800100WanderState(Task* task)
         ACTOR_800100_WANDER_WALK_TICKS_MASK  = 0x3F,
         ACTOR_800100_WANDER_WALK_MIN_TICKS   = 60,
         ACTOR_800100_WANDER_ANIMATION_WALK   = 2,
-        ACTOR_800100_WANDER_MOVEMENT_WALK    = 1,
         ACTOR_800100_WANDER_BLEND_FRAMES     = 3,
     };
     GameActor*     actor;
@@ -2380,8 +2375,8 @@ static void _actor800100WanderState(Task* task)
                 actor->statePhase  += 1;
                 actor->rotation.vy  = (u16)companion->targetHeading;
                 actor->turnSign     = 0;
-                actor->movementMode = ACTOR_800100_WANDER_MOVEMENT_WALK;
-                turnAndTimingValue  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                actor->movementMode = GAME_ACTOR_MOVEMENT_WALK;
+                turnAndTimingValue  = RANDOM_LCG_NEXT(gRandomLcgState);
                 gRandomLcgState     = turnAndTimingValue;
                 turnAndTimingValue  = (((u32)turnAndTimingValue >> 16) & ACTOR_800100_WANDER_PAUSE_TICKS_MASK) + ACTOR_800100_WANDER_PAUSE_MIN_TICKS;
                 actor->stateTimer   = turnAndTimingValue;
@@ -2554,14 +2549,13 @@ static void _actor800100EnterTurnToPlayer(Task* task)
 {
     enum {
         ACTOR_800100_STATE_TURN_TO_PLAYER = 2,
-        ACTOR_800100_MOVEMENT_STOPPED     = 0
     };
     GameActor* actor;
 
     actor                = task->work;
     actor->state         = ACTOR_800100_STATE_TURN_TO_PLAYER;
     actor->mode          = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode  = ACTOR_800100_MOVEMENT_STOPPED;
+    actor->movementMode  = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex = ACTOR_800100_TURN_RATE_64;
     _actor800100ResetBehaviorProgress(actor);
 }
@@ -2873,7 +2867,7 @@ static void _actor800100TickSingleShotAttack(Task* task)
     switch (phase) {
         case ACTOR_800100_SINGLE_SHOT_START:
             actor->mode                                  = GAME_ACTOR_MODE_NORMAL;
-            actor->movementMode                          = ACTOR_800100_MOVEMENT_STOPPED;
+            actor->movementMode                          = GAME_ACTOR_MOVEMENT_STOPPED;
             actor->turnRateIndex                         = ACTOR_800100_TURN_STOPPED;
             actor->animationState                        = ACTOR_800100_ANIMATION_CONTROLLER_NONE;
             actor->stateAux                              = ACTOR_800100_SINGLE_SHOT_CONTACT;
@@ -2935,7 +2929,7 @@ static void _actor800100TickMm1Attack(Task* task)
     switch (phase) {
         case ACTOR_800100_MM1_START:
             actor->mode           = GAME_ACTOR_MODE_NORMAL;
-            actor->movementMode   = ACTOR_800100_MOVEMENT_STOPPED;
+            actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
             actor->turnRateIndex  = ACTOR_800100_TURN_STOPPED;
             actor->animationState = ACTOR_800100_ANIMATION_CONTROLLER_NONE;
             /* fallthrough */
@@ -3020,7 +3014,7 @@ static void _actor800100TickM950Attack(Task* task)
     switch (phase) {
         case ACTOR_800100_M950_START:
             actor->mode                                           = GAME_ACTOR_MODE_NORMAL;
-            actor->movementMode                                   = ACTOR_800100_MOVEMENT_STOPPED;
+            actor->movementMode                                   = GAME_ACTOR_MOVEMENT_STOPPED;
             actor->turnRateIndex                                  = ACTOR_800100_ATTACK_TURN_RATE;
             actor->animationState                                 = ACTOR_800100_ANIMATION_CONTROLLER_NONE;
             companion->activity.combat.repeatsRemaining           = (rand() & ACTOR_800100_M950_REPEAT_MASK) + ACTOR_800100_M950_MIN_SHOTS;
@@ -3138,7 +3132,7 @@ static void _actor800100TickM4a1PykeAttack(Task* task)
     switch (phase) {
         case ACTOR_800100_RIFLE_START:
             actor->mode           = GAME_ACTOR_MODE_NORMAL;
-            actor->movementMode   = ACTOR_800100_MOVEMENT_STOPPED;
+            actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
             actor->animationState = ACTOR_800100_ANIMATION_CONTROLLER_NONE;
             actor->stateAux      += 1;
             playerActorPlayChildSlotsWithBlend(task, ACTOR_800100_ANIMATION_COMBAT_HOLD, 0, ACTOR_800100_RIFLE_READY_BLEND_FRAMES);
@@ -3153,8 +3147,8 @@ static void _actor800100TickM4a1PykeAttack(Task* task)
             break;
 
         case ACTOR_800100_RIFLE_SELECT:
-            gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-            if (((gRandomLcgState >> 16) & ACTOR_800100_RIFLE_RANDOM_MASK) < ACTOR_800100_RIFLE_PYKE_THRESHOLD) {
+            RANDOM_LCG_ADVANCE();
+            if ((RANDOM_LCG_DRAW() & ACTOR_800100_RIFLE_RANDOM_MASK) < ACTOR_800100_RIFLE_PYKE_THRESHOLD) {
                 actor->stateAux                    = ACTOR_800100_RIFLE_PYKE;
                 actor->turnRateIndex               = ACTOR_800100_ATTACK_TURN_RATE;
                 actor->attackControl.cooldownTicks = ACTOR_800100_RIFLE_PYKE_COOLDOWN_TICKS;
@@ -3353,7 +3347,7 @@ static void _actor800100DrawAimBeamLine(const GfxCoord* beamCoord, s16 contactDi
         line->r1 = line->r0 - ACTOR_800100_BEAM_LINE_TIP_FADE;
         line->g1 = 0;
         line->b1 = 0;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)reservedBlock->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), line);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(reservedBlock->otz), line);
         gpuSetPrimitiveBlendMode(line, GPU_BLEND_ADD, reservedBlock->otz);
     }
     SCRATCH_STACK_RELEASE_BLOCK_AT(scratchCursor, _Actor800100AimBeamLineScratch);
@@ -3587,7 +3581,6 @@ void actor800100EnterReload(Task* task, s32 animationVariant)
 {
     enum {
         ACTOR_800100_STATE_RELOAD          = 9,
-        ACTOR_800100_MOVEMENT_STOPPED      = 0,
         ACTOR_800100_ANIMATION_RELOAD_BASE = 14,
         ACTOR_800100_RELOAD_BLEND_FRAMES   = 1,
     };
@@ -3597,7 +3590,7 @@ void actor800100EnterReload(Task* task, s32 animationVariant)
     actor->state            = ACTOR_800100_STATE_RELOAD;
     actor->stateAux         = animationVariant;
     actor->mode             = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode     = ACTOR_800100_MOVEMENT_STOPPED;
+    actor->movementMode     = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex    = ACTOR_800100_TURN_STOPPED;
     actor->animationState   = ACTOR_800100_ANIMATION_CONTROLLER_NONE;
     actor->statePhase       = 0;

@@ -8,7 +8,9 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_402200.h"
+#include "actors/actor_403900.h"
 
 #include "gameplay/area.h"
 #include "gameplay/area_flags.h"
@@ -94,30 +96,26 @@ static s32 _shelterB1AccessTunnelRejectKeyItemUse(Task* task, s32 messageId, s32
 static s32 _shelterB1AccessTunnelIgnoreRoomCommand(Task* task, s32 messageId, s32 command, s32 unusedArg);
 static s32 _shelterB1AccessTunnelIgnoreRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedArg);
 
-enum { SHELTER_B1_ACCESS_TUNNEL_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Bodyless transition task spawned by this room's event gate at priority 32.
 ///
 /// Uses the latched request and destination to play CAP and optional sounds,
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
-
-enum { SHELTER_B1_ACCESS_TUNNEL_STAGED_EVENT_PRIORITY = 32 };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Bodyless controller for the staged departure scene and room reload.
 ///
 /// Spawning copies this recipe; the controller borrows the latched transition
 /// and scene records until reload. It starts with both spawn arguments zero.
-static TaskDesc _gShelterB1AccessTunnelStagedEventTaskDesc = { { { TASK_BODY_NONE, SHELTER_B1_ACCESS_TUNNEL_STAGED_EVENT_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gShelterB1AccessTunnelStagedEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Room messages for exit resolution, key-item use, actions and script commands.
 ///
 /// The live room receiver borrows the four handlers and terminal entry.
 static const TaskMessageEntry _gShelterB1AccessTunnelRoomMessages[5] SECTION(".data") = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB1AccessTunnelResolveRoomEvent },
-    { SHELTER_B1_ACCESS_TUNNEL_MESSAGE_USE_KEY_ITEM, _shelterB1AccessTunnelRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB1AccessTunnelRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB1AccessTunnelIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _shelterB1AccessTunnelIgnoreRoomCommand },
     { TASK_MESSAGE_TABLE_END, NULL },

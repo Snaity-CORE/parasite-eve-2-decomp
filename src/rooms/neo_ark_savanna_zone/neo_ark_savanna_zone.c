@@ -9,7 +9,13 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_02600.h"
+#include "actors/actor_03800.h"
+#include "actors/actor_05600.h"
+#include "actors/actor_05700.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -74,15 +80,12 @@ static s32                              _neoArkSavannaZoneRejectKeyItemUse(Task*
 static s32                              _neoArkSavannaZoneIgnoreRoomCommand(Task* task, s32 messageId, s32 commandId, s32 commandArg);
 static s32                              _neoArkSavannaZoneIgnoreRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedArg);
 
-/// Requests use of the selected collected key item; zero refuses the request.
-enum { NEO_ARK_SAVANNA_ZONE_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Bodyless staged-departure task recipe for the savanna room.
 ///
-/// Spawns entry 0 at `ROOM_EVENT_TASK_PRIORITY` with zero metadata and payloads.
+/// Spawns entry 0 at `TASK_PRIORITY_SCENE` with zero metadata and payloads.
 /// The descriptor is read synchronously; the room-owned destination/event
 /// snapshots and callback code remain loaded through deferred scene reload.
-static TaskDesc _gNeoArkSavannaZoneStagedEventTaskDesc = { .header = { .fields = { .flags = TASK_BODY_NONE, .priority = ROOM_EVENT_TASK_PRIORITY } }, .callback = roomEventStagedTask, .data = { .value = 0 } };
+static TaskDesc _gNeoArkSavannaZoneStagedEventTaskDesc = { .header = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_SCENE } }, .callback = roomEventStagedTask, .data = { .value = 0 } };
 
 /// Message routes borrowed by the savanna room controller.
 ///
@@ -93,7 +96,7 @@ static TaskDesc _gNeoArkSavannaZoneStagedEventTaskDesc = { .header = { .fields =
 /// Keep the table and its callback code loaded while the room task uses them.
 static TaskMessageEntry _gNeoArkSavannaZoneRoomMessages[5] = {
     { .messageId = ROOM_EVENT_MESSAGE_RESOLVE, .handler = _neoArkSavannaZoneResolveRoomEvent },
-    { .messageId = NEO_ARK_SAVANNA_ZONE_MESSAGE_USE_KEY_ITEM, .handler = _neoArkSavannaZoneRejectKeyItemUse },
+    { .messageId = ROOM_MESSAGE_USE_KEY_ITEM, .handler = _neoArkSavannaZoneRejectKeyItemUse },
     { .messageId = DIRECTION_MESSAGE_ROOM_ACTION, .handler = _neoArkSavannaZoneIgnoreRoomAction },
     { .messageId = ROOM_MESSAGE_COMMAND, .handler = _neoArkSavannaZoneIgnoreRoomCommand },
     { .messageId = TASK_MESSAGE_TABLE_END, .handler = NULL },

@@ -9,7 +9,7 @@
 #include "gte.h"
 
 #include "actors/actor_143000.h"
-#include "actors/task_tables.h"
+#include "actors/actor_143000.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -61,8 +61,6 @@
 #include "mapui/map_shelter.h"
 
 #include "overlay.h"
-
-#include "rooms/akropolis_square.h"
 
 #include "rooms/room.h"
 
@@ -148,37 +146,8 @@ static void _shelterB2LaboratoryFinishConsoleSceneTask(Task* task);
 
 #include "../../shared/room/telephone_data.inc.c"
 
-static TmdBone _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Skeleton[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_skeleton.inc"
-};
-
-static u32 _gShelterB2LaboratoryAcropolisSanctuaryModel090F0PartVerts[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_partVerts.inc"
-};
-
-static SVECTOR _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Verts[56] = {
-#include "assets/acropolis_sanctuary_model_090F0_verts.inc"
-};
-
-static SVECTOR _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Normals[6] = {
-#include "assets/acropolis_sanctuary_model_090F0_normals.inc"
-};
-
-static u32 _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Stream[215] = {
-#include "assets/acropolis_sanctuary_model_090F0_stream.inc"
-};
-
-TmdSource gShelterB2LaboratoryAcropolisSanctuaryModel090F0 = {
-    0,
-    1768,
-    0,
-    3,
-    _gShelterB2LaboratoryAcropolisSanctuaryModel090F0PartVerts,
-    _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Verts,
-    _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Normals,
-    _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Skeleton,
-    _gShelterB2LaboratoryAcropolisSanctuaryModel090F0Stream,
-};
+#include "assets/rooms/item_box/model.inc"
+DEFINE_ALIAS(_gItemBoxModel, gShelterB2LaboratoryItemBoxModel);
 
 /// This carrier's bodyless scene runner and timed sound task, followed by END.
 ///
@@ -187,8 +156,8 @@ TmdSource gShelterB2LaboratoryAcropolisSanctuaryModel090F0 = {
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -198,7 +167,7 @@ static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Laboratory room-message routes, with five handlers followed by the end marker.
 ///
@@ -222,24 +191,23 @@ static TaskMessageEntry _gShelterB2LaboratoryRoomMessages[6] = {
 /// loaded until it is cleared. Spawn failure is not handled by the waiter.
 static Task* _gShelterB2LaboratoryKeypadTask = NULL;
 
-/// Descriptor indices and execution priority for laboratory background tasks.
+/// Descriptor indices of the laboratory's background tasks.
 enum {
     SHELTER_B2_LABORATORY_TASK_CONSOLE_KEYPAD       = 0,
     SHELTER_B2_LABORATORY_TASK_AMBIENCE             = 1,
     SHELTER_B2_LABORATORY_TASK_FINISH_CONSOLE_SCENE = 2,
     SHELTER_B2_LABORATORY_TASK_COUNT                = 3,
-    SHELTER_B2_LABORATORY_TASK_PRIORITY             = 32,
 };
 
 /// Spawn recipes for the console keypad waiter, ambience and post-scene follow-up.
 ///
-/// Three bodyless tasks at priority 32, with unused spawn payloads and models.
+/// Three bodyless tasks at priority `TASK_PRIORITY_SCENE`, with unused spawn payloads and models.
 /// No end marker: callers select only the named descriptor indices. Spawning
 /// copies the recipe; this overlay's callback code must outlive each task.
 static TaskDesc _gShelterB2LaboratoryTaskDescriptors[SHELTER_B2_LABORATORY_TASK_COUNT] = {
-    { { { TASK_BODY_NONE, SHELTER_B2_LABORATORY_TASK_PRIORITY } }, _shelterB2LaboratoryConsoleKeypadTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B2_LABORATORY_TASK_PRIORITY } }, _shelterB2LaboratoryAmbienceTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B2_LABORATORY_TASK_PRIORITY } }, _shelterB2LaboratoryFinishConsoleSceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB2LaboratoryConsoleKeypadTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB2LaboratoryAmbienceTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB2LaboratoryFinishConsoleSceneTask, { .value = 0 } },
 };
 
 /// Looping ambience gain percentages indexed by the active logical view, 0..15.
@@ -1294,9 +1262,9 @@ static s32 _shelterB2LaboratoryCommandMessage(Task* unusedTask, s32 messageId, s
             gameFlagSetNibble(GAME_FLAG_SHELTER_B2_LABORATORY_017, SHELTER_B2_LABORATORY_PROGRESS_FLAG_SET);
             gameFlagSetNibble(GAME_FLAG_SHELTER_B2_LABORATORY_018, SHELTER_B2_LABORATORY_PROGRESS_FLAG_SET);
             if (gameFlagGetNibble(GAME_FLAG_083) != 0) {
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_B2_LABORATORY_OBJECTIVE_ROUTE_SET);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_B2_LABORATORY_OBJECTIVE_ROUTE_SET);
             } else {
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_B2_LABORATORY_OBJECTIVE_ROUTE_CLEAR);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_B2_LABORATORY_OBJECTIVE_ROUTE_CLEAR);
             }
             _gShelterB2LaboratoryConsoleCutsceneRec.rec.view      = SHELTER_B2_LABORATORY_SCENE_VIEW;
             _gShelterB2LaboratoryConsoleCutsceneRec.rec.capSlot   = SHELTER_B2_LABORATORY_CAP_COMPLETED_SCENE_SLOT;
@@ -1422,9 +1390,7 @@ static void _shelterB2LaboratoryAmbienceTask(Task* task)
 /// item menu's refusal notice and leaves the room and inventory unchanged.
 static s32 _shelterB2LaboratoryRejectKeyItemUse(Task* task, s32 messageId, s32 keyItemId, s32 unusedArg)
 {
-    enum { SHELTER_B2_LABORATORY_KEY_ITEM_REFUSED = 0 };
-
-    return SHELTER_B2_LABORATORY_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Resolves a laboratory departure and gates its corridor-door event.
@@ -1878,7 +1844,7 @@ static void _shelterB2LaboratoryDrawGlowDiamond(const SVECTOR* worldPoint, s32 p
             prim->y0     = screenY;
             verticalSide = partIndex * 2;
             prim->y1     = (block->sy - (u16)block->radius) + (block->radius * verticalSide);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                     prim);
             gpuSetPrimitiveBlendMode(prim, GPU_BLEND_ADD, block->otz);
             partIndex++;

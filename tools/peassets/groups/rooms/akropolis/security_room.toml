@@ -11,17 +11,14 @@ chunk = "sounds_0"
 chunk = "sounds_1"
 
 [[file.contents]]
-chunk = "image"
-sha1 = "5360b94da1bb881aa13d21ca02fd7a13a0377e73"
-pages = [{ texture = "dialogue_glyphs", region = "engine/vram/dialogue_glyph_page", offset = [0x00000, 0x00000] }]
-slots = 2
+chunk = "dialogue_0_atlas"
 
 [[file.contents]]
 chunk = "palette"
 sha1 = "ae879f1d2b055de10a045a730b6f54c4d2ad6b5d"
 
 [[file.contents.palettes]]
-texture = "monitor_glow_page_1"
+texture = "lock_lamps_left"
 variant = "row_270"
 region = "engine/vram/effect_palettes"
 offset = [0x00000, 0x00009]
@@ -51,7 +48,7 @@ region = "engine/vram/effect_palettes"
 offset = [0x00130, 0x00009]
 
 [[file.contents.palettes]]
-texture = "monitor_glow_page_1"
+texture = "lock_lamps_left"
 variant = "row_271"
 region = "engine/vram/effect_palettes"
 offset = [0x00000, 0x0000A]
@@ -84,8 +81,8 @@ offset = [0x00130, 0x0000A]
 chunk = "image_2"
 sha1 = "2751dd04724884f1175fd9fbb2ef6dcff263d715"
 pages = [
-    { texture = "monitor_glow_page_1", region = "engine/vram/effect_sheet", offset = [0x000C0, 0x00000] },
-    { texture = "monitor_glow_page_2", region = "engine/vram/room_sprite_sheet", offset = [0x00000, 0x00000] },
+    { texture = "lock_lamps_left", region = "engine/vram/effect_sheet", offset = [0x000C0, 0x00000] },
+    { texture = "lock_lamps_right", region = "engine/vram/room_sprite_sheet", offset = [0x00000, 0x00000] },
 ]
 
 [[file.contents]]
@@ -118,15 +115,19 @@ resources = [
 sha1 = "0000774ccddd05b446721d8b10b4a0f8d7b719a3"
 
 [package]
-type = "room"
+type = "package"
 embedded = [
-    "acropolis_security_room_clut_05358",
-    "acropolis_security_room_clut_05558",
-    "acropolis_security_room_clut_05758",
-    "acropolis_security_room_clut_05958",
+    "rooms/akropolis/security_room/lamp_left_locked",
+    "rooms/akropolis/security_room/lamp_left_released",
+    "rooms/akropolis/security_room/lamp_right_locked",
+    "rooms/akropolis/security_room/lamp_right_released",
+    { asset = "rooms/item_box/model", offset = 0x07A00, size = 0x5E8, address = 0x80184FC0 },
 ]
-package_name = "acropolis_security_room"
+load = { slot = "room" }
+package_name = "akropolis_security_room"
 required = true
+requires = ["gameplay", "rooms/akropolis/stage"]
+slots = { security_monitors = "rooms/akropolis/security_room/security_monitors" }
 sha1 = "e0f563a5df845e45721bcf02a30ddee1283ed722"
 
 [package.entries]
@@ -181,7 +182,7 @@ sha1 = "0905dc17256d29eb02b9b75c342a8a94b0ff218b"
 type = "animation_bank"
 clips = { monitor_idle = "rooms/akropolis/security_room/swat_monitor_idle" }
 schema = "rooms/akropolis/security_room/swat_schema"
-symbol = "_gActor311900SwatAnimationSets"
+symbol = "_gSecurityMonitorsSwatAnimationSets"
 
 [dialogue_0]
 type = "cap"
@@ -664,7 +665,7 @@ sha1 = "ab6723512f370cb225524c36a5e4e84f35b0cb93"
 type = "animation_bank"
 clips = { walk = "characters/rupert/walk" }
 schema = "rooms/akropolis/security_room/rupert_schema"
-symbol = "_gActor311900RupertAnimationSets"
+symbol = "_gSecurityMonitorsRupertAnimationSets"
 
 [swat_schema]
 type = "animation_schema"
@@ -894,13 +895,37 @@ sha1 = "5afa5a3bf7cdb5c6e898f7350b464c6811ee8d95"
 type = "sound"
 sha1 = "0bb4f6a89d03f455cc4b274168d4b14b809a6b91"
 
-[dialogue_glyphs]
+[lock_lamps_left]
 type = "texture"
-bpp = 4
+bpp = 8
 height = 256
-no_palette = true
-variants = ["default"]
-width = 256
+variants = ["row_270", "row_271", "locked", "released"]
+width = 128
+
+[lock_lamps_left.palettes_from]
+locked = "rooms/akropolis/security_room/lamp_left_locked"
+released = "rooms/akropolis/security_room/lamp_left_released"
+
+[dialogue_0_atlas]
+type = "font_atlas"
+bpp = 4
+generated_by = "rooms/akropolis/security_room/dialogue_0"
+h = 256
+w = 64
+x = 384
+y = 0
+sha1 = "5360b94da1bb881aa13d21ca02fd7a13a0377e73"
+
+[lock_lamps_right]
+type = "texture"
+bpp = 8
+height = 256
+variants = ["locked", "released"]
+width = 128
+
+[lock_lamps_right.palettes_from]
+locked = "rooms/akropolis/security_room/lamp_right_locked"
+released = "rooms/akropolis/security_room/lamp_right_released"
 
 [view1_background]
 type = "bs"
@@ -939,16 +964,22 @@ type = "bs"
 sha1 = "7927558d027eaf61b49ecb46d41e6ba6d1bfacdb"
 
 [security_monitors]
-type = "pe2pkg"
+type = "package"
 embedded = [
     { asset = "characters/rupert/walk", offset = 0x0C150, size = 0x880, address = 0x8016DF70 },
     { name = "swat_monitor_idle", offset = 0x0C9D0, size = 0x3F8, address = 0x8016E7F0 },
     { name = "rupert_bank", offset = 0x0CDC8, size = 0xC, address = 0x8016EBE8 },
     { name = "swat_bank", offset = 0x0CDD4, size = 0xC, address = 0x8016EBF4 },
 ]
-package_name = "actor_311900"
+load = { slot = "actor_3" }
+package_name = "security_monitors"
 required = true
+requires = ["gameplay"]
 sha1 = "bf71732d3698d13e9081cbae18002b7a03b4e28b"
+
+[security_monitors.exports]
+rupert_tasks = { at = 0x0CDEC, symbol = "gSecurityMonitorsRupertTaskDesc" }
+swat_tasks = { at = 0x0CDE0, symbol = "gSecurityMonitorsSwatTaskDesc" }
 
 [swat_monitor_idle]
 type = "clip"
@@ -985,18 +1016,3 @@ sha1 = "48bc773ed8ee409cb95aeee0c0487832a62f8c61"
 [view16_background]
 type = "bs"
 sha1 = "43dd169de686e3afd1cd983faa1fed17ef2f73a1"
-
-[monitor_glow_page_1]
-type = "texture"
-bpp = 8
-height = 256
-variants = ["row_270", "row_271"]
-width = 128
-
-[monitor_glow_page_2]
-type = "texture"
-bpp = 8
-height = 256
-no_palette = true
-variants = ["default"]
-width = 128

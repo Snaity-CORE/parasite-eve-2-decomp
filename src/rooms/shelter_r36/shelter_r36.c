@@ -8,7 +8,7 @@
 
 #include "shelter_r36_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_143900.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/area.h"
@@ -470,11 +470,11 @@ static ActorTransform _gShelterR36ArrivalPlayerTransform = {
 
 /// Zero-body task recipes for warp 1's arrival scene and warp 2's movie ending.
 ///
-/// Indices 0 and 1 use priority 32 and receive zero spawn words. The controller
+/// Indices 0 and 1 use priority `TASK_PRIORITY_SCENE` and receive zero spawn words. The controller
 /// borrows this two-entry table; its callbacks require the room's loaded resources.
 static TaskDesc _gShelterR36ArrivalTasks[2] = {
-    { { { TASK_BODY_NONE, 32 } }, _shelterR36ArrivalSceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 32 } }, _shelterR36MovieEndingTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterR36ArrivalSceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterR36MovieEndingTask, { .value = 0 } },
 };
 
 /// CAP-paced first-arrival choreography for both meeting-progress branches.
@@ -579,8 +579,8 @@ static EvsCommand _gShelterR36ArrivalSkipScript[8] = {
 /// normal path and the separately supplied skip stream request the same reload.
 static EvsCommand _gShelterR36MovieLeadInScript[25] = {
     { EVENT_SCRIPT_OPCODE_REQUEST_SCENE_MUSIC, { .value = SHELTER_R36_MOVIE_LEAD_IN_MUSIC_EVENT }, { .value = 1 }, { .value = 1 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_R36_SECOND_WALKER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_R36_FIRST_WALKER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = 0 }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_R36_SECOND_WALKER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_R36_FIRST_WALKER_PLACEMENT }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _shelterR36SelectCapFile }, { .value = 1 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_CAP_CONTROL }, { .value = 0 }, { .value = CAP_CONTROL_MESSAGE_START }, { .value = 1 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_START_SECONDARY_FADE, { .value = 0 }, { .value = 1 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -645,8 +645,8 @@ static TaskMessageEntry _gShelterR36RoomMessages[5] = {
 };
 
 TaskDesc gShelterR36MovieTasks[2] = {
-    { { { TASK_BODY_NONE, 192 } }, shelterR36StartMovieTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, streamedScenePlay, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterR36StartMovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, streamedScenePlay, { .value = 0 } },
 };
 
 u8* gShelterR36RoomViewMaps[1] = {

@@ -237,9 +237,9 @@ static void _spriteEmitBatch(const SpriteSource* sourceElements, const SpriteBat
             spriteIndex++;
             spritePacket->packed.size = source->size.packed;
             texturePageSource++;
-            drawPacket->drawMode.tag = (drawPacket->drawMode.tag & packetLengthMask) | (*GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)source->depth << display->otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)) & linkAddressMask);
-            *GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)source->depth << display->otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)) =
-                (*GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)source->depth << display->otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)) & packetLengthMask) | ((u32)drawPacket & linkAddressMask);
+            drawPacket->drawMode.tag = (drawPacket->drawMode.tag & packetLengthMask) | (*GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(source->depth, display->otDepthShift) & linkAddressMask);
+            *GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(source->depth, display->otDepthShift) =
+                (*GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(source->depth, display->otDepthShift) & packetLengthMask) | ((u32)drawPacket & linkAddressMask);
             drawPacket++;
             source++;
         } while (spriteIndex < batch->spriteCount);
@@ -515,11 +515,6 @@ static s32 _spriteViewUsesImageStrips(void)
 /// Requires live view resources, sufficient packet storage and a 1024-tag OT.
 static void _spriteQueueViewDrawAreas(void)
 {
-    enum {
-        SPRITE_VIEW_WIDTH_PIXELS    = 320,
-        SPRITE_VIEW_HEIGHT_PIXELS   = 240,
-        SPRITE_VIEW_BUFFER_Y_STRIDE = 272
-    };
     RECT            rect;
     SpriteDrawArea* drawArea;
     DR_AREA*        drawAreaPacket;
@@ -530,21 +525,21 @@ static void _spriteQueueViewDrawAreas(void)
             // Apply the view clip before depth-sorted drawing begins.
             rect = drawArea->clipRect;
             if (gDisplayState.drawBuffer != 0) {
-                rect.y += SPRITE_VIEW_BUFFER_Y_STRIDE;
+                rect.y += DISPLAY_BUFFER_STRIDE_ROWS;
             }
             drawAreaPacket = _spriteCreateDrawAreaPacket(&rect);
             addPrim(&gGpuCurrentOt[GPU_ORDERING_TABLE_DEPTH_BYTE_MASK / sizeof(*gGpuCurrentOt)], drawAreaPacket);
             // Restore the full draw buffer at this record's sorting boundary.
             if (gDisplayState.drawBuffer != 0) {
-                rect.y = SPRITE_VIEW_BUFFER_Y_STRIDE;
+                rect.y = DISPLAY_BUFFER_STRIDE_ROWS;
             } else {
                 rect.y = 0;
             }
             rect.x         = 0;
-            rect.w         = SPRITE_VIEW_WIDTH_PIXELS;
-            rect.h         = SPRITE_VIEW_HEIGHT_PIXELS;
+            rect.w         = DISPLAY_SCREEN_WIDTH;
+            rect.h         = DISPLAY_SCREEN_HEIGHT;
             drawAreaPacket = _spriteCreateDrawAreaPacket(&rect);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)drawArea->restoreDepth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), drawAreaPacket);
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(drawArea->restoreDepth), drawAreaPacket);
         }
     }
 }

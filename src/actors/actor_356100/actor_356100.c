@@ -252,17 +252,15 @@ static void      _actor356100Task(Task* task);
 
 #include "../../shared/actor/actor_contacts.h"
 
-enum { ACTOR_356100_GRAB_PLAYER_REACTION = 7 };
-
 /// Horned Stranger attack damage and player reactions.
 ///
 /// The grab strike uses slot 0. Slots 0..3 use reaction 7; slots 4/5 use the
 /// ordinary reaction. No consumer establishes the roles of slots 1..5.
 static DamageAttack _gActor356100Attacks[6] = {
-    { 30, ACTOR_356100_GRAB_PLAYER_REACTION },
-    { 30, ACTOR_356100_GRAB_PLAYER_REACTION },
-    { 50, ACTOR_356100_GRAB_PLAYER_REACTION },
-    { 50, ACTOR_356100_GRAB_PLAYER_REACTION },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 40, GAME_ACTOR_REACTION_ORDINARY },
     { 40, GAME_ACTOR_REACTION_ORDINARY },
 };
@@ -411,7 +409,7 @@ static TaskMessageEntry _gActor356100Messages[7] = {
 /// value; its further purpose is unproven.
 static u16 _gActor356100CircleStepTotal = 0;
 
-TaskDesc gActor356100HornedStrangerTaskDesc = { { { TASK_BODY_TMD, 96 } }, _actor356100Task, { .model = &_gStrangerHornedBody } };
+TaskDesc gActor356100HornedStrangerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor356100Task, { .model = &_gStrangerHornedBody } };
 
 static SVECTOR ActorContact_ScratchPosition = { 0 };
 
@@ -1685,8 +1683,8 @@ static void _actor356100Sidestep(Task* actor)
         _actorPositionDeltaToPlayer(&gPlayerStatus, actor->extra.tmd->coords, &sidestep->delta);
         sidestep->turn = ratan2(scratchEnd[-1].delta.vx, sidestep->delta.vz);
         if (work->sidestepSide == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
                 work->sidestepSide = 1;
             } else {
                 work->sidestepSide = -1;
@@ -2112,8 +2110,8 @@ static void _actor356100Dormant(Task* actor)
     }
     // After the idle threshold, only a zero random nibble skips this tick.
     if (work->stateTimer > RANDOM_SKIP_AFTER_TICKS) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (!((gRandomLcgState >> 16) & RANDOM_SKIP_MASK)) {
+        RANDOM_LCG_ADVANCE();
+        if (!(RANDOM_LCG_DRAW() & RANDOM_SKIP_MASK)) {
             return;
         }
     } else {
@@ -2127,8 +2125,8 @@ static void _actor356100Dormant(Task* actor)
     }
     _actor356100UpdateAnimation(actor);
     if (work->animId == ACTOR_356100_ANIM_DORMANT && (work->rig.slots[1].status.fields.flags & ANIMATION_SLOT_FOLLOWED_JUMP)) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             work->animId      = ACTOR_356100_ANIM_DORMANT_FIDGET;
             work->animRequest = ACTOR_356100_ANIM_REQUEST_BLEND;
             _actor356100UpdateAnimation(actor);
@@ -2184,7 +2182,7 @@ static void _actor356100ScriptedDormantState(Task* task)
         work->lookYawTarget           = 0;
         work->stateTimer              = 0;
     } else if (work->stateTimer == 0) {
-        soundKey = ((enemy->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT;
+        soundKey = ((enemy->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT;
         pan      = (s8)worldCoordGetOriginAudioPan(task->extra.tmd->coords);
         sndEvtRequestScriptStart(soundKey, pan, (s8)worldCoordGetOriginAudioDepth(task->extra.tmd->coords));
         work->stateTimer = 1;
@@ -2202,7 +2200,7 @@ static void _actor356100ScriptedDormantState(Task* task)
     playerOffset       = &toPlayer;
     _actorPositionDeltaToLivePlayer(rootCoord, playerOffset);
     if (!_actorRangeOutsideRadiusXZ(playerOffset, ACTOR_356100_SCRIPTED_WAKE_DISTANCE)) {
-        sndEvtRequestScriptStop(SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
+        sndEvtRequestScriptStop(SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
         work->state = ACTOR_356100_STATE_ALERT;
     }
 }
@@ -3156,8 +3154,8 @@ static void _actor356100Down(Task* actor)
     work  = actor->work;
     enemy = actor->spawnArg2.pointer;
     if (work->stateEntered != 0) {
-        gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->stateTimer = work->downFramesBase + ((gRandomLcgState >> 16) & EXTRA_DOWN_TICKS_MASK);
+        RANDOM_LCG_ADVANCE();
+        work->stateTimer = work->downFramesBase + (RANDOM_LCG_DRAW() & EXTRA_DOWN_TICKS_MASK);
     }
     if ((s16)--work->stateTimer < 0) {
         switch (work->animId) {

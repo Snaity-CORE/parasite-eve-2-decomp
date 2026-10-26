@@ -688,7 +688,6 @@ enum {
     ACTOR_00400_DISCHARGE_ATTACK_INDEX = 0,
     ACTOR_00400_SHOT_ATTACK_INDEX      = 1,
     ACTOR_00400_ATTACK_COUNT           = 2,
-    ACTOR_00400_ATTACK_REACTION        = 5 // Three player hit flashes, with no status effect
 };
 
 /// Base attacks of the stranded trunk discharge and the independently flying shot.
@@ -697,8 +696,8 @@ enum {
 /// shared parameters; each shot packs row 1 directly. Storage stays loaded
 /// until every body carrying one of these keys has been unlinked.
 static DamageAttack _gActor00400Attacks[ACTOR_00400_ATTACK_COUNT] = {
-    [ACTOR_00400_DISCHARGE_ATTACK_INDEX] = { .power = 18, .reaction = ACTOR_00400_ATTACK_REACTION },
-    [ACTOR_00400_SHOT_ATTACK_INDEX]      = { .power = 24, .reaction = ACTOR_00400_ATTACK_REACTION },
+    [ACTOR_00400_DISCHARGE_ATTACK_INDEX] = { .power = 18, .reaction = GAME_ACTOR_REACTION_HIT_FLASHES },
+    [ACTOR_00400_SHOT_ATTACK_INDEX]      = { .power = 24, .reaction = GAME_ACTOR_REACTION_HIT_FLASHES },
 };
 
 /// Shared Bog Diver health, battle rewards and incoming-hit reaction parameters.
@@ -754,12 +753,10 @@ static TaskMessageEntry _gActor00400Messages[3] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { ACTOR_00400_TASK_PRIORITY = 96 };
-
 TaskDesc gActor00400Tasks[ACTOR_00400_TASK_DESCRIPTOR_COUNT] = {
-    [ACTOR_00400_BODY_TASK_INDEX]  = { { { TASK_BODY_TMD, ACTOR_00400_TASK_PRIORITY } }, _actor00400BodyTask, { .model = &_gDiverBody } },
-    [ACTOR_00400_SHOT_TASK_INDEX]  = { { { TASK_BODY_COORD, ACTOR_00400_TASK_PRIORITY } }, _actor00400ShotTask, { .value = 0 } },
-    [ACTOR_00400_STAIN_DESCRIPTOR] = { { { TASK_BODY_COORD, ACTOR_00400_TASK_PRIORITY } }, _actor00400GroundStainTask, { .value = 0 } },
+    [ACTOR_00400_BODY_TASK_INDEX]  = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor00400BodyTask, { .model = &_gDiverBody } },
+    [ACTOR_00400_SHOT_TASK_INDEX]  = { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _actor00400ShotTask, { .value = 0 } },
+    [ACTOR_00400_STAIN_DESCRIPTOR] = { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _actor00400GroundStainTask, { .value = 0 } },
 };
 
 /// Indices into the Bog Diver body animation bank; playback requires 1..19.
@@ -1669,8 +1666,8 @@ static void _actor00400SpawnBodyChunks(Task* task)
     if (leftArmEffect != NULL) {
         _actor00400BindChunkTexture(task, leftArmEffect);
     }
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    if ((gRandomLcgState >> 16) & 1) {
+    RANDOM_LCG_ADVANCE();
+    if (RANDOM_LCG_DRAW() & 1) {
         gTaskBank2Descs[TASK_BANK2_BURST_MODEL_PART_SLOT].data.model = &_gDiverBurstLegRight;
         randomLimbEffect                                             = effectSpawn(EFFECT_BODY_CHUNK, &task->extra.tmd->coords[8], ACTOR_00400_CHUNK_PARTICLE_SIZE, NULL);
     } else {
@@ -2097,7 +2094,7 @@ static inline void _actor00400QueueGroundStain(const _Actor00400GroundStainScrat
     quad->tpage = getTPage(ACTOR_00400_GROUND_STAIN_TEXTURE_4_BIT, GPU_BLEND_SUBTRACT, 512, 0);
     quad->clut  = getClut(48, 266);
     setRGB0(quad, intensity >> 1, intensity, intensity);
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), quad);
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth), quad);
 }
 
 /// Queues a subtractive blob-texture quad for the diver's ground stain.
@@ -3261,7 +3258,7 @@ static void _actor00400SwimDecide(Task* task)
     work = task->work;
     if ((_actor00400ApplyHitReaction(task) << 0x10) == 0) {
         if (work->targetDistance < ACTOR_00400_SWIM_ATTACK_DISTANCE && (u32)(work->targetBearing - ACTOR_00400_SWIM_ATTACK_EXCLUDED_START) >= ACTOR_00400_SWIM_ATTACK_EXCLUDED_WIDTH) {
-            randomValue     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomValue     = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = randomValue;
             if ((randomValue >> 16) & 1) {
                 attackWork                                              = task->work;
@@ -4029,10 +4026,10 @@ static void _actor00400SwimStart(Task* task)
     work      = task->work;
     rootCoord = task->extra.tmd->coords;
     sceneAcquireBattleRef(0);
-    gRandomLcgState          = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->bobPhase           = gRandomLcgState >> 16;
-    gRandomLcgState          = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->frameCount         = gRandomLcgState >> 16;
+    RANDOM_LCG_ADVANCE();
+    work->bobPhase = RANDOM_LCG_DRAW();
+    RANDOM_LCG_ADVANCE();
+    work->frameCount         = RANDOM_LCG_DRAW();
     requestWork              = task->work;
     requestWork->animStep    = ANIMATION_RATE_ONE;
     requestWork->animClip    = ACTOR_00400_ANIM_SURFACED;
@@ -4897,7 +4894,7 @@ static void _actor00400WoundedGroundIdleEnter(Task* task)
     u32              randomValue;
 
     work            = task->work;
-    randomValue     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    randomValue     = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState = randomValue;
     requestWork     = task->work;
     _diverRequestClipBlend(requestWork, ACTOR_00400_ANIM_STRANDED_STATUS_HOLD_ENTER,
@@ -6073,7 +6070,7 @@ static void _actor00400WoundedFloatIdleEnter(Task* task)
     u32              randomValue;
 
     work        = task->work;
-    randomValue = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    randomValue = RANDOM_LCG_NEXT(gRandomLcgState);
     work->goalY = work->waterLevel;
     requestWork = task->work;
     _diverRequestClipBlend(requestWork, ACTOR_00400_ANIM_SWIM_STATUS_HOLD_LOOP,

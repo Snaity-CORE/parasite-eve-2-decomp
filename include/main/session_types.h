@@ -216,16 +216,34 @@ enum {
     GAME_ACTOR_COLLISION_DISABLE_REQUEST_SHIFT = 3
 };
 
-/// Proven pending-reaction IDs; 4..7 select separate presentation paths whose identities remain unproven.
+/// Pending-reaction IDs: the player's hit reaction an attack names (`DamageAttack::reaction`). 4 has no presentation of its
+/// own; 5, 6 and 7 are presentations without a status.
 enum {
-    GAME_ACTOR_REACTION_ORDINARY  = 0,
-    GAME_ACTOR_REACTION_DARKNESS  = 1,
-    GAME_ACTOR_REACTION_PARALYSIS = 2,
-    GAME_ACTOR_REACTION_POISON    = 3,
-    GAME_ACTOR_REACTION_SILENCE   = 8,
-    GAME_ACTOR_REACTION_STATUS20  = 9,
-    GAME_ACTOR_REACTION_CONFUSION = 10,
-    GAME_ACTOR_REACTION_BERSERKER = 11
+    GAME_ACTOR_REACTION_ORDINARY        = 0,
+    GAME_ACTOR_REACTION_DARKNESS        = 1,
+    GAME_ACTOR_REACTION_PARALYSIS       = 2,
+    GAME_ACTOR_REACTION_POISON          = 3,
+    GAME_ACTOR_REACTION_HIT_FLASHES     = 5, // Three descending-part flashes
+    GAME_ACTOR_REACTION_BODY_BLAST      = 6,
+    GAME_ACTOR_REACTION_SPARK_AND_PUFFS = 7,
+    GAME_ACTOR_REACTION_SILENCE         = 8,
+    GAME_ACTOR_REACTION_STATUS20        = 9,
+    GAME_ACTOR_REACTION_CONFUSION       = 10,
+    GAME_ACTOR_REACTION_BERSERKER       = 11
+};
+
+/// What `GameActor::movementMode` selects: the speed an actor moves along its facing, a divisor of its forward axis
+/// (gameplay's `_gPlayerActorMovementSpeedDivisors`: 112, 170, 50, 128, 248, 48, 170). The player walks, backs away,
+/// runs - and moves at running speed when aiming forward - or circles a locked target; the companions also use 5..7.
+enum {
+    GAME_ACTOR_MOVEMENT_STOPPED        = 0,
+    GAME_ACTOR_MOVEMENT_WALK           = 1,
+    GAME_ACTOR_MOVEMENT_BACKWARD_WALK  = 2,
+    GAME_ACTOR_MOVEMENT_RUN            = 3,
+    GAME_ACTOR_MOVEMENT_CIRCLE         = 4,
+    GAME_ACTOR_MOVEMENT_COMPANION_WALK = 5,
+    GAME_ACTOR_MOVEMENT_COMPANION_RUN  = 6,
+    GAME_ACTOR_MOVEMENT_SLOW_WALK      = 7,
 };
 
 /// Work owned by the player or companion task, including its embedded collision and animation state.
@@ -324,7 +342,7 @@ typedef struct {
 
     u16 mode;                                                                                          // Top-level dispatch (0 normal, 1 damage reaction, 2 scripted)
     u16 state;                                                                                         // Mode/companion-specific state-table index; valid domain depends on its dispatcher
-    s16 movementMode;                                                                                  // Movement-speed/behavior table selector (0 stopped; player 1..4, companions also 5..7)
+    s16 movementMode;                                                                                  // `GAME_ACTOR_MOVEMENT_*`
     u16 turnRateIndex;                                                                                 // Turn-rate table selector (0 disables turning)
     u16 animationState;                                                                                // Cue/end-driven animation controller selector (observed 0..10)
     u16 statePhase;                                                                                    // Progress within the selected state; cue/end handlers advance it

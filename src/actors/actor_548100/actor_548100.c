@@ -109,16 +109,13 @@ enum {
 
 /// Panel packet depths and pixel coordinates; wires use a two-pixel origin bias.
 enum {
-    ACTOR_548100_OT_WIRES             = 0x3FC,
-    ACTOR_548100_OT_PANEL_PIECES      = 0x3FE,
-    ACTOR_548100_WIRE_ORIGIN_X        = 158,
-    ACTOR_548100_WIRE_ORIGIN_Y        = 118,
-    ACTOR_548100_SCREEN_CENTER_X      = 160,
-    ACTOR_548100_SCREEN_CENTER_Y      = 120,
-    ACTOR_548100_SCREEN_WIDTH         = 320,
-    ACTOR_548100_SCREEN_HEIGHT        = 240,
-    ACTOR_548100_DRAW_BUFFER_STRIDE_Y = 272,
-    ACTOR_548100_PANEL_TEXTURE_PAGE   = 0x116, // 15-bit texels at VRAM (384, 256)
+    ACTOR_548100_OT_WIRES           = 0x3FC,
+    ACTOR_548100_OT_PANEL_PIECES    = 0x3FE,
+    ACTOR_548100_WIRE_ORIGIN_X      = 158,
+    ACTOR_548100_WIRE_ORIGIN_Y      = 118,
+    ACTOR_548100_SCREEN_CENTER_X    = 160,
+    ACTOR_548100_SCREEN_CENTER_Y    = 120,
+    ACTOR_548100_PANEL_TEXTURE_PAGE = 0x116, // 15-bit texels at VRAM (384, 256)
 };
 
 /// Pulse level at which a wire colour equals its authored RGB bytes.
@@ -137,11 +134,10 @@ enum {
     ACTOR_548100_CHOICE_GATE_LOCKS  = 9,
 };
 
-/// Pulse phases stored in a byte, and the exported panel task's scheduling priority.
+/// Pulse phases stored in a byte.
 enum {
-    ACTOR_548100_PULSE_RISING        = 0,
-    ACTOR_548100_PULSE_FALLING       = 1,
-    ACTOR_548100_PANEL_TASK_PRIORITY = 192,
+    ACTOR_548100_PULSE_RISING  = 0,
+    ACTOR_548100_PULSE_FALLING = 1,
 };
 
 /// Publishes a route node, skipping a gap marker when the caller already selected that branch.
@@ -356,14 +352,12 @@ static const char _gActor548100StopWireLabel[5];
 static const char _gActor548100FlowWireLabel[5];
 static void       _actor548100PanelTask(Task* task);
 
-enum { ACTOR_548100_PANEL_PROMPT_PRIORITY = 192 };
-
 /// Action-cursor child task recipe for the mine power panel.
 ///
 /// The child has no automatic task body and runs at priority 192. The panel
 /// retains its borrowed handle until requesting completion on exit; cursor work
 /// and presentation are owned by the spawned prompt task.
-static TaskDesc _gActor548100PanelPromptTaskDesc = { { { TASK_BODY_NONE, ACTOR_548100_PANEL_PROMPT_PRIORITY } }, _actor548100PromptTask, { .value = 0 } };
+static TaskDesc _gActor548100PanelPromptTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor548100PromptTask, { .value = 0 } };
 
 /// Forwarded key-item-use requests handled by the mine power panel.
 ///
@@ -615,7 +609,7 @@ static _Actor548100ColorRow _gActor548100WireColorRows[3] = {
     { { &_gActor548100ShortBaseRed, &_gActor548100ShortBaseGreen, _gActor548100ShortBaseBlueStorage }, _gActor548100ShortWireLabel },
 };
 
-TaskDesc gActor548100PanelTaskDesc = { { { TASK_BODY_NONE, ACTOR_548100_PANEL_TASK_PRIORITY } }, _actor548100PanelTask, { .value = 0 } };
+TaskDesc gActor548100PanelTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor548100PanelTask, { .value = 0 } };
 
 /// Diagram node positions in pixels from the screen's top-left corner.
 ///
@@ -1775,8 +1769,8 @@ static void _actor548100DrawEdge(const _Actor548100Edge* edge)
             fromY          = _gActor548100DiagramNodes[fromNode].vy - ACTOR_548100_WIRE_ORIGIN_Y;
             toX            = _gActor548100DiagramNodes[toNode].vx - ACTOR_548100_WIRE_ORIGIN_X;
             toY            = _gActor548100DiagramNodes[toNode].vy - ACTOR_548100_WIRE_ORIGIN_Y;
-            setRECT(&rect, 0, 0, ACTOR_548100_SCREEN_WIDTH, ACTOR_548100_SCREEN_HEIGHT);
-            rect.y += gDisplayState.drawBuffer * ACTOR_548100_DRAW_BUFFER_STRIDE_Y;
+            setRECT(&rect, 0, 0, DISPLAY_SCREEN_WIDTH, DISPLAY_SCREEN_HEIGHT);
+            rect.y += gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
             SetDrawArea(area, &rect);
             addPrim(&gGpuCurrentOt[ACTOR_548100_OT_WIRES], area);
             if (edge->vertical == 0) {
@@ -1789,20 +1783,20 @@ static void _actor548100DrawEdge(const _Actor548100Edge* edge)
                 area           = gGpuPrimCursor;
                 gGpuPrimCursor = area + 1;
                 if (fromX < toX) {
-                    setRECT(&rect, 0, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_X, ACTOR_548100_SCREEN_HEIGHT);
+                    setRECT(&rect, 0, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_X, DISPLAY_SCREEN_HEIGHT);
                 } else {
-                    setRECT(&rect, splitCoord + ACTOR_548100_SCREEN_CENTER_X, 0, ACTOR_548100_SCREEN_CENTER_X - splitCoord, ACTOR_548100_SCREEN_HEIGHT);
+                    setRECT(&rect, splitCoord + ACTOR_548100_SCREEN_CENTER_X, 0, ACTOR_548100_SCREEN_CENTER_X - splitCoord, DISPLAY_SCREEN_HEIGHT);
                 }
-                rect.y += gDisplayState.drawBuffer * ACTOR_548100_DRAW_BUFFER_STRIDE_Y;
+                rect.y += gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
                 SetDrawArea(area, &rect);
                 addPrim(&gGpuCurrentOt[ACTOR_548100_OT_WIRES], area);
                 _actor548100DrawWire(fromNode, toNode, _gActor548100StopRed, _gActor548100StopGreen, _gActor548100StopBlue);
                 area           = gGpuPrimCursor;
                 gGpuPrimCursor = area + 1;
                 if (fromX < toX) {
-                    setRECT(&rect, splitCoord + ACTOR_548100_SCREEN_CENTER_X, 0, ACTOR_548100_SCREEN_CENTER_X - splitCoord, ACTOR_548100_SCREEN_HEIGHT);
+                    setRECT(&rect, splitCoord + ACTOR_548100_SCREEN_CENTER_X, 0, ACTOR_548100_SCREEN_CENTER_X - splitCoord, DISPLAY_SCREEN_HEIGHT);
                 } else {
-                    setRECT(&rect, 0, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_X, ACTOR_548100_SCREEN_HEIGHT);
+                    setRECT(&rect, 0, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_X, DISPLAY_SCREEN_HEIGHT);
                 }
             } else {
                 direction = 1;
@@ -1814,23 +1808,23 @@ static void _actor548100DrawEdge(const _Actor548100Edge* edge)
                 area           = gGpuPrimCursor;
                 gGpuPrimCursor = area + 1;
                 if (fromY < toY) {
-                    setRECT(&rect, 0, 0, ACTOR_548100_SCREEN_WIDTH, splitCoord + ACTOR_548100_SCREEN_CENTER_Y);
+                    setRECT(&rect, 0, 0, DISPLAY_SCREEN_WIDTH, splitCoord + ACTOR_548100_SCREEN_CENTER_Y);
                 } else {
-                    setRECT(&rect, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_Y, ACTOR_548100_SCREEN_WIDTH, ACTOR_548100_SCREEN_CENTER_Y - splitCoord);
+                    setRECT(&rect, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_Y, DISPLAY_SCREEN_WIDTH, ACTOR_548100_SCREEN_CENTER_Y - splitCoord);
                 }
-                rect.y += gDisplayState.drawBuffer * ACTOR_548100_DRAW_BUFFER_STRIDE_Y;
+                rect.y += gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
                 SetDrawArea(area, &rect);
                 addPrim(&gGpuCurrentOt[ACTOR_548100_OT_WIRES], area);
                 _actor548100DrawWire(fromNode, toNode, _gActor548100StopRed, _gActor548100StopGreen, _gActor548100StopBlue);
                 area           = gGpuPrimCursor;
                 gGpuPrimCursor = area + 1;
                 if (fromY < toY) {
-                    setRECT(&rect, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_Y, ACTOR_548100_SCREEN_WIDTH, ACTOR_548100_SCREEN_CENTER_Y - splitCoord);
+                    setRECT(&rect, 0, splitCoord + ACTOR_548100_SCREEN_CENTER_Y, DISPLAY_SCREEN_WIDTH, ACTOR_548100_SCREEN_CENTER_Y - splitCoord);
                 } else {
-                    setRECT(&rect, 0, 0, ACTOR_548100_SCREEN_WIDTH, splitCoord + ACTOR_548100_SCREEN_CENTER_Y);
+                    setRECT(&rect, 0, 0, DISPLAY_SCREEN_WIDTH, splitCoord + ACTOR_548100_SCREEN_CENTER_Y);
                 }
             }
-            rect.y += gDisplayState.drawBuffer * ACTOR_548100_DRAW_BUFFER_STRIDE_Y;
+            rect.y += gDisplayState.drawBuffer * DISPLAY_BUFFER_STRIDE_ROWS;
             SetDrawArea(area, &rect);
             addPrim(&gGpuCurrentOt[ACTOR_548100_OT_WIRES], area);
             break;

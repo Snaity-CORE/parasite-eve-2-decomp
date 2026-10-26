@@ -52,6 +52,8 @@
 
 #include "rooms/room_common.h"
 
+#include "assets/engine/animation/player_schema.h"
+
 static void _screenFadeInTask(Task* task);
 /// Binds the shared fade-in declaration and definition to this file's private task.
 ///
@@ -144,11 +146,9 @@ const TaskMessageEntry gDryfieldWarehouseRoomMessages[3] SECTION(".data") = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { DRYFIELD_WAREHOUSE_ROOM_TASK_PRIORITY = 32 };
-
 TaskDesc gDryfieldWarehouseRoomTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_WAREHOUSE_ROOM_TASK_PRIORITY } }, dryfieldWarehouseEventTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_WAREHOUSE_ROOM_TASK_PRIORITY } }, dryfieldWarehouseAmbienceTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, dryfieldWarehouseEventTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, dryfieldWarehouseAmbienceTask, { .value = 0 } },
 };
 
 static AnimationPackedPose _gDryfieldWarehouseAnimation02260Bank1[2] = {
@@ -244,9 +244,9 @@ static EvsCommand _gDryfieldWarehouseCutsceneSkipScript[11] = {
 };
 
 TaskDesc gDryfieldWarehouseCutsceneTaskDescs[3] = {
-    { { { TASK_BODY_NONE, 192 } }, _dryfieldWarehouseCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _dryfieldWarehouseFadeOutTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _screenFadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldWarehouseCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldWarehouseFadeOutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeInTask, { .value = 0 } },
 };
 
 SVECTOR gGlowPrismCorners[16] = {
@@ -672,10 +672,6 @@ static void _dryfieldWarehouseDrawLightBeam(const GfxCoord* coord, s16 firstRing
 /// base 34, beyond the declared bank table; that path's reachability is unproven.
 static inline void _dryfieldWarehouseRestoreSkippedPlayer(_DryfieldWarehouseCutsceneWork* work)
 {
-    enum { CHARACTER_WITH_FIRST_WEAPON_BANKS = 1,
-           FIRST_WEAPON_BANK_BASE            = 1,
-           OTHER_WEAPON_BANK_BASE            = 0x22,
-           WEAPON_RESTORE_ANIMATION          = 1 };
     AnimationPlayRequest animationRequest;
     s32                  weaponId;
     s32                  animationBankIndex;
@@ -686,9 +682,9 @@ static inline void _dryfieldWarehouseRestoreSkippedPlayer(_DryfieldWarehouseCuts
         playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);
     }
     weaponId                              = gPlayerStatus.weapon;
-    animationBankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == CHARACTER_WITH_FIRST_WEAPON_BANKS) ? weaponId + FIRST_WEAPON_BANK_BASE : weaponId + OTHER_WEAPON_BANK_BASE;
+    animationBankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     animationRequest.source.index         = animationBankIndex;
-    animationRequest.animationId          = WEAPON_RESTORE_ANIMATION;
+    animationRequest.animationId          = PLAYER_ANIMATION_IDLE;
     animationRequest.blend                = ANIMATION_BLEND_RESET;
     animationRequest.blendFrames          = 0;
     animationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_ENABLE;
@@ -752,22 +748,21 @@ static void _dryfieldWarehouseSkipCutscene(s32 phase)
 /// Task-spawn and effect-allocation failures do not stop command progression.
 static void _dryfieldWarehouseExecuteCutsceneCommand(Task* task)
 {
-    enum { DRYFIELD_WAREHOUSE_COMMAND_STEP_BEGIN          = 0,
-           DRYFIELD_WAREHOUSE_COMMAND_STEP_RUN            = 1,
-           DRYFIELD_WAREHOUSE_COMMAND_STEP_ROOM_REFRESHED = 2,
-           DRYFIELD_WAREHOUSE_TASK_FADE_OUT               = 1,
-           DRYFIELD_WAREHOUSE_TASK_FADE_IN                = 2,
-           DRYFIELD_WAREHOUSE_FADE_INTENSITY_STEP         = 8,
-           DRYFIELD_WAREHOUSE_PLAYER_SCENE_CLIP           = 1,
-           DRYFIELD_WAREHOUSE_PRIMARY_CHARACTER           = 1,
-           DRYFIELD_WAREHOUSE_PRIMARY_WEAPON_BANK_BASE    = 1,
-           DRYFIELD_WAREHOUSE_OTHER_WEAPON_BANK_BASE      = 34,
-           DRYFIELD_WAREHOUSE_FINAL_ROOM                  = 2,
-           DRYFIELD_WAREHOUSE_ROOM_SWITCH_SOUND_FRAME     = 10,
-           DRYFIELD_WAREHOUSE_DUST_PERIOD_MASK            = 8 - 1,
-           // Low 12 bits: size 768; bits 12..15: two ticks per texture frame;
-           // sign bit: permit randomized child puffs.
-           DRYFIELD_WAREHOUSE_DUST_SPAWN_ARGUMENT = 0x80002300 };
+    enum {
+        DRYFIELD_WAREHOUSE_COMMAND_STEP_BEGIN          = 0,
+        DRYFIELD_WAREHOUSE_COMMAND_STEP_RUN            = 1,
+        DRYFIELD_WAREHOUSE_COMMAND_STEP_ROOM_REFRESHED = 2,
+        DRYFIELD_WAREHOUSE_TASK_FADE_OUT               = 1,
+        DRYFIELD_WAREHOUSE_TASK_FADE_IN                = 2,
+        DRYFIELD_WAREHOUSE_FADE_INTENSITY_STEP         = 8,
+        DRYFIELD_WAREHOUSE_PLAYER_SCENE_CLIP           = 1,
+        DRYFIELD_WAREHOUSE_FINAL_ROOM                  = 2,
+        DRYFIELD_WAREHOUSE_ROOM_SWITCH_SOUND_FRAME     = 10,
+        DRYFIELD_WAREHOUSE_DUST_PERIOD_MASK            = 8 - 1,
+        // Low 12 bits: size 768; bits 12..15: two ticks per texture frame;
+        // sign bit: permit randomized child puffs.
+        DRYFIELD_WAREHOUSE_DUST_SPAWN_ARGUMENT = 0x80002300,
+    };
     _DryfieldWarehouseCutsceneWork* work;
     _DryfieldWarehouseCutsceneWork* publishedWork;
     _DryfieldWarehouseCutsceneWork* animationWork;
@@ -788,23 +783,23 @@ static void _dryfieldWarehouseExecuteCutsceneCommand(Task* task)
     /// character/bank/clip constants, live player/save and closing transform.
     /// Equipment restoration clears its pending flag before scripted hold resumes.
     /// The two dispatches borrow their payloads synchronously, with collision enabled.
-#define DRYFIELD_WAREHOUSE_RESTORE_COMMAND_PLAYER(cutsceneWork, animationRequest, weaponSlot, bankIndex)                                                                                                                                                                  \
-    {                                                                                                                                                                                                                                                                     \
-        if ((cutsceneWork)->playerEffectsSuppressed != 0) {                                                                                                                                                                                                               \
-            playerActorRestoreEquipment();                                                                                                                                                                                                                                \
-            (cutsceneWork)->playerEffectsSuppressed = 0;                                                                                                                                                                                                                  \
-            playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);                                                                                                                                                                                              \
-        }                                                                                                                                                                                                                                                                 \
-        (weaponSlot)                            = gPlayerStatus.weapon;                                                                                                                                                                                                   \
-        (bankIndex)                             = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_WAREHOUSE_PRIMARY_CHARACTER) ? (weaponSlot) + DRYFIELD_WAREHOUSE_PRIMARY_WEAPON_BANK_BASE : (weaponSlot) + DRYFIELD_WAREHOUSE_OTHER_WEAPON_BANK_BASE; \
-        (animationRequest).source.index         = (bankIndex);                                                                                                                                                                                                            \
-        (animationRequest).animationId          = DRYFIELD_WAREHOUSE_PLAYER_SCENE_CLIP;                                                                                                                                                                                   \
-        (animationRequest).blend                = ANIMATION_BLEND_RESET;                                                                                                                                                                                                  \
-        (animationRequest).blendFrames          = 0;                                                                                                                                                                                                                      \
-        (animationRequest).enableWorldCollision = ANIMATION_WORLD_COLLISION_ENABLE;                                                                                                                                                                                       \
-                                                                                                                                                                                                                                                                          \
-        TASK_MESSAGE_DISPATCH_POINTER((cutsceneWork)->player, ANIMATION_MESSAGE_PLAY, &(animationRequest), 0);                                                                                                                                                            \
-        TASK_MESSAGE_DISPATCH_POINTER((cutsceneWork)->player, GAME_ACTOR_MESSAGE_PLACE, &_gDryfieldWarehouseClosingPlayerTransform, 0);                                                                                                                                   \
+#define DRYFIELD_WAREHOUSE_RESTORE_COMMAND_PLAYER(cutsceneWork, animationRequest, weaponSlot, bankIndex)                                \
+    {                                                                                                                                   \
+        if ((cutsceneWork)->playerEffectsSuppressed != 0) {                                                                             \
+            playerActorRestoreEquipment();                                                                                              \
+            (cutsceneWork)->playerEffectsSuppressed = 0;                                                                                \
+            playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);                                                            \
+        }                                                                                                                               \
+        (weaponSlot)                            = gPlayerStatus.weapon;                                                                 \
+        (bankIndex)                             = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponSlot);                                           \
+        (animationRequest).source.index         = (bankIndex);                                                                          \
+        (animationRequest).animationId          = PLAYER_ANIMATION_IDLE;                                                                \
+        (animationRequest).blend                = ANIMATION_BLEND_RESET;                                                                \
+        (animationRequest).blendFrames          = 0;                                                                                    \
+        (animationRequest).enableWorldCollision = ANIMATION_WORLD_COLLISION_ENABLE;                                                     \
+                                                                                                                                        \
+        TASK_MESSAGE_DISPATCH_POINTER((cutsceneWork)->player, ANIMATION_MESSAGE_PLAY, &(animationRequest), 0);                          \
+        TASK_MESSAGE_DISPATCH_POINTER((cutsceneWork)->player, GAME_ACTOR_MESSAGE_PLACE, &_gDryfieldWarehouseClosingPlayerTransform, 0); \
     }
 
     work = task->work;
@@ -945,14 +940,10 @@ static void _dryfieldWarehouseExecuteCutsceneCommand(Task* task)
 static void _dryfieldWarehouseCutsceneTask(Task* task)
 {
     enum {
-        DRYFIELD_WAREHOUSE_SCENE_INITIALIZE           = 0,
-        DRYFIELD_WAREHOUSE_SCENE_START_SCRIPT         = 1,
-        DRYFIELD_WAREHOUSE_SCENE_EXECUTE              = 2,
-        DRYFIELD_WAREHOUSE_PRIMARY_CHARACTER          = 1,
-        DRYFIELD_WAREHOUSE_PRIMARY_WEAPON_BANK_BASE   = 1,
-        DRYFIELD_WAREHOUSE_ALTERNATE_WEAPON_BANK_BASE = 34,
-        DRYFIELD_WAREHOUSE_PLAYER_IDLE_ANIMATION      = 1,
-        DRYFIELD_WAREHOUSE_PLAYER_TICK_HOLD           = 1,
+        DRYFIELD_WAREHOUSE_SCENE_INITIALIZE   = 0,
+        DRYFIELD_WAREHOUSE_SCENE_START_SCRIPT = 1,
+        DRYFIELD_WAREHOUSE_SCENE_EXECUTE      = 2,
+        DRYFIELD_WAREHOUSE_PLAYER_TICK_HOLD   = 1,
     };
     _DryfieldWarehouseCutsceneWork* work;
     AnimationPlayRequest            animationRequest;
@@ -964,19 +955,17 @@ static void _dryfieldWarehouseCutsceneTask(Task* task)
 /// Captures weaponId, bankIndex, animationRequest and this function's bank/clip
 /// constants. The stack request is borrowed only through synchronous dispatch.
 /// Takes no arguments; use inside a braced block with the player and bank live.
-#define DRYFIELD_WAREHOUSE_PLAY_CUTSCENE_IDLE_ANIMATION()                                                                                      \
-    {                                                                                                                                          \
-        weaponId = gPlayerStatus.weapon;                                                                                                       \
-        /* Dispatch borrows this request; playback borrows the selected bank. */                                                               \
-        bankIndex                             = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_WAREHOUSE_PRIMARY_CHARACTER) \
-                                                    ? weaponId + DRYFIELD_WAREHOUSE_PRIMARY_WEAPON_BANK_BASE                                   \
-                                                    : weaponId + DRYFIELD_WAREHOUSE_ALTERNATE_WEAPON_BANK_BASE;                                \
-        animationRequest.source.index         = bankIndex;                                                                                     \
-        animationRequest.animationId          = DRYFIELD_WAREHOUSE_PLAYER_IDLE_ANIMATION;                                                      \
-        animationRequest.blend                = ANIMATION_BLEND_RESET;                                                                         \
-        animationRequest.blendFrames          = 0;                                                                                             \
-        animationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;                                                             \
-        TASK_MESSAGE_DISPATCH_POINTER(gameGetTaskSlot(GAME_TASK_SLOT_PLAYER), ANIMATION_MESSAGE_PLAY, &animationRequest, 0);                   \
+#define DRYFIELD_WAREHOUSE_PLAY_CUTSCENE_IDLE_ANIMATION()                                                                    \
+    {                                                                                                                        \
+        weaponId = gPlayerStatus.weapon;                                                                                     \
+        /* Dispatch borrows this request; playback borrows the selected bank. */                                             \
+        bankIndex                             = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);                                    \
+        animationRequest.source.index         = bankIndex;                                                                   \
+        animationRequest.animationId          = PLAYER_ANIMATION_IDLE;                                                       \
+        animationRequest.blend                = ANIMATION_BLEND_RESET;                                                       \
+        animationRequest.blendFrames          = 0;                                                                           \
+        animationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;                                           \
+        TASK_MESSAGE_DISPATCH_POINTER(gameGetTaskSlot(GAME_TASK_SLOT_PLAYER), ANIMATION_MESSAGE_PLAY, &animationRequest, 0); \
     }
 
     switch (task->state) {
@@ -1196,7 +1185,7 @@ static void _dryfieldWarehouseDrawLightBeam(const GfxCoord* coord, s16 firstRing
         setRGB1(prim, brightness, brightness, brightness);
         setRGB2(prim, 0, 0, 0);
         setRGB3(prim, 0, 0, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                 prim);
         gpuSetPrimitiveBlendMode(prim, GPU_BLEND_ADD, block->depth);
     }

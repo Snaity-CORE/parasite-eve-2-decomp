@@ -10,7 +10,11 @@
 #include "neo_ark_forest_zone_private.h"
 
 #include "actors/actor.h"
-#include "actors/task_tables.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_03800.h"
+#include "actors/actor_05600.h"
+#include "actors/actor_356100.h"
+#include "actors/actor_401300.h"
 
 #include "gameplay/animation.h"
 #include "gameplay/captions.h"
@@ -130,17 +134,15 @@ static AnimationSet _gNeoArkForestZoneAnimation047D4 = {
     { NULL, _gNeoArkForestZoneAnimation047D4Bank1, NULL, NULL, _gNeoArkForestZoneAnimation047D4Bank4, NULL, NULL, NULL },
 };
 
-enum { NEO_ARK_FOREST_ZONE_STAGED_EVENT_PRIORITY = 32 };
-
 TaskDesc gNeoArkForestZoneStagedEventTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, NEO_ARK_FOREST_ZONE_STAGED_EVENT_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = roomEventStagedTask,
     .data     = { .value = 0 },
 };
 
 TaskMessageEntry gNeoArkForestZoneRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, neoArkForestZoneResolveTransition },
-    { NEO_ARK_FOREST_ZONE_MESSAGE_USE_KEY_ITEM, neoArkForestZoneRejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, neoArkForestZoneRejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, neoArkForestZoneHandleAction },
     { ROOM_MESSAGE_COMMAND, neoArkForestZoneIgnoreCommandMessage },
     { ROOM_MESSAGE_ACTOR_EVENT, neoArkForestZoneForwardActorEvent },
@@ -737,10 +739,10 @@ WorldCollisionSurfaceProperties* gNeoArkForestZoneSurfaceProperties[NEO_ARK_FORE
 /// select ordinary reaction 0. The parameter record borrows this overlay storage;
 /// its live consumers use the HP ceiling and do not index these attack rows.
 static DamageAttack _gNeoArkForestZoneRoamerAttacks[6] = {
-    { 30, 7 },
-    { 30, 7 },
-    { 50, 7 },
-    { 50, 7 },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 40, 0 },
     { 40, 0 },
 };
@@ -923,13 +925,9 @@ static const RoamerSpawnPoint _gNeoArkForestZoneRoamerPoolBSpawnPointEnd SECTION
     .yaw = ROAMER_SPAWN_POINT_END,
 };
 
-enum { NEO_ARK_FOREST_ZONE_POOL_B_TASK_PRIORITY = 32 };
-
 TaskDesc gNeoArkForestZoneRoamerPoolBTaskDesc = {
-    { { TASK_BODY_NONE, NEO_ARK_FOREST_ZONE_POOL_B_TASK_PRIORITY } }, _neoArkForestZoneRoamerPoolBTask, { .value = 0 }
+    { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _neoArkForestZoneRoamerPoolBTask, { .value = 0 }
 };
-
-enum { NEO_ARK_FOREST_ZONE_UNUSED_POOL_A_PRIORITY = 32 };
 
 /// Retained, unused bodyless recipe for the pool-A roaming-enemy controller.
 ///
@@ -937,7 +935,7 @@ enum { NEO_ARK_FOREST_ZONE_UNUSED_POOL_A_PRIORITY = 32 };
 /// No room code spawns this descriptor; a spawned task would borrow the
 /// callback code for its lifetime.
 static TaskDesc _gNeoArkForestZoneUnusedRoamerPoolATaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = NEO_ARK_FOREST_ZONE_UNUSED_POOL_A_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_SCENE } },
     .callback = _neoArkForestZoneRoamerPoolATask,
     .data     = { .value = 0 },
 };

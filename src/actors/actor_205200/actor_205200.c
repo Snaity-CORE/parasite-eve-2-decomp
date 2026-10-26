@@ -8,7 +8,7 @@
 
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_205200.h"
 
 #include "gameplay/actor.h"
 #include "gameplay/actor_render.h"
@@ -317,15 +317,12 @@ static const u16* _gActor205200SitePartHeadings[4] = {
     [ACTOR_205200_SITE_B6_TRAINING_ROOM]  = _gActor205200B6TrainingRoomPartHeadings,
 };
 
-/// Execution priority of the controller's screen-wave grid task.
-enum { ACTOR_205200_SCREEN_WAVE_TASK_PRIORITY = 192 };
-
-/// Bodyless screen-wave task recipe at priority 192, followed by an end marker.
+/// Bodyless screen-wave task recipe at priority `TASK_PRIORITY_CONTROL`, followed by an end marker.
 ///
 /// Spawn only entry zero with the persistent ramp context in spawn argument 2.
 /// The wave borrows that context through its final draw.
 static TaskDesc _gActor205200ScreenWaveTasks[2] = {
-    { { { TASK_BODY_NONE, ACTOR_205200_SCREEN_WAVE_TASK_PRIORITY } }, _screenWaveGridTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveGridTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -336,8 +333,8 @@ static TaskDesc _gActor205200ScreenWaveTasks[2] = {
 static s32 _gScreenWaveAmplitude = 256;
 
 TaskDesc gActor205200ControllerPartTasks[2] = {
-    { { { TASK_BODY_COORD, ACTOR_205200_ENEMY_TASK_PRIORITY } }, _actor205200ControllerTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, ACTOR_205200_ENEMY_TASK_PRIORITY } }, _actor205200PartTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _actor205200ControllerTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _actor205200PartTask, { .value = 0 } },
 };
 
 /// Controller messages for latching a stop from a nonzero actor command.
@@ -864,13 +861,13 @@ static void _actor205200TickDownPart(Enemy* enemy, Task* task)
                     break;
             }
             part->downState      = ACTOR_205200_PART_DOWN_SMOULDERING;
-            part->sparkTimer     = (((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & ACTOR_205200_PART_WRECK_SPARK_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
-            part->effectCooldown = (((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & ACTOR_205200_PART_WRECK_SMOKE_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
+            part->sparkTimer     = (((RANDOM_LCG_ADVANCE()) >> 16) & ACTOR_205200_PART_WRECK_SPARK_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
+            part->effectCooldown = (((RANDOM_LCG_ADVANCE()) >> 16) & ACTOR_205200_PART_WRECK_SMOKE_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
             break;
         case ACTOR_205200_PART_DOWN_SMOULDERING:
             if (--part->sparkTimer <= 0) {
-                gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                part->sparkTimer = ((gRandomLcgState >> 16) & ACTOR_205200_PART_WRECK_SPARK_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
+                RANDOM_LCG_ADVANCE();
+                part->sparkTimer = (RANDOM_LCG_DRAW() & ACTOR_205200_PART_WRECK_SPARK_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
                 effectSpawnHit(EFFECT_HIT_KIND_SPARK_BURST, coord, NULL, &part->effectArg);
                 effectSpawn(EFFECT_SMOKE_PUFF, coord, ACTOR_205200_PART_SMOKE_SUBTRACTIVE, NULL);
                 camera          = viewGetMappedCamera(&gGameSession->location);
@@ -884,8 +881,8 @@ static void _actor205200TickDownPart(Enemy* enemy, Task* task)
                 sndEvtRequestScriptStart(soundId, panOffset, (s16)distanceOffset >> ACTOR_205200_AUDIO_DISTANCE_SHIFT);
             }
             if (--part->effectCooldown <= 0) {
-                gRandomLcgState      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                part->effectCooldown = ((gRandomLcgState >> 16) & ACTOR_205200_PART_WRECK_SMOKE_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
+                RANDOM_LCG_ADVANCE();
+                part->effectCooldown = (RANDOM_LCG_DRAW() & ACTOR_205200_PART_WRECK_SMOKE_DELAY_MASK) + ACTOR_205200_PART_WRECK_DELAY_BASE;
                 effectSpawn(EFFECT_SMOKE_PUFF, coord, ACTOR_205200_PART_SMOKE_SUBTRACTIVE, NULL);
                 effectSpawn(EFFECT_SMOKE_PUFF, coord, ACTOR_205200_PART_SMOKE_SUBTRACTIVE, NULL);
             }

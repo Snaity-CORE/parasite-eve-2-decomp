@@ -24,37 +24,37 @@
 #include "main/tmd.h"
 #include "main/wipsys.h"
 
-#include "rooms/acropolis_bridge.h"
+#include "stages/akropolis/rooms/bridge.h"
 
-#include "rooms/acropolis_cafeteria.h"
+#include "stages/akropolis/rooms/cafeteria.h"
 
-#include "rooms/acropolis_east_elevator_hall.h"
+#include "stages/akropolis/rooms/east_elevator_hall.h"
 
-#include "rooms/acropolis_fire_escape.h"
+#include "stages/akropolis/rooms/fire_escape.h"
 
-#include "rooms/acropolis_forked_road.h"
+#include "stages/akropolis/rooms/forked_road.h"
 
-#include "rooms/acropolis_fountain.h"
+#include "stages/akropolis/rooms/fountain.h"
 
-#include "rooms/acropolis_hallway.h"
+#include "stages/akropolis/rooms/hallway.h"
 
-#include "rooms/acropolis_helicopter_landing_pad.h"
+#include "stages/akropolis/rooms/helicopter_landing_pad.h"
 
-#include "rooms/acropolis_observatory.h"
+#include "stages/akropolis/rooms/observatory.h"
 
-#include "rooms/acropolis_patio.h"
+#include "stages/akropolis/rooms/patio.h"
 
-#include "rooms/acropolis_plaza.h"
+#include "stages/akropolis/rooms/plaza.h"
 
-#include "rooms/acropolis_promenade.h"
+#include "stages/akropolis/rooms/promenade.h"
 
-#include "rooms/acropolis_roof_garden.h"
+#include "stages/akropolis/rooms/roof_garden.h"
 
-#include "rooms/acropolis_sanctuary.h"
+#include "stages/akropolis/rooms/sanctuary.h"
 
-#include "rooms/acropolis_security_room.h"
+#include "stages/akropolis/rooms/security_room.h"
 
-#include "rooms/akropolis_square.h"
+#include "stages/akropolis/rooms/square.h"
 
 #include "rooms/dryfield_back_street.h"
 
@@ -188,11 +188,11 @@
 
 #include "rooms/mine_tunnel_entrance.h"
 
-#include "rooms/mist_parking.h"
+#include "stages/akropolis/rooms/mist_parking.h"
 
-#include "rooms/mist_r18.h"
+#include "stages/akropolis/rooms/mist_r18.h"
 
-#include "rooms/mist_shooting_gallery.h"
+#include "stages/akropolis/rooms/mist_shooting_gallery.h"
 
 #include "rooms/neo_ark_bridge.h"
 
@@ -408,21 +408,21 @@ const AreaRecord* gAreaRecordsByStage[GAME_STAGE_SHELTER_NEO_ARK + 1] = {
 /// Save slots are explicit: the shooting gallery uses the live Dryfield bank.
 static const AreaRecord _gAreaAcropolisRecords[GAME_AREA_MIST_SHOOTING_GALLERY + 1] SECTION(".data") = {
     [GAME_AREA_AKROPOLIS_SQUARE]                 = { gAkropolisSquareAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[0].state },
-    [GAME_AREA_AKROPOLIS_EAST_ELEVATOR_HALL]     = { gAcropolisEastElevatorHallAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[1].state },
-    [GAME_AREA_AKROPOLIS_PATIO]                  = { gAcropolisPatioAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[2].state },
-    [GAME_AREA_AKROPOLIS_CAFETERIA]              = { gAcropolisCafeteriaAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[3].state },
-    [GAME_AREA_AKROPOLIS_PLAZA]                  = { gAcropolisPlazaAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[4].state },
-    [GAME_AREA_AKROPOLIS_SECURITY_ROOM]          = { gAcropolisSecurityRoomAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[5].state },
-    [GAME_AREA_AKROPOLIS_HALLWAY]                = { gAcropolisHallwayAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[6].state },
-    [GAME_AREA_AKROPOLIS_FOUNTAIN]               = { gAcropolisFountainAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[7].state },
-    [GAME_AREA_AKROPOLIS_FORKED_ROAD]            = { gAcropolisForkedRoadAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[8].state },
-    [GAME_AREA_AKROPOLIS_OBSERVATORY]            = { gAcropolisObservatoryAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[9].state },
-    [GAME_AREA_AKROPOLIS_PROMENADE]              = { gAcropolisPromenadeAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[10].state },
-    [GAME_AREA_AKROPOLIS_SANCTUARY]              = { gAcropolisSanctuaryAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[11].state },
-    [GAME_AREA_AKROPOLIS_ROOF_GARDEN]            = { gAcropolisRoofGardenAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[12].state },
-    [GAME_AREA_AKROPOLIS_BRIDGE]                 = { gAcropolisBridgePlacementVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[13].state },
-    [GAME_AREA_AKROPOLIS_FIRE_ESCAPE]            = { gAcropolisFireEscapeAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[14].state },
-    [GAME_AREA_AKROPOLIS_HELICOPTER_LANDING_PAD] = { gAcropolisHelicopterLandingPadAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[15].state },
+    [GAME_AREA_AKROPOLIS_EAST_ELEVATOR_HALL]     = { gAkropolisEastElevatorHallAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[1].state },
+    [GAME_AREA_AKROPOLIS_PATIO]                  = { gAkropolisPatioAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[2].state },
+    [GAME_AREA_AKROPOLIS_CAFETERIA]              = { gAkropolisCafeteriaAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[3].state },
+    [GAME_AREA_AKROPOLIS_PLAZA]                  = { gAkropolisPlazaAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[4].state },
+    [GAME_AREA_AKROPOLIS_SECURITY_ROOM]          = { gAkropolisSecurityRoomAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[5].state },
+    [GAME_AREA_AKROPOLIS_HALLWAY]                = { gAkropolisHallwayAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[6].state },
+    [GAME_AREA_AKROPOLIS_FOUNTAIN]               = { gAkropolisFountainAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[7].state },
+    [GAME_AREA_AKROPOLIS_FORKED_ROAD]            = { gAkropolisForkedRoadAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[8].state },
+    [GAME_AREA_AKROPOLIS_OBSERVATORY]            = { gAkropolisObservatoryAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[9].state },
+    [GAME_AREA_AKROPOLIS_PROMENADE]              = { gAkropolisPromenadeAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[10].state },
+    [GAME_AREA_AKROPOLIS_SANCTUARY]              = { gAkropolisSanctuaryAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[11].state },
+    [GAME_AREA_AKROPOLIS_ROOF_GARDEN]            = { gAkropolisRoofGardenAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[12].state },
+    [GAME_AREA_AKROPOLIS_BRIDGE]                 = { gAkropolisBridgePlacementVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[13].state },
+    [GAME_AREA_AKROPOLIS_FIRE_ESCAPE]            = { gAkropolisFireEscapeAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[14].state },
+    [GAME_AREA_AKROPOLIS_HELICOPTER_LANDING_PAD] = { gAkropolisHelicopterLandingPadAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[15].state },
     [GAME_AREA_AKROPOLIS_WEST_ELEVATOR_HALL]     = { NULL, NULL },
     [GAME_AREA_MIST_R18]                         = { gMistR18AreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[16].state },
     [GAME_AREA_MIST_PARKING]                     = { gMistParkingAreaVariants, &gGameFlagAcropolisBanks[GAME_FLAG_STAGE_BANK_LIVE].areas[17].state },

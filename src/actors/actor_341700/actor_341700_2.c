@@ -204,9 +204,7 @@ static u8 _gActor341700PropSpriteSchedule[150][4] = {
 #include "assets/actor_341700_motion_142DC.inc"
 };
 
-enum { ACTOR_341700_PROP_TASK_PRIORITY = 96 };
-
-TaskDesc gActor341700PropTaskDesc = { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_341700_PROP_TASK_PRIORITY } }, _actor341700PropTask, { .model = &_gActor341700Model13558 } };
+TaskDesc gActor341700PropTaskDesc = { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_ACTOR } }, _actor341700PropTask, { .model = &_gActor341700Model13558 } };
 
 /// Returns this carrier's persistent last contact-push correction.
 ///
@@ -376,7 +374,7 @@ static void _actor341700PropRiseState(Enemy* enemy, Task* task)
             return;
         }
         spriteOffset    = _gActor341700PropSpriteOffsets[_gActor341700PropSpriteSchedule[work->stateFrame - ACTOR_341700_PROP_SPRITE_FIRST_FRAME][spriteSlot]];
-        nextRandomState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        nextRandomState = RANDOM_LCG_NEXT(gRandomLcgState);
         randomByte      = (nextRandomState >> 16) & 0xFF;
         jitter          = randomByte;
         gRandomLcgState = nextRandomState;

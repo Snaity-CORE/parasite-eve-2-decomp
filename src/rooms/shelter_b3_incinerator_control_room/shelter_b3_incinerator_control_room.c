@@ -44,8 +44,6 @@
 
 #include "mapui/map_shelter.h"
 
-#include "rooms/akropolis_square.h"
-
 #include "rooms/room.h"
 
 #include "rooms/room_common.h"
@@ -77,8 +75,8 @@ static s32 _shelterB3IncineratorControlRoomHandleSoundCue(Task* task, s32 messag
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -253,7 +251,7 @@ static void _shelterB3IncineratorControlRoomInitializeRoom(Task* task)
     gameSetTaskSlot(task, GAME_TASK_SLOT_ROOM);
     task->state++;
     if (gGameSession->location.warp == SHELTER_B3_INCINERATOR_CONTROL_ROOM_INCINERATOR_ARRIVAL) {
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_B3_INCINERATOR_CONTROL_ROOM_ARRIVAL_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_B3_INCINERATOR_CONTROL_ROOM_ARRIVAL_OBJECTIVE);
         areaApplySavedUpdates(gShelterB3IncineratorControlRoomArrivalSavedUpdates);
         companionRestoreFullHp();
         evsStartScriptWithSkip(gActor142600IncineratorArrivalScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor142600IncineratorArrivalSkipScript);

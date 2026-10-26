@@ -9,7 +9,9 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_05600.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -581,9 +583,7 @@ WorldCollisionSurfaceProperties* gNeoArkNorthPromenadeSurfaceProperties[NEO_ARK_
 /// All arguments are ignored; returns the item menu's cannot-use result.
 static s32 _neoArkNorthPromenadeRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedArg)
 {
-    enum { KEY_ITEM_NOT_USED = 0 };
-
-    return KEY_ITEM_NOT_USED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Resolves Neo Ark room variants and refuses the locked forest-zone departure.

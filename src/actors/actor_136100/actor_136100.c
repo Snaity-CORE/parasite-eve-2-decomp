@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_136100.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -47,6 +47,9 @@
 #include "overlay.h"
 
 #include "rooms/dryfield_night_main_street.h"
+#include "../../shared/screen/screen_fade_step_up.inc.c"
+
+#include "assets/engine/animation/player_schema.h"
 
 static void _screenFadeInTask(Task* task);
 /// Binds the shared fade-in declaration and definition to this file's private task.
@@ -136,14 +139,11 @@ enum {
 
 /// Bank selection and playback defaults of this package's street scenes.
 enum {
-    ACTOR_136100_PRIMARY_CHARACTER          = 1,
-    ACTOR_136100_PRIMARY_WEAPON_BANK_BASE   = 1,
-    ACTOR_136100_ALTERNATE_WEAPON_BANK_BASE = 0x22,
-    ACTOR_136100_PLAYER_WEAPON_ANIMATION    = 1,
-    ACTOR_136100_BODY_AFTER_BURNER_START    = 1,
-    ACTOR_136100_BODY_BEFORE_BURNER_START   = 3,
-    ACTOR_136100_ANIMATION_BLEND_FRAMES     = 10,
-    ACTOR_136100_REQUEST_NONE               = 0,
+    ACTOR_136100_PLAYER_WEAPON_ANIMATION  = 1,
+    ACTOR_136100_BODY_AFTER_BURNER_START  = 1,
+    ACTOR_136100_BODY_BEFORE_BURNER_START = 3,
+    ACTOR_136100_ANIMATION_BLEND_FRAMES   = 10,
+    ACTOR_136100_REQUEST_NONE             = 0,
 };
 
 /// Opening-scene cue classifications and the room actions selecting street scenes.
@@ -271,9 +271,6 @@ enum {
 
 /// Exactly this argument requests the before-Burner skip's head-rotation reset.
 enum { ACTOR_136100_RESET_HEAD_ROTATION = 1 };
-
-/// Execution priority shared by this package's scene and model/fade tasks.
-enum { ACTOR_136100_TASK_PRIORITY = 192 };
 
 /// Sticky cancellation latch for this load of the street scene's fade-out.
 ///
@@ -771,12 +768,12 @@ static EvsCommand _gActor136100BeforeBurnerRepeatFollowUpScript[11] = {
 };
 
 TaskDesc gActor136100SceneTaskDescriptors[6] = {
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_136100_TASK_PRIORITY } }, _actor136100SceneTask, { .model = &_gGaryBody } },
-    { { { TASK_BODY_NONE, ACTOR_136100_TASK_PRIORITY } }, NULL, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_136100_TASK_PRIORITY } }, _actor136100HeadTask, { .model = &_gGaryHeadHat } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_136100_TASK_PRIORITY } }, _actor136100RifleTask, { .model = &_gGaryShotgun } },
-    { { { TASK_BODY_NONE, ACTOR_136100_TASK_PRIORITY } }, _screenFadeInTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_136100_TASK_PRIORITY } }, _actor136100FadeOutTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor136100SceneTask, { .model = &_gGaryBody } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, NULL, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor136100HeadTask, { .model = &_gGaryHeadHat } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor136100RifleTask, { .model = &_gGaryShotgun } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor136100FadeOutTask, { .value = 0 } },
 };
 
 /// Borrowed singleton task running Gary Douglas's night Main Street scenes.
@@ -834,7 +831,7 @@ static s32 _actor136100AdvancePlayerAnimation(Task* task)
 
                 requestWork                  = task->work;
                 weaponId                     = gPlayerStatus.weapon;
-                selection                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_136100_PRIMARY_CHARACTER) ? weaponId + ACTOR_136100_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_136100_ALTERNATE_WEAPON_BANK_BASE;
+                selection                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
                 request.source.index         = selection;
                 requestWork->playerAnimation = nextAnimationId;
                 request.animationId          = nextAnimationId;
@@ -1046,26 +1043,21 @@ static void _actor136100RifleTask(Task* task)
 /// Bank selection is weapon+1 for saved character 1, weapon+34 otherwise;
 /// backing banks for the alternate range are unproven. Loaded clip data must
 /// outlive playback. Expands to a standalone block with its own work reload.
-#define ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(controllerTask, clipId, blendMode, blendDuration, request)                      \
-    {                                                                                                                             \
-        enum { ACTOR_136100_PRIMARY_CHARACTER          = 1,                                                                       \
-               ACTOR_136100_PRIMARY_WEAPON_BANK_BASE   = 1,                                                                       \
-               ACTOR_136100_ALTERNATE_WEAPON_BANK_BASE = 34 };                                                                    \
-        _Actor136100Work* animationWork;                                                                                          \
-        s32               weaponId;                                                                                               \
-        s32               bankIndex;                                                                                              \
-        animationWork                  = (controllerTask)->work;                                                                  \
-        weaponId                       = gPlayerStatus.weapon;                                                                    \
-        bankIndex                      = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_136100_PRIMARY_CHARACTER) \
-                                             ? weaponId + ACTOR_136100_PRIMARY_WEAPON_BANK_BASE                                   \
-                                             : weaponId + ACTOR_136100_ALTERNATE_WEAPON_BANK_BASE;                                \
-        (request).source.index         = bankIndex;                                                                               \
-        animationWork->playerAnimation = (clipId);                                                                                \
-        (request).animationId          = (clipId);                                                                                \
-        (request).blend                = (blendMode);                                                                             \
-        (request).blendFrames          = (blendDuration);                                                                         \
-        (request).enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;                                                       \
-        TASK_MESSAGE_DISPATCH_POINTER(animationWork->playerTask, ANIMATION_MESSAGE_PLAY, &(request), 0);                          \
+#define ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(controllerTask, clipId, blendMode, blendDuration, request) \
+    {                                                                                                        \
+        _Actor136100Work* animationWork;                                                                     \
+        s32               weaponId;                                                                          \
+        s32               bankIndex;                                                                         \
+        animationWork                  = (controllerTask)->work;                                             \
+        weaponId                       = gPlayerStatus.weapon;                                               \
+        bankIndex                      = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);                           \
+        (request).source.index         = bankIndex;                                                          \
+        animationWork->playerAnimation = (clipId);                                                           \
+        (request).animationId          = (clipId);                                                           \
+        (request).blend                = (blendMode);                                                        \
+        (request).blendFrames          = (blendDuration);                                                    \
+        (request).enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;                                  \
+        TASK_MESSAGE_DISPATCH_POINTER(animationWork->playerTask, ANIMATION_MESSAGE_PLAY, &(request), 0);     \
     }
 
 /// Places the player at a scene entrance and starts its scripted walk.
@@ -1142,10 +1134,10 @@ static void _actor136100UpdateAfterBurnerPlayerRequest(Task* task)
             ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ANIMATION_BANK_BASE_SET_COUNT, ANIMATION_BLEND_RESET, 0, request);
             break;
         case ACTOR_136100_PLAYER_AFTER_BLEND_WEAPON:
-            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ACTOR_136100_PLAYER_WEAPON_ANIMATION, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, request);
+            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, request);
             break;
         case ACTOR_136100_PLAYER_AFTER_RESET_WEAPON:
-            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ACTOR_136100_PLAYER_WEAPON_ANIMATION, ANIMATION_BLEND_RESET, 0, request);
+            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_RESET, 0, request);
             break;
     }
     work->playerRequest = ACTOR_136100_REQUEST_NONE;
@@ -1434,7 +1426,7 @@ static void _actor136100UpdateBeforeBurnerPlayerRequest(Task* task)
             break;
         case ACTOR_136100_PLAYER_BEFORE_HIDE:
             taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE, 0);
-            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ACTOR_136100_PLAYER_WEAPON_ANIMATION, ANIMATION_BLEND_RESET, 0, request);
+            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_RESET, 0, request);
             break;
         case ACTOR_136100_PLAYER_BEFORE_ENTER:
             switch ((u16)work->playerRequestStep) {
@@ -1465,13 +1457,13 @@ static void _actor136100UpdateBeforeBurnerPlayerRequest(Task* task)
             break;
         case ACTOR_136100_PLAYER_BEFORE_EXIT:
             TASK_MESSAGE_DISPATCH_POINTER(work->playerTask, GAME_ACTOR_MESSAGE_PLACE, &_gActor136100BeforeBurnerPlayerExitPlacement, 0);
-            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ACTOR_136100_PLAYER_WEAPON_ANIMATION, ANIMATION_BLEND_RESET, 0, request);
+            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_RESET, 0, request);
             break;
         case ACTOR_136100_PLAYER_BEFORE_RESET_SCENE_ANIMATION:
             ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ANIMATION_BANK_BASE_SET_COUNT, ANIMATION_BLEND_RESET, 0, request);
             break;
         case ACTOR_136100_PLAYER_BEFORE_BLEND_WEAPON:
-            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ACTOR_136100_PLAYER_WEAPON_ANIMATION, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, request);
+            ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, request);
             break;
     }
     work->playerRequest = ACTOR_136100_REQUEST_NONE;
@@ -1628,10 +1620,10 @@ static void _actor136100ResetAfterBurnerScene(void)
     // Re-read work after placement dispatch before caching the player clip.
     requestWork                  = task->work;
     weaponId                     = gPlayerStatus.weapon;
-    bankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_136100_PRIMARY_CHARACTER) ? weaponId + ACTOR_136100_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_136100_ALTERNATE_WEAPON_BANK_BASE;
+    bankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     request.source.index         = bankIndex;
     requestWork->playerAnimation = ACTOR_136100_PLAYER_WEAPON_ANIMATION;
-    request.animationId          = ACTOR_136100_PLAYER_WEAPON_ANIMATION;
+    request.animationId          = PLAYER_ANIMATION_IDLE;
     request.blend                = ANIMATION_BLEND_RESET;
     request.blendFrames          = 0;
     request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -1670,10 +1662,10 @@ static void _actor136100ResetBeforeBurnerScene(s32 resetHeadRotation)
     // Re-read work after placement dispatch before caching the player clip.
     requestWork                  = task->work;
     weaponId                     = gPlayerStatus.weapon;
-    bankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_136100_PRIMARY_CHARACTER) ? weaponId + ACTOR_136100_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_136100_ALTERNATE_WEAPON_BANK_BASE;
+    bankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     request.source.index         = bankIndex;
     requestWork->playerAnimation = ACTOR_136100_PLAYER_WEAPON_ANIMATION;
-    request.animationId          = ACTOR_136100_PLAYER_WEAPON_ANIMATION;
+    request.animationId          = PLAYER_ANIMATION_IDLE;
     request.blend                = ANIMATION_BLEND_RESET;
     request.blendFrames          = 0;
     request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -1951,7 +1943,7 @@ static void _actor136100SceneTask(Task* task)
             break;
         case ACTOR_136100_SCENE_STAGE_OPENING:
             if (work->scene == ACTOR_136100_SCENE_AFTER_BURNER) {
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, ACTOR_136100_SCENE_AFTER_BURNER_OBJECTIVE);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, ACTOR_136100_SCENE_AFTER_BURNER_OBJECTIVE);
                 taskMessageDispatch(task, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
                 taskMessageDispatch(work->headTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
                 taskMessageDispatch(work->rifleTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
@@ -1963,7 +1955,7 @@ static void _actor136100SceneTask(Task* task)
                 _actor136100ResetBodyTracks(task, ACTOR_136100_BODY_AFTER_BURNER_START);
                 ACTOR_136100_RESET_COMPANION_ANIMATION(task, ACTOR_136100_SCENE_AFTER_COMPANION_CLIP, message.animation);
             } else {
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, ACTOR_136100_SCENE_BEFORE_BURNER_OBJECTIVE);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, ACTOR_136100_SCENE_BEFORE_BURNER_OBJECTIVE);
                 taskMessageDispatch(task, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
                 taskMessageDispatch(work->headTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
                 taskMessageDispatch(work->rifleTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
@@ -1985,7 +1977,7 @@ static void _actor136100SceneTask(Task* task)
                 if (gDisplayState.pendingMode != DISPLAY_MODE_NONE) {
                     return;
                 }
-                ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ACTOR_136100_PLAYER_WEAPON_ANIMATION, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, message.animation);
+                ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, message.animation);
                 evsStartScriptWithSkip(_gActor136100AfterBurnerOpeningScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gActor136100AfterBurnerOpeningSkipScript);
                 worldCollisionUnlinkTrigger(WORLD_COLLISION_TRIGGER_LIST_ACTION, &gDryfieldNightMainStreetRooms2And3ActionTriggers[DRYFIELD_NIGHT_MAIN_STREET_ACTION_TRIGGER_AFTER_BURNER]);
                 ACTOR_136100_COPY_PLAYER_ANIMATION_SETS(task, message.copy);
@@ -2000,7 +1992,7 @@ static void _actor136100SceneTask(Task* task)
                 if (gDisplayState.pendingMode != DISPLAY_MODE_NONE) {
                     return;
                 }
-                ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, ACTOR_136100_PLAYER_WEAPON_ANIMATION, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, message.animation);
+                ACTOR_136100_PLAY_PLAYER_WEAPON_ANIMATION(task, PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, ACTOR_136100_ANIMATION_BLEND_FRAMES, message.animation);
                 evsStartScriptWithSkip(_gActor136100BeforeBurnerOpeningScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gActor136100BeforeBurnerOpeningSkipScript);
                 worldCollisionUnlinkTrigger(WORLD_COLLISION_TRIGGER_LIST_ACTION, &gDryfieldNightMainStreetRooms2And3ActionTriggers[DRYFIELD_NIGHT_MAIN_STREET_ACTION_TRIGGER_BEFORE_BURNER]);
                 ACTOR_136100_COPY_PLAYER_ANIMATION_SETS(task, message.copy);
@@ -2044,19 +2036,6 @@ static void _actor136100SceneTask(Task* task)
 #include "../../shared/screen/screen_fade_in.inc.c"
 #undef SCREEN_FADE_IN_TASK
 
-/// Adds the task's intensity increment to each signed fade channel in order.
-///
-/// Requires writable fade work and a live task. The low unsigned halfword of
-/// `spawnArg1` is intensity units per tick; zero holds the current channels.
-/// Each addition reads the rate anew and narrows to a signed halfword without
-/// clamping. Completion and display cancellation belong to the caller.
-static inline void _actor136100StepFadeOut(ScreenFadeWork* fade, const Task* task)
-{
-    fade->r += task->spawnArg1.halves.low;
-    fade->g += task->spawnArg1.halves.low;
-    fade->b += task->spawnArg1.halves.low;
-}
-
 /// Darkens the street scene and blanks the display when the ramp completes.
 ///
 /// Start at state 0 without owned work. Initialization allocates primary-heap
@@ -2094,7 +2073,7 @@ static void _actor136100FadeOutTask(Task* task)
             /* fallthrough */
         case RAMP:
             fadeDrawOverlay(fade->r, fade->g, fade->r, GPU_BLEND_SUBTRACT);
-            _actor136100StepFadeOut(fade, task);
+            _screenFadeStepUp(fade, task);
             if (_gActor136100FadeOutCancelled != 0) {
                 taskKill(task);
                 return;
@@ -2121,9 +2100,9 @@ static void _actor136100ResetPlayerWeaponAnimation(void)
     s32                  bankIndex;
 
     weaponId                     = gPlayerStatus.weapon;
-    bankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_136100_PRIMARY_CHARACTER) ? weaponId + ACTOR_136100_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_136100_ALTERNATE_WEAPON_BANK_BASE;
+    bankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     request.source.index         = bankIndex;
-    request.animationId          = ACTOR_136100_PLAYER_WEAPON_ANIMATION;
+    request.animationId          = PLAYER_ANIMATION_IDLE;
     request.blend                = ANIMATION_BLEND_RESET;
     request.blendFrames          = 0;
     request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;

@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_403000.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -727,27 +727,26 @@ static void _actor403000IgnoreMessage2015(Task* task, s32 messageId, s32 unusedF
 /// Row 2 has no recovered sender. Reaction 7 selects the player's spark/puff
 /// hit presentation without a status effect; ordinary and poison use shared IDs.
 enum {
-    ACTOR_403000_ATTACK_LUNGE                    = 0,
-    ACTOR_403000_ATTACK_GRAB                     = 1,
-    ACTOR_403000_ATTACK_UNPROVEN2                = 2,
-    ACTOR_403000_ATTACK_DROP                     = 3,
-    ACTOR_403000_ATTACK_COUNT                    = 4,
-    ACTOR_403000_ATTACK_REACTION_SPARK_AND_PUFFS = 7,
+    ACTOR_403000_ATTACK_LUNGE     = 0,
+    ACTOR_403000_ATTACK_GRAB      = 1,
+    ACTOR_403000_ATTACK_UNPROVEN2 = 2,
+    ACTOR_403000_ATTACK_DROP      = 3,
+    ACTOR_403000_ATTACK_COUNT     = 4,
 };
 
 /// Default variant's base HP damage and player reactions, indexed by attack.
 static DamageAttack _gActor403000Attacks[ACTOR_403000_ATTACK_COUNT] = {
-    [ACTOR_403000_ATTACK_LUNGE]     = { 30, ACTOR_403000_ATTACK_REACTION_SPARK_AND_PUFFS },
-    [ACTOR_403000_ATTACK_GRAB]      = { 20, ACTOR_403000_ATTACK_REACTION_SPARK_AND_PUFFS },
-    [ACTOR_403000_ATTACK_UNPROVEN2] = { 20, ACTOR_403000_ATTACK_REACTION_SPARK_AND_PUFFS },
+    [ACTOR_403000_ATTACK_LUNGE]     = { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    [ACTOR_403000_ATTACK_GRAB]      = { 20, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    [ACTOR_403000_ATTACK_UNPROVEN2] = { 20, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     [ACTOR_403000_ATTACK_DROP]      = { 25, GAME_ACTOR_REACTION_ORDINARY },
 };
 
 /// Alternate variant's base HP damage and player reactions, including a poison lunge.
 static DamageAttack _gActor403000AlternateAttacks[ACTOR_403000_ATTACK_COUNT] = {
     [ACTOR_403000_ATTACK_LUNGE]     = { 20, GAME_ACTOR_REACTION_POISON },
-    [ACTOR_403000_ATTACK_GRAB]      = { 12, ACTOR_403000_ATTACK_REACTION_SPARK_AND_PUFFS },
-    [ACTOR_403000_ATTACK_UNPROVEN2] = { 12, ACTOR_403000_ATTACK_REACTION_SPARK_AND_PUFFS },
+    [ACTOR_403000_ATTACK_GRAB]      = { 12, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    [ACTOR_403000_ATTACK_UNPROVEN2] = { 12, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     [ACTOR_403000_ATTACK_DROP]      = { 18, GAME_ACTOR_REACTION_ORDINARY },
 };
 
@@ -922,15 +921,14 @@ static _Actor403000RingCellMap _gActor403000RingCellMap = {
 };
 
 enum {
-    ACTOR_403000_TASK_PRIORITY = 96,
-    ACTOR_403000_TASK_SPAWN    = 0,
-    ACTOR_403000_TASK_UPDATE   = 1,
-    ACTOR_403000_TASK_DESTROY  = 2,
+    ACTOR_403000_TASK_SPAWN   = 0,
+    ACTOR_403000_TASK_UPDATE  = 1,
+    ACTOR_403000_TASK_DESTROY = 2,
 };
 
 TaskDesc gActor403000TaskDesc = {
     .header   = { .fields = { .flags    = TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER,
-                              .priority = ACTOR_403000_TASK_PRIORITY } },
+                              .priority = TASK_PRIORITY_ACTOR } },
     .callback = _actor403000Task,
     .data     = { .model = &_gMineCavernBlizzardChaserBody },
 };
@@ -1183,10 +1181,10 @@ static void _actor403000DrawFlare(GfxCoord* flareCoord, const SVECTOR* localPosi
     gte_stflg(&projectionFlags);
     gte_stszotz(&quarterDepth);
     if (projectionFlags >= 0) {
-        screenX         = screenPosition;
-        screenY         = screenPosition >> 16;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        screenRadius    = (s32)(((gRandomLcgState >> 16) & ACTOR_403000_FLARE_RADIUS_RANDOM_MASK) + ACTOR_403000_FLARE_RADIUS_MIN) * ACTOR_403000_FLARE_SCREEN_DISTANCE / (quarterDepth * 4);
+        screenX = screenPosition;
+        screenY = screenPosition >> 16;
+        RANDOM_LCG_ADVANCE();
+        screenRadius = (s32)((RANDOM_LCG_DRAW() & ACTOR_403000_FLARE_RADIUS_RANDOM_MASK) + ACTOR_403000_FLARE_RADIUS_MIN) * ACTOR_403000_FLARE_SCREEN_DISTANCE / (quarterDepth * 4);
         for (sectorIndex = 0; sectorIndex < ACTOR_403000_FLARE_SECTOR_COUNT; sectorIndex++) {
             triangle = gGpuPrimCursor;
             // Preserve the textured-triangle-sized reservation for this gouraud packet.
@@ -2125,7 +2123,7 @@ static void _actor403000SpawnHitEffects(Task* task, s16 hitYaw, s32 attackKey)
     hitYawMagnitude = (hitYaw >= 0) ? hitYaw : -hitYaw;
     work            = task->work;
     if (hitYawMagnitude < ACTOR_403000_HIT_FRONT_YAW_LIMIT) {
-        switch ((s32)((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & 3) {
+        switch ((s32)((RANDOM_LCG_ADVANCE()) >> 16) & 3) {
             case 0:
                 hitOffsets[0] = _gActor403000HitEffectOffsets[0];
                 hitOffsets[1] = _gActor403000HitEffectOffsets[3];
@@ -2147,7 +2145,7 @@ static void _actor403000SpawnHitEffects(Task* task, s16 hitYaw, s32 attackKey)
                 break;
         }
     } else if (hitYawMagnitude > ACTOR_403000_HIT_REAR_YAW_LIMIT) {
-        switch ((s32)((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & 2) {
+        switch ((s32)((RANDOM_LCG_ADVANCE()) >> 16) & 2) {
             case 0:
                 hitOffsets[0] = _gActor403000HitEffectOffsets[5];
                 hitOffsets[1] = _gActor403000HitEffectOffsets[6];
@@ -2345,8 +2343,8 @@ static void _actor403000ApplyDamage(Task* actorTask)
             }
         }
         if ((s16)_actor403000CheckTargetBlast(actorTask) != 0) {
-            gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->blastPuffFrames = ((gRandomLcgState >> 16) & ACTOR_403000_BLAST_PUFF_RANDOM_MASK) + ACTOR_403000_BLAST_PUFF_MIN_TICKS;
+            RANDOM_LCG_ADVANCE();
+            work->blastPuffFrames = (RANDOM_LCG_DRAW() & ACTOR_403000_BLAST_PUFF_RANDOM_MASK) + ACTOR_403000_BLAST_PUFF_MIN_TICKS;
             if (work->state != ACTOR_403000_STATE_STUNNED && work->state != ACTOR_403000_STATE_DOWN && !(work->state == ACTOR_403000_STATE_GET_UP && work->stateFrame >= ACTOR_403000_GET_UP_BLAST_KNOCKDOWN_FRAME)) {
                 if (work->state != ACTOR_403000_STATE_AMBUSH && !(work->state == ACTOR_403000_STATE_DROP && actorTask->extra.tmd->coords->coord.t[1] < player->extra.tmd->coords->coord.t[1]) && work->state != ACTOR_403000_STATE_DROP_CATCH && work->playerCaught != 1) {
                     work->state = ACTOR_403000_STATE_KNOCKDOWN;
@@ -2566,7 +2564,7 @@ static void _actor403000StunnedState(Task* task)
     _actor403000UpdateAnimation(task);
     // Pause the twitch clip briefly at each control jump or settled boundary.
     if (work->slots[1].status.word & (ANIMATION_SLOT_FOLLOWED_JUMP | ANIMATION_SLOT_SETTLED)) {
-        randomState      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomState      = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState  = randomState;
         work->stateFrame = (randomState >> 0x10) & ACTOR_403000_STUN_PAUSE_MASK;
     }
@@ -3277,7 +3275,6 @@ static inline void _actor403000AlignGrabCatch(Task* actorTask, Task* player, _Ac
 static void _actor403000GrabState(Task* actorTask)
 {
     enum {
-
         ACTOR_403000_GRAB_RUSH_DISTANCE           = 0xDAC,
         ACTOR_403000_GRAB_RUSH_TRAVEL_TICKS       = 15,
         ACTOR_403000_GRAB_BEFORE_FIRST_FRAME      = -1,
@@ -3488,7 +3485,6 @@ static void _actor403000GrabCatchState(Task* actorTask)
 static void _actor403000LungeState(Task* actorTask)
 {
     enum {
-
         ACTOR_403000_LUNGE_STOP_DISTANCE       = 900,
         ACTOR_403000_LUNGE_TRAVEL_TICKS        = 20,
         ACTOR_403000_LUNGE_MOVE_START_FRAME    = 5,
@@ -4084,7 +4080,7 @@ static void _actor403000PatrolState(Task* actorTask)
         if (work->ambushRequested == 1) {
             work->state = ACTOR_403000_STATE_AMBUSH;
         } else {
-            behaviorRoll = ((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & ACTOR_403000_PATROL_ROLL_MASK;
+            behaviorRoll = ((RANDOM_LCG_ADVANCE()) >> 16) & ACTOR_403000_PATROL_ROLL_MASK;
             if (actorTask->extra.tmd->texturePageOffset == ACTOR_403000_TEXTURE_BURNED) {
                 if (behaviorRoll <= 0) {
                     work->state = ACTOR_403000_STATE_WATCH;
@@ -4349,7 +4345,6 @@ static void _actor403000TurnState(Task* actorTask)
 static void _actor403000DropState(Task* actorTask)
 {
     enum {
-
         ACTOR_403000_DROP_ORIGIN_X       = 0x2134,
         ACTOR_403000_DROP_HEIGHT         = 0x1518,
         ACTOR_403000_DROP_ORIGIN_Z       = 0x1194,
@@ -5341,7 +5336,7 @@ static void _actor403000DownState(Task* actorTask)
     work  = actorTask->work;
     enemy = actorTask->spawnArg2.pointer;
     if (work->stateEntered != 0) {
-        randomState      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState      = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState  = randomState;
         work->stateFrame = ((randomState >> 16) & ACTOR_403000_DOWN_DELAY_RANDOM_MASK) + ACTOR_403000_DOWN_DELAY_MIN;
     }

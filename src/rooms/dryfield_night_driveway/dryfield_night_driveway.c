@@ -8,7 +8,9 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01500.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_03700.h"
 
 #include "gameplay/animation.h"
 #include "gameplay/player_actor.h"
@@ -74,7 +76,6 @@ static void _dryfieldNightDrivewayInitializeRoom(Task* task);
 static void _dryfieldNightDrivewayRoomIdle(Task* task);
 
 enum {
-    DRYFIELD_NIGHT_DRIVEWAY_MESSAGE_USE_KEY_ITEM = 0x13F1,
     DRYFIELD_NIGHT_DRIVEWAY_ENCOUNTER_WAVE_BEGIN = 1,
     DRYFIELD_NIGHT_DRIVEWAY_PLAYER_STATE_RUNNING = 0,
 };
@@ -99,7 +100,7 @@ static void         _dryfieldNightDrivewaySetPlayerStateHold(u8 hold);
 ///
 /// Spawns state 0 with unused arguments. The room-owned destination and event
 /// snapshots must remain stable until the callback requests session reload.
-static TaskDesc _gRoomEventStagedTaskDesc = { { { TASK_BODY_NONE, DRIVEWAY_SCENE_TASK_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gRoomEventStagedTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 static AnimationPackedPose _gDryfieldNightDrivewayAnimation0150CBank1[10] = {
 #include "assets/dryfield_night_driveway_animation_0150C_bank1.inc"
@@ -194,8 +195,8 @@ static AnimationSet _gDryfieldNightDrivewayAnimation01D64 = {
 /// Both live recipes are bodyless priority-32 tasks with unused spawn arguments.
 /// The controllers borrow this overlay's scripts and resources through completion.
 static TaskDesc _gDryfieldNightDrivewaySceneTasks[3] = {
-    { { { TASK_BODY_NONE, DRIVEWAY_SCENE_TASK_PRIORITY } }, _drivewayBlackoutTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRIVEWAY_SCENE_TASK_PRIORITY } }, _drivewayCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _drivewayBlackoutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _drivewayCutsceneTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -357,7 +358,7 @@ static EvsCommand _gDryfieldNightDrivewayBlackoutSkipScript[9] = {
 /// message IDs return zero; payload meanings belong to the selected handler.
 static TaskMessageEntry _gDryfieldNightDrivewayRoomMessages[] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _roomVariantResolveDriveway },
-    { DRYFIELD_NIGHT_DRIVEWAY_MESSAGE_USE_KEY_ITEM, _dryfieldNightDrivewayRejectKeyItem },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldNightDrivewayRejectKeyItem },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldNightDrivewayIgnoreDirectionAction },
     { ROOM_MESSAGE_COMMAND, _dryfieldNightDrivewayIgnoreRoomCommand },
     { ROOM_MESSAGE_SOUND, _drivewayScriptSound },
@@ -1492,9 +1493,7 @@ static void _dryfieldNightDrivewaySetPlayerStateHold(u8 hold)
 /// collected `itemId` cannot be used here; `unusedArg` is the sender's zero word.
 static s32 _dryfieldNightDrivewayRejectKeyItem(Task* task, s32 messageId, s32 itemId, s32 unusedArg)
 {
-    enum { DRYFIELD_NIGHT_DRIVEWAY_KEY_ITEM_REFUSED = 0 };
-
-    return DRYFIELD_NIGHT_DRIVEWAY_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Ignores room commands from CAP and direction control, returning zero.

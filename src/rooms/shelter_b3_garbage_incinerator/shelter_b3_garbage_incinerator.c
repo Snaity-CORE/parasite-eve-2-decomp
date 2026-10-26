@@ -22,7 +22,7 @@ static u16 _gShelterB3GarbageIncineratorSwitchNoticeTicks;
 #include "shelter_b3_garbage_incinerator_private.h"
 
 #include "actors/actor_444000.h"
-#include "actors/task_tables.h"
+#include "actors/actor_342400.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/captions.h"
@@ -83,14 +83,12 @@ static TaskMessageEntry _gShelterB3GarbageIncineratorRoomMessages[7] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { SHELTER_B3_GARBAGE_INCINERATOR_CONTROL_ROOM_EXIT_TASK_PRIORITY = 32 };
-
 /// Bodyless priority-32 recipe for the deferred control-room departure choice.
 ///
 /// Spawn only index 0 with unused zero payloads, after latching the destination.
 /// The callback borrows that snapshot and loaded CAP/sound resources through
 /// cancellation or reload; spawning retains no pointer to this recipe.
-static TaskDesc _gShelterB3GarbageIncineratorControlRoomExitTaskDesc = { { { TASK_BODY_NONE, SHELTER_B3_GARBAGE_INCINERATOR_CONTROL_ROOM_EXIT_TASK_PRIORITY } }, _shelterB3GarbageIncineratorExitToControlRoomTask, { .value = 0 } };
+static TaskDesc _gShelterB3GarbageIncineratorControlRoomExitTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB3GarbageIncineratorExitToControlRoomTask, { .value = 0 } };
 
 u16 gShelterB3GarbageIncineratorDoorEventSuspended;
 

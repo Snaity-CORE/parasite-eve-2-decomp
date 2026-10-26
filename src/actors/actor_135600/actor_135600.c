@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_135600.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -192,30 +192,28 @@ static AnimationSet** _gActorMotionAnimBanks[1] = {
     _gActor135600KyleMadiganAnimationBank,
 };
 
-enum { ACTOR_135600_KYLE_TASK_PRIORITY = 192 };
-
 TaskDesc gActor135600KyleMadiganTaskDescriptors[4] = {
     // 0: body.
     {
-        .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = ACTOR_135600_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor135600KyleMadiganWalkerTask,
         .data     = { .model = &gKyleBody },
     },
     // 1: left hand.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_135600_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor135600KyleMadiganHandTask,
         .data     = { .model = &gKyleHandLeft },
     },
     // 2: right hand.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_135600_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor135600KyleMadiganHandTask,
         .data     = { .model = &gKyleHandRight },
     },
     // 3: held model.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_135600_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor135600KyleMadiganHeldItemTask,
         .data     = { .model = &_gActor135600Model06AC4 },
     },
@@ -332,7 +330,7 @@ static s32 _actor135600DrawHeldItemQuad(GfxCoord* itemRoot, s32 lengthScale12)
         quadPacket->y2 = screenCorners[2].vy;
         quadPacket->x3 = screenCorners[3].vx;
         quadPacket->y3 = screenCorners[3].vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)orderingDepth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)) - 2, quadPacket);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth) - 2, quadPacket);
 
         // addPrim prepends: the draw mode must reach the GPU before the quad.
         drawModePacket = gGpuPrimCursor;
@@ -340,7 +338,7 @@ static s32 _actor135600DrawHeldItemQuad(GfxCoord* itemRoot, s32 lengthScale12)
         setlen(drawModePacket, sizeof(*drawModePacket) / sizeof(u32) - 1);
         // Quarter-source additive blending, drawing in the display area, no dithering.
         drawModePacket->code[0] = _get_mode(1, 0, getTPage(0, 3, 320, 0));
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)orderingDepth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)) - 2, drawModePacket);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth) - 2, drawModePacket);
     }
     return screenAngle;
 }
@@ -736,8 +734,7 @@ static void _actor135600BeginKyleMadiganWalk(Task* task)
 static s32 _actor135600SetKyleMadiganDrawMode(Task* task, s32 msgId, s32 mode, s32 unusedArg)
 {
     enum {
-        ACTOR_135600_KYLE_DRAW_SHOW_SKIP_AUTO_BUFFER = 3,
-        ACTOR_135600_KYLE_BUFFER_RELEASE_DELAY       = 2,
+        ACTOR_135600_KYLE_BUFFER_RELEASE_DELAY = 2,
     };
     KyleMadiganWalkerWork* work;
     TmdObject*             bodyModel;
@@ -767,7 +764,7 @@ static s32 _actor135600SetKyleMadiganDrawMode(Task* task, s32 msgId, s32 mode, s
             work->freeCountdown = ACTOR_135600_KYLE_BUFFER_RELEASE_DELAY;
             bodyModel->flags   |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_135600_KYLE_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             bodyModel->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             bodyModel->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

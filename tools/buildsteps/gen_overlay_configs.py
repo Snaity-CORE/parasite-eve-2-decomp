@@ -480,7 +480,7 @@ def has_stored_bss(name: str, objects: list[dict], data: bytes) -> bool:
     return True
 
 
-RECORD_SIZE = {"model": 0x24}        # a declared model's symbol names its TmdSource record, its last 0x24 bytes
+RECORD_SIZE = {"model": 0x24, "clip": 0x28}   # a model's symbol names its TmdSource record, a clip's its AnimationClip: the last bytes
 _ASSET_TABLES: list = []
 
 
@@ -498,7 +498,7 @@ def asset_symbols(package: str) -> list[tuple[str, int]]:
     out = []
     # An asset several packages carry (the P08's model, which its Snail variant places too) is listed by each.
     holder = next((rec for key, rec in data.ASSETS.items()
-                   if rec.get("type") in ("pe2pkg", "room", "stage") and rec.get("package_name", key) == package), None)
+                   if rec.get("type") in ("pe2pkg", "room", "stage", "package") and rec.get("package_name", key) == package), None)
     placed = {p["name"]: p for p in (holder or {}).get("embedded", ()) if isinstance(p, dict)}
     for name, rec in data.ASSETS.items():
         place = data.EMBEDDED_ASSETS.get(name)

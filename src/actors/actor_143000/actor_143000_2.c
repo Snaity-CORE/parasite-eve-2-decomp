@@ -81,12 +81,12 @@ enum {
 };
 
 TaskDesc gActor143000TerminalTasks[2] = {
-    { { { TASK_BODY_NONE, 192 } }, taskKill, { .value = 0 } },
-    { { { TASK_BODY_NONE, 32 } }, _actor143000TerminalSessionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _actor143000TerminalSessionTask, { .value = 0 } },
 };
 
 /// Bodyless priority-32 task descriptor for asynchronous background-band capture.
-static TaskDesc _gActor143000CaptureStripTaskDesc = { { { TASK_BODY_NONE, 32 } }, actor143000CaptureStripTask, { .value = 0 } };
+static TaskDesc _gActor143000CaptureStripTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, actor143000CaptureStripTask, { .value = 0 } };
 
 /// Player clips for the laboratory terminal and completion scenes, extended ids 47..51.
 ///
@@ -505,7 +505,7 @@ static void _actor143000TerminalSessionTask(Task* task)
         case ACTOR_143000_TERMINAL_STATE_WAIT_SUCCESS:
             if (capIsBusy() == 0) {
                 capReset();
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, ACTOR_143000_TERMINAL_COMPLETE_OBJECTIVE);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, ACTOR_143000_TERMINAL_COMPLETE_OBJECTIVE);
                 gameFlagSetNibble(GAME_FLAG_SHELTER_B2_LABORATORY_PROGRESS, ACTOR_143000_TERMINAL_PROGRESS_COMPLETE);
                 gameFlagSetNibble(GAME_FLAG_COMPANION_2_SCHEDULE, 0);
                 areaApplySavedUpdates(gShelterB2LaboratoryQuizCompletionAreaUpdates);

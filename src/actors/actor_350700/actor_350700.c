@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_350700.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -194,30 +194,28 @@ static AnimationSet** _gActorMotionAnimBanks[1] = {
     _gActor350700KyleMadiganAnimationBank,
 };
 
-enum { ACTOR_350700_KYLE_TASK_PRIORITY = 192 };
-
 TaskDesc gActor350700KyleMadiganTaskDescriptors[4] = {
     // 0: body.
     {
-        .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = ACTOR_350700_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor350700KyleMadiganWalkerTask,
         .data     = { .model = &gKyleBody },
     },
     // 1: left hand.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_350700_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor350700KyleMadiganAttachmentTask,
         .data     = { .model = &gKyleHandLeft },
     },
     // 2: right hand.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_350700_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor350700KyleMadiganAttachmentTask,
         .data     = { .model = &gKyleHandRight },
     },
     // 3: held gun.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_350700_KYLE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor350700KyleMadiganAttachmentTask,
         .data     = { .model = &gKyleP229 },
     },
@@ -549,7 +547,6 @@ static void _actor350700KyleMadiganWalkerBeginMove(Task* task)
 /// payload are ignored; no payload storage is borrowed.
 static s32 _actor350700KyleMadiganWalkerSetDrawModeMsg(Task* task, s32 msgId, s32 mode, s32 unusedArg)
 {
-    enum { ACTOR_350700_KYLE_MADIGAN_DRAW_SHOW_SKIP_AUTO_BUFFER = 3 };
     KyleMadiganWalkerWork* work;
     TmdObject*             bodyModel;
     TmdObject*             leftHandModel;
@@ -579,7 +576,7 @@ static s32 _actor350700KyleMadiganWalkerSetDrawModeMsg(Task* task, s32 msgId, s3
             work->freeCountdown = mode;
             bodyModel->flags   |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_350700_KYLE_MADIGAN_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             bodyModel->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             bodyModel->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

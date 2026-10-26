@@ -57,6 +57,11 @@
 
 #include "rooms/shelter_b1_pod_service_gantry.h"
 #include "../../shared/actor/actor_messages.h"
+#include "../../shared/screen/screen_fade.h"
+#include "../../shared/screen/screen_fade_step_down.inc.c"
+#include "../../shared/screen/screen_fade_step_up.inc.c"
+
+#include "assets/engine/animation/player_schema.h"
 
 /// Work block of the task that runs the package's cutscene, allocated zeroed at
 /// its full size by that task's first state and kept at its `Task::work`.
@@ -2532,12 +2537,11 @@ static AnimationSet _gActor560800Animation3CBE0 = {
 
 enum {
     ACTOR_560800_MOVIE_TASK_PLAYBACK = 1,
-    ACTOR_560800_SCENE_TASK_PRIORITY = 192,
 };
 
 TaskDesc gActor560800MovieTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, ACTOR_560800_SCENE_TASK_PRIORITY } }, _actor560800StartMovieTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_560800_SCENE_TASK_PRIORITY } }, _actor560800MovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800StartMovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800MovieTask, { .value = 0 } },
 };
 
 /// Scene animation bank borrowed by Aya's player task.
@@ -3785,23 +3789,21 @@ static EvsCommand _gActor560800CutsceneSkipScript[10] = {
     { .opcode = EVENT_SCRIPT_OPCODE_END },
 };
 
-enum { ACTOR_560800_CUTSCENE_TASK_PRIORITY = 192 };
-
 TaskDesc gActor560800CutsceneTaskDescriptors[14] = {
-    { { { TASK_BODY_NONE, ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800CutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800DiscardTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800FadeInTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800FadeOutTask, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800EveBodyTask, { .model = &gEveMaskedBody } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800KyleBodyTask, { .model = &gKyleBody } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800No9BodyTask, { .model = &_gGolemNo9BodyDryfield } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800CastAttachmentTask, { .model = &gKyleHandLeft2 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800CastAttachmentTask, { .model = &gKyleHandRight } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800CastAttachmentTask, { .model = &gKyleP229 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800CastAttachmentTask, { .model = &_gGolemNo9Gunblade } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800EveBodyTask, { .model = &_gEveBody } },
-    { { { TASK_BODY_NONE, ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800ReplaceEveBodyTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_560800_CUTSCENE_TASK_PRIORITY } }, _actor560800AwaitScenePlaybackTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800CutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800DiscardTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800FadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800FadeOutTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800EveBodyTask, { .model = &gEveMaskedBody } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800KyleBodyTask, { .model = &gKyleBody } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800No9BodyTask, { .model = &_gGolemNo9BodyDryfield } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800CastAttachmentTask, { .model = &gKyleHandLeft2 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800CastAttachmentTask, { .model = &gKyleHandRight } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800CastAttachmentTask, { .model = &gKyleP229 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800CastAttachmentTask, { .model = &_gGolemNo9Gunblade } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800EveBodyTask, { .model = &_gEveBody } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800ReplaceEveBodyTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor560800AwaitScenePlaybackTask, { .value = 0 } },
 };
 
 static TmdBone _gActor560800Model40064Skeleton[7] = {
@@ -4251,7 +4253,7 @@ static TaskMessageEntry _gActor560800CarrierMessages[3] = {
 
 /// Task recipes for the cutscene's chain group, chains and carrier.
 ///
-/// Four entries without a terminator, at priority 192: 0 coordinate-body group,
+/// Four entries without a terminator, at priority `TASK_PRIORITY_CONTROL`: 0 coordinate-body group,
 /// 1 intact chain, 2 carrier, 3 falling chain copy. The group and carrier borrow
 /// the cutscene Task* in spawnArg2. Chains borrow their coordinate-body group
 /// in spawnArg2 and use spawnArg1 = 1..8 as their number. A falling copy receives
@@ -4260,10 +4262,10 @@ static TaskMessageEntry _gActor560800CarrierMessages[3] = {
 /// teardown tree. Intact chains and the carrier skip automatic model buffering;
 /// falling copies use it.
 static TaskDesc _gActor560800PropTaskDescriptors[4] = {
-    { { { TASK_BODY_COORD, ACTOR_560800_SCENE_TASK_PRIORITY } }, _actor560800ChainGroupTask, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_SCENE_TASK_PRIORITY } }, _actor560800IntactChainTask, { .model = &_gActor560800Model40064 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_560800_SCENE_TASK_PRIORITY } }, _actor560800CarrierTask, { .model = &_gActor560800Model41AC4 } },
-    { { { TASK_BODY_TMD, ACTOR_560800_SCENE_TASK_PRIORITY } }, _actor560800FallingChainTask, { .model = &_gActor560800Model40E78 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _actor560800ChainGroupTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800IntactChainTask, { .model = &_gActor560800Model40064 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor560800CarrierTask, { .model = &_gActor560800Model41AC4 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _actor560800FallingChainTask, { .model = &_gActor560800Model40E78 } },
 };
 
 /// Borrowed singleton task controlling the scene and owning its cast/props.
@@ -5205,16 +5207,11 @@ static inline void _actor560800BlendPlayerAnimation(Task* task, u16 animationId,
 /// unchanged; the five-word request is borrowed only during dispatch.
 static inline void _actor560800RestartPlayerWeaponAnimation(s16 animationId)
 {
-    enum {
-        ACTOR_560800_PRIMARY_CHARACTER          = 1,
-        ACTOR_560800_PRIMARY_WEAPON_BANK_BASE   = 1,
-        ACTOR_560800_ALTERNATE_WEAPON_BANK_BASE = 0x22,
-    };
     AnimationPlayRequest request;
     s32                  weaponId;
 
     weaponId                     = gPlayerStatus.weapon;
-    request.source.index         = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_560800_PRIMARY_CHARACTER) ? weaponId + ACTOR_560800_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_560800_ALTERNATE_WEAPON_BANK_BASE;
+    request.source.index         = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     request.animationId          = animationId;
     request.blend                = ANIMATION_BLEND_RESET;
     request.blendFrames          = 0;
@@ -5230,16 +5227,11 @@ static inline void _actor560800RestartPlayerWeaponAnimation(s16 animationId)
 /// cutscene's scene-clip id or hold count.
 static inline void _actor560800BlendPlayerWeaponAnimation(s32 animationId)
 {
-    enum {
-        ACTOR_560800_PRIMARY_CHARACTER          = 1,
-        ACTOR_560800_PRIMARY_WEAPON_BANK_BASE   = 1,
-        ACTOR_560800_ALTERNATE_WEAPON_BANK_BASE = 0x22,
-    };
     AnimationPlayRequest request;
     s32                  weaponId;
 
     weaponId                     = gPlayerStatus.weapon;
-    request.source.index         = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_560800_PRIMARY_CHARACTER) ? weaponId + ACTOR_560800_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_560800_ALTERNATE_WEAPON_BANK_BASE;
+    request.source.index         = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     request.animationId          = animationId;
     request.blend                = ANIMATION_BLEND_INTERPOLATE;
     request.blendFrames          = ACTOR_560800_ANIMATION_BLEND_FRAMES;
@@ -5325,16 +5317,16 @@ static void _actor560800HandlePlayerCue(Task* task)
         case 38:
             break;
         case 1:
-            _actor560800RestartPlayerWeaponAnimation(1);
+            _actor560800RestartPlayerWeaponAnimation(PLAYER_ANIMATION_IDLE);
             break;
         case 3:
-            _actor560800BlendPlayerWeaponAnimation(7);
+            _actor560800BlendPlayerWeaponAnimation(PLAYER_ANIMATION_AIM_ENTER);
             break;
         case 9:
             _actor560800BlendPlayerAnimation(task, 0, ACTOR_560800_ANIMATION_BLEND_FRAMES);
             break;
         case 12:
-            _actor560800RestartPlayerWeaponAnimation(9);
+            _actor560800RestartPlayerWeaponAnimation(PLAYER_ANIMATION_AIM_IDLE);
             break;
         case 16:
             _actor560800RestartPlayerAnimation(task, 0xC);
@@ -5342,7 +5334,7 @@ static void _actor560800HandlePlayerCue(Task* task)
         case 18:
             switch (work->playerCue.step) {
                 case 0:
-                    _actor560800RestartPlayerWeaponAnimation(3);
+                    _actor560800RestartPlayerWeaponAnimation(PLAYER_ANIMATION_BACKWARD_WALK);
                     taskMessageDispatch(work->player, ANIMATION_MESSAGE_SET_RATE, ANIMATION_RATE_ONE / 2, 0);
                     work->playerCue.counter = 0;
                     work->playerCue.step++;
@@ -5390,7 +5382,7 @@ static void _actor560800HandlePlayerCue(Task* task)
         case ACTOR_560800_PLAYER_CUE_DELAYED_WEAPON_BLEND:
             switch (work->playerCue.step) {
                 case 0:
-                    _actor560800BlendPlayerWeaponAnimation(8);
+                    _actor560800BlendPlayerWeaponAnimation(PLAYER_ANIMATION_AIM_EXIT);
                     taskMessageDispatch(work->player, ANIMATION_MESSAGE_SET_RATE, ANIMATION_RATE_ONE / 2, 0);
                     work->playerCue.counter = 0;
                     work->playerCue.step++;
@@ -5698,7 +5690,7 @@ static void _actor560800HandleKyleCue(Task* task)
             switch (work->kyleCue.step) {
                 case 0:
                     ((_Actor560800CastWork*)work->kyle->work)->relit = true;
-                    _actor560800BlendPlayerWeaponAnimation(3);
+                    _actor560800BlendPlayerWeaponAnimation(PLAYER_ANIMATION_BACKWARD_WALK);
                     taskMessageDispatch(work->player, ANIMATION_MESSAGE_SET_RATE, ANIMATION_RATE_ONE / 2, 0);
                     work->kyleCue.counter = 0;
                     work->kyleCue.step++;
@@ -5971,13 +5963,10 @@ static void _actor560800InitializeCutscene(Task* task)
 static void _actor560800CutsceneTask(Task* task)
 {
     enum {
-        ACTOR_560800_SCENE_WAIT_PRESENTATION    = 0,
-        ACTOR_560800_SCENE_START_SCRIPT         = 1,
-        ACTOR_560800_SCENE_RUN_SCRIPT           = 2,
-        ACTOR_560800_SCENE_CUE_REPLACE_EVE      = 1,
-        ACTOR_560800_PRIMARY_CHARACTER          = 1,
-        ACTOR_560800_PRIMARY_WEAPON_BANK_BASE   = 1,
-        ACTOR_560800_ALTERNATE_WEAPON_BANK_BASE = 0x22,
+        ACTOR_560800_SCENE_WAIT_PRESENTATION = 0,
+        ACTOR_560800_SCENE_START_SCRIPT      = 1,
+        ACTOR_560800_SCENE_RUN_SCRIPT        = 2,
+        ACTOR_560800_SCENE_CUE_REPLACE_EVE   = 1,
     };
     AnimationPlayRequest      request;
     _Actor560800CutsceneWork* work;
@@ -6005,8 +5994,8 @@ static void _actor560800CutsceneTask(Task* task)
                 gRandomLcgState = _gActor560800SavedRandomState;
                 roomEffectRequestCancelAll();
                 weaponId                     = gPlayerStatus.weapon;
-                request.source.index         = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_560800_PRIMARY_CHARACTER) ? weaponId + ACTOR_560800_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_560800_ALTERNATE_WEAPON_BANK_BASE;
-                request.animationId          = 1;
+                request.source.index         = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
+                request.animationId          = PLAYER_ANIMATION_IDLE;
                 request.blend                = ANIMATION_BLEND_RESET;
                 request.blendFrames          = 0;
                 request.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -6057,9 +6046,8 @@ static void _actor560800StartMovieTask(Task* task)
 /// narrow to signed 16 bits without clamping. Zero rate never finishes.
 static void _actor560800FadeOutTask(Task* task)
 {
-    enum { ACTOR_560800_FADE_INITIALIZE    = 0,
-           ACTOR_560800_FADE_RAMP          = 1,
-           ACTOR_560800_FADE_END_INTENSITY = 256 };
+    enum { ACTOR_560800_FADE_INITIALIZE = 0,
+           ACTOR_560800_FADE_RAMP       = 1 };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
 
@@ -6081,10 +6069,8 @@ static void _actor560800FadeOutTask(Task* task)
             /* fallthrough */
         case ACTOR_560800_FADE_RAMP:
             fadeDrawOverlay(fade->r, fade->g, fade->r, GPU_BLEND_SUBTRACT);
-            fade->r += task->spawnArg1.halves.low;
-            fade->g += task->spawnArg1.halves.low;
-            fade->b += task->spawnArg1.halves.low;
-            if (fade->r >= ACTOR_560800_FADE_END_INTENSITY) {
+            _screenFadeStepUp(fade, task);
+            if (fade->r >= SCREEN_FADE_OUT_COMPLETE) {
                 SetDispMask(0);
                 taskKill(task);
             }
@@ -6104,8 +6090,7 @@ static void _actor560800FadeInTask(Task* task)
 {
     enum { ACTOR_560800_FADE_INITIALIZE     = 0,
            ACTOR_560800_FADE_ENABLE_DISPLAY = 6,
-           ACTOR_560800_FADE_RAMP           = 7,
-           ACTOR_560800_FADE_MAX_INTENSITY  = 255 };
+           ACTOR_560800_FADE_RAMP           = 7 };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
 
@@ -6119,9 +6104,9 @@ static void _actor560800FadeInTask(Task* task)
                 return;
             }
             fade    = allocatedFade;
-            fade->b = ACTOR_560800_FADE_MAX_INTENSITY;
-            fade->g = ACTOR_560800_FADE_MAX_INTENSITY;
-            fade->r = ACTOR_560800_FADE_MAX_INTENSITY;
+            fade->b = SCREEN_FADE_FULL_INTENSITY;
+            fade->g = SCREEN_FADE_FULL_INTENSITY;
+            fade->r = SCREEN_FADE_FULL_INTENSITY;
             taskReparent(_gActor560800CutsceneTask, task);
             task->state += 1;
             break;
@@ -6141,9 +6126,7 @@ static void _actor560800FadeInTask(Task* task)
             return;
     }
     fadeDrawOverlay(fade->r, fade->g, fade->r, GPU_BLEND_SUBTRACT);
-    fade->r -= task->spawnArg1.halves.low;
-    fade->g -= task->spawnArg1.halves.low;
-    fade->b -= task->spawnArg1.halves.low;
+    _screenFadeStepDown(fade, task);
     if (fade->r < 0) {
         taskKill(task);
     }
@@ -6805,12 +6788,12 @@ static void _actor560800InitChainModel(Task* task)
     model->colorMtx = &work->color;
     taskReparent(work->parent, task);
     // Keep all three draws so later scene effects see the same RNG sequence.
-    gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->swayPhase  = gRandomLcgState >> 16;
-    gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->field_274  = gRandomLcgState >> 16;
-    gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->pulseScale = (gRandomLcgState >> 16) & 0x3FF;
+    RANDOM_LCG_ADVANCE();
+    work->swayPhase = RANDOM_LCG_DRAW();
+    RANDOM_LCG_ADVANCE();
+    work->field_274 = RANDOM_LCG_DRAW();
+    RANDOM_LCG_ADVANCE();
+    work->pulseScale = RANDOM_LCG_DRAW() & 0x3FF;
     animationInitContext(&work->rig.anim, _gActor560800ChainAnimationSets, model, work->rig.poses, work->rig.slots);
     work->chainNumber = task->spawnArg1.value;
 }

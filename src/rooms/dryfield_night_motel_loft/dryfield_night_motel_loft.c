@@ -4,7 +4,8 @@
 
 #include "dryfield_night_motel_loft_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01600.h"
+#include "actors/actor_400600.h"
 
 #include "gameplay/area.h"
 #include "gameplay/captions.h"
@@ -538,7 +539,7 @@ static void _dryfieldNightMotelLoftUpdateRoom(Task* task)
     if (inventoryHasCollectedBit(INVENTORY_COLLECTION_ID_JERRY_CAN) && gameFlagGetNibble(GAME_FLAG_NIGHT_MOTEL_LOFT_EVENT_SEEN) == 0 && sceneFindPlacedActor(0)) {
         gameFlagSetNibble(GAME_FLAG_NIGHT_MOTEL_LOFT_EVENT_SEEN, 1);
         evsStartScript(gDryfieldNightMotelLoftStalkerEncounterScript, EVENT_SCRIPT_HUD_HIDE_RESTORE);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_MOTEL_LOFT_ENCOUNTER_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_MOTEL_LOFT_ENCOUNTER_OBJECTIVE);
         gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = DRYFIELD_NIGHT_MOTEL_LOFT_ENCOUNTER_MUSIC_KEY;
     }
 }

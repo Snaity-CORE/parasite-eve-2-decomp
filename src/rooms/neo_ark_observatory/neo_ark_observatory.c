@@ -10,7 +10,7 @@
 #include "gte.h"
 
 #include "actors/actor_450200.h"
-#include "actors/task_tables.h"
+#include "actors/actor_450200.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/animation.h"
@@ -111,8 +111,6 @@ static inline void _neoArkObservatoryProjectBeamSegment(EffectQuadScratch* quadS
     gte_stflg(&quadScratch->projectionFlags);
 }
 
-enum { NEO_ARK_OBSERVATORY_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static WorldCollisionOccluder _gNeoArkObservatorySightOccluders[4];
 static WorldCollisionTrigger  _gNeoArkObservatoryViewBoundaryTriggers[18];
 static WorldCollisionTrigger  _gNeoArkObservatoryActionTriggers[14];
@@ -128,11 +126,9 @@ static void _neoArkObservatoryCapEventTask(Task* task);
 
 #include "../../shared/room/planar_reflection_data.inc.c"
 
-enum { NEO_ARK_OBSERVATORY_REFLECTION_PRIORITY = 112 };
-
 TaskDesc gNeoArkObservatoryReflectionTaskDescs[2] = {
-    { { { TASK_BODY_NONE, NEO_ARK_OBSERVATORY_REFLECTION_PRIORITY } }, _neoArkObservatoryPlayerReflectionTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, NEO_ARK_OBSERVATORY_REFLECTION_PRIORITY } }, _planarReflectionAttachmentTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, _neoArkObservatoryPlayerReflectionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, _planarReflectionAttachmentTask, { .value = 0 } },
 };
 
 /// Borrows this overlay's two reflection task descriptors.
@@ -146,16 +142,14 @@ static inline TaskDesc* _planarReflectionGetTaskTable(void)
 }
 
 enum {
-    NEO_ARK_OBSERVATORY_DEPARTURE_PRIORITY = 32,
-    NEO_ARK_OBSERVATORY_CAP_EVENT_PRIORITY = 192,
-    NEO_ARK_OBSERVATORY_SCENE_CAP_COMMAND  = 12,
+    NEO_ARK_OBSERVATORY_SCENE_CAP_COMMAND = 12,
 };
 
 /// Bodyless departure recipe consuming the room's staged destination at priority 32.
 ///
 /// Spawning uses descriptor index 0 and no payload. The departure record and
 /// room overlay must remain live until the departure task completes.
-static TaskDesc _gNeoArkObservatoryDepartureTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_OBSERVATORY_DEPARTURE_PRIORITY } }, roomEventDepartureTask, { .value = 0 } };
+static TaskDesc _gNeoArkObservatoryDepartureTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventDepartureTask, { .value = 0 } };
 
 static AnimationPackedPose _gNeoArkObservatoryAnimation03BC4Bank1[6] = {
 #include "assets/neo_ark_observatory_animation_03BC4_bank1.inc"
@@ -184,7 +178,7 @@ static AnimationSet _gNeoArkObservatoryAnimation03BC4 = {
 /// Descriptor index 0 accepts the command index in spawn argument 1. Playback
 /// uses the room's second CAP resource, then restores player control and the
 /// default CAP resources. Keep the room loaded through completion.
-static TaskDesc _gNeoArkObservatoryCapEventTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_OBSERVATORY_CAP_EVENT_PRIORITY } }, _neoArkObservatoryCapEventTask, { .value = 0 } };
+static TaskDesc _gNeoArkObservatoryCapEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _neoArkObservatoryCapEventTask, { .value = 0 } };
 
 /// Message routes installed by the room task, including the end marker.
 ///
@@ -193,7 +187,7 @@ static TaskDesc _gNeoArkObservatoryCapEventTaskDesc = { { { TASK_BODY_NONE, NEO_
 /// The receiver borrows this table and its callbacks while the room is loaded.
 static TaskMessageEntry _gNeoArkObservatoryRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _neoArkObservatoryResolveRoomEventMessage },
-    { NEO_ARK_OBSERVATORY_MESSAGE_USE_KEY_ITEM, _neoArkObservatoryRejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _neoArkObservatoryRejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, _neoArkObservatoryRoomActionMessage },
     { ROOM_MESSAGE_COMMAND, _neoArkObservatoryCommandMessage },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -1982,10 +1976,10 @@ static s32 _neoArkObservatoryRoomActionMessage(Task* unusedTask, s32 unusedMessa
     if (actionRequest->actionId == ACTION_COMPANION_ARRIVAL_SCENE && gameFlagGetNibble(GAME_FLAG_0D7) == 0) {
         gameFlagSetNibble(GAME_FLAG_0D7, true);
         if (gameFlagGetNibble(GAME_FLAG_083) != 0) {
-            gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, COMPANION_FIRST_BRANCH_OBJECTIVE);
+            gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, COMPANION_FIRST_BRANCH_OBJECTIVE);
             evsStartScriptWithSkip(gActor450200SoloSceneScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor450200SoloSceneSkipScript);
         } else {
-            gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, COMPANION_SECOND_BRANCH_OBJECTIVE);
+            gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, COMPANION_SECOND_BRANCH_OBJECTIVE);
             gameFlagSetNibble(GAME_FLAG_0D1, COMPANION_ROUTE_AT_OBSERVATORY);
             evsStartScriptWithSkip(gActor450200CompanionSceneScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor450200CompanionSceneSkipScript);
         }
@@ -2426,7 +2420,7 @@ static void _neoArkObservatoryDrawLightBeam(const SVECTOR ringCenters[2], s32 ou
                 setRGB1(quad, intensity >> 1, intensity >> 1, intensity >> 1);
                 setRGB2(quad, 0, 0, 0);
                 setRGB3(quad, 0, 0, 0);
-                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(quadScratch->depth << display->otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(quadScratch->depth, display->otDepthShift),
                         quad);
                 quad->x0 = quadScratch->screenCorners[0].vx;
                 quad->y0 = quadScratch->screenCorners[0].vy;

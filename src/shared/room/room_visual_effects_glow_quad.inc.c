@@ -35,7 +35,7 @@ static void _roomVisualEffectsDrawHaloBurstGlow(const GfxCoord* coord, s16 halfE
     light                                              = &lightSlot->light;
     light->inner                                       = ROOM_VISUAL_EFFECTS_BURST_LIGHT_INNER_RADIUS;
     light->outer                                       = ROOM_VISUAL_EFFECTS_BURST_LIGHT_OUTER_RADIUS;
-    randomState                                        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+    randomState                                        = RANDOM_LCG_NEXT(gRandomLcgState);
     intensity                                          = ((randomState >> 0x10) & ROOM_VISUAL_EFFECTS_BURST_LIGHT_RANDOM_INTENSITY_MASK) + ROOM_VISUAL_EFFECTS_BURST_LIGHT_BASE_INTENSITY;
     light->head.color.r                                = intensity;
     packedIntensity                                    = intensity << 0x10;
@@ -88,7 +88,7 @@ static void _roomVisualEffectsDrawHaloBurstGlow(const GfxCoord* coord, s16 halfE
         quad->y3                 = bottom;
         quad->y2                 = bottom;
         addPrim(
-            GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)projection->depth << gDisplayState.otDepthShift) >> 2 & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
             quad);
         quad           = gGpuPrimCursor;
         gGpuPrimCursor = quad + 1;
@@ -113,7 +113,7 @@ static void _roomVisualEffectsDrawHaloBurstGlow(const GfxCoord* coord, s16 halfE
         quad->y3                 = outerBottom;
         quad->y2                 = outerBottom;
         addPrim(
-            GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)projection->depth << gDisplayState.otDepthShift) >> 2 & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
             quad);
         if (worldCollisionProjectGroundCoord(coord, &ground) == 1) {
             _roomVisualEffectsDrawHaloBurstGroundQuad(&ground, outerHalfExtent);
@@ -194,7 +194,7 @@ static void _roomVisualEffectsDrawHaloBurstGroundQuad(const GfxCoord* coord, s32
         quad->y2    = quadScratch->screenCorners[2].vy;
         quad->x3    = quadScratch->screenCorners[3].vx;
         quad->y3    = quadScratch->screenCorners[3].vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectQuadScratch);

@@ -9,7 +9,8 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01500.h"
+#include "actors/actor_04000.h"
 
 #include "gameplay/display.h"
 #include "gameplay/area.h"
@@ -50,9 +51,6 @@ static s32  _dryfieldSouvenirShopIgnoreRoomAction(Task* task, s32 messageId, con
 static void _dryfieldSouvenirShopIdleRoomTask(Task* task);
 static void _dryfieldSouvenirShopInitRoomTask(Task* task);
 
-/// Inventory's request to use a key item in this room.
-enum { DRYFIELD_SOUVENIR_SHOP_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static WorldCollisionGrid    _gDryfieldSouvenirShopCollisionGrid;
 static WorldCollisionTrigger _gDryfieldSouvenirShopViewBoundaryTriggers[2];
 static WorldCollisionTrigger _gDryfieldSouvenirShopActionTriggers[12];
@@ -64,7 +62,7 @@ static WorldCoordRoomLights  _gDryfieldSouvenirShopLights;
 /// this table and its callbacks for its lifetime in the loaded room overlay.
 static TaskMessageEntry _gDryfieldSouvenirShopMessageTable[] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _dryfieldSouvenirShopResolveRoomEvent },
-    { DRYFIELD_SOUVENIR_SHOP_MESSAGE_USE_KEY_ITEM, _dryfieldSouvenirShopRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldSouvenirShopRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldSouvenirShopIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _dryfieldSouvenirShopIgnoreRoomCommand },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -472,9 +470,7 @@ WorldCollisionSurfaceProperties* gDryfieldSouvenirShopSurfacePropertiesByClass[8
 /// inventory item's integer ID; all callback arguments are ignored.
 static s32 _dryfieldSouvenirShopRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_SOUVENIR_SHOP_KEY_ITEM_USE_REJECTED = 0 };
-
-    return DRYFIELD_SOUVENIR_SHOP_KEY_ITEM_USE_REJECTED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Permits a room transition with the requested destination unchanged.

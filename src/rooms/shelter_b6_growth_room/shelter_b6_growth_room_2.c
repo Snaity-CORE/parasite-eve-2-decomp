@@ -649,15 +649,15 @@ void shelterB6GrowthRoomAmbientEffectsTask(Task* task)
 /// Q12 trig results narrow to s16 XYZ; pad remains untouched. Spawning copies XYZ
 /// immediately; the mist task never reads the retained stack offset pointer.
 /// Expands to a compound statement and leaves position and angle as outputs.
-#define SHELTER_B6_GROWTH_ROOM_SPAWN_MIST(effectTask, anchorIndex, position, angle)                                                                                                                                      \
-    {                                                                                                                                                                                                                    \
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                                                                                \
-        (angle)         = ((gRandomLcgState >> 16) & SHELTER_B6_GROWTH_ROOM_MIST_ANGLE_MASK) - SHELTER_B6_GROWTH_ROOM_MIST_HALF_ARC;                                                                                     \
-        (position).vx   = _gShelterB6GrowthRoomEffectAnchors[(anchorIndex) + SHELTER_B6_GROWTH_ROOM_MIST_ANCHOR_START].vx + ((rcos((angle)) * SHELTER_B6_GROWTH_ROOM_MIST_RADIUS) >> SHELTER_B6_GROWTH_ROOM_TRIG_SHIFT); \
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                                                                                \
-        (position).vy   = -((s32)(gRandomLcgState >> 16) % (((effectTask)->spawnArg1.value + 1) * 8));                                                                                                                   \
-        (position).vz   = _gShelterB6GrowthRoomEffectAnchors[(anchorIndex) + SHELTER_B6_GROWTH_ROOM_MIST_ANCHOR_START].vz + ((rsin((angle)) * SHELTER_B6_GROWTH_ROOM_MIST_RADIUS) >> SHELTER_B6_GROWTH_ROOM_TRIG_SHIFT); \
-        effectSpawn(EFFECT_GROWTH_ROOM_MIST, NULL, SHELTER_B6_GROWTH_ROOM_MIST_SPAWN_ARG, &(position));                                                                                                                  \
+#define SHELTER_B6_GROWTH_ROOM_SPAWN_MIST(effectTask, anchorIndex, position, angle)                                                                                                                                    \
+    {                                                                                                                                                                                                                  \
+        RANDOM_LCG_ADVANCE();                                                                                                                                                                                          \
+        (angle)       = (RANDOM_LCG_DRAW() & SHELTER_B6_GROWTH_ROOM_MIST_ANGLE_MASK) - SHELTER_B6_GROWTH_ROOM_MIST_HALF_ARC;                                                                                           \
+        (position).vx = _gShelterB6GrowthRoomEffectAnchors[(anchorIndex) + SHELTER_B6_GROWTH_ROOM_MIST_ANCHOR_START].vx + ((rcos((angle)) * SHELTER_B6_GROWTH_ROOM_MIST_RADIUS) >> SHELTER_B6_GROWTH_ROOM_TRIG_SHIFT); \
+        RANDOM_LCG_ADVANCE();                                                                                                                                                                                          \
+        (position).vy = -((s32)RANDOM_LCG_DRAW() % (((effectTask)->spawnArg1.value + 1) * 8));                                                                                                                         \
+        (position).vz = _gShelterB6GrowthRoomEffectAnchors[(anchorIndex) + SHELTER_B6_GROWTH_ROOM_MIST_ANCHOR_START].vz + ((rsin((angle)) * SHELTER_B6_GROWTH_ROOM_MIST_RADIUS) >> SHELTER_B6_GROWTH_ROOM_TRIG_SHIFT); \
+        effectSpawn(EFFECT_GROWTH_ROOM_MIST, NULL, SHELTER_B6_GROWTH_ROOM_MIST_SPAWN_ARG, &(position));                                                                                                                \
     }
 
     // Ramp the glow and mist spread; source count latches at six floor anchors.
@@ -677,14 +677,14 @@ void shelterB6GrowthRoomAmbientEffectsTask(Task* task)
 #undef SHELTER_B6_GROWTH_ROOM_SPAWN_MIST
     // Puffs continue on alternating frames even while the ramp is paused.
     if (!(gDisplayState.animFrame & 1)) {
-        gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
         spawnPosition.vx = -1000;
-        gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        spawnPosition.vy = -1200 - (gRandomLcgState >> 16) % 400;
-        gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        puffBaseZ        = (gRandomLcgState >> 16) % 400 + 3500;
-        gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        spawnPosition.vz = puffBaseZ + ((gRandomLcgState >> 16) & 1) * 1000;
+        RANDOM_LCG_ADVANCE();
+        spawnPosition.vy = -1200 - RANDOM_LCG_DRAW() % 400;
+        RANDOM_LCG_ADVANCE();
+        puffBaseZ = RANDOM_LCG_DRAW() % 400 + 3500;
+        RANDOM_LCG_ADVANCE();
+        spawnPosition.vz = puffBaseZ + (RANDOM_LCG_DRAW() & 1) * 1000;
         effectSpawn(EFFECT_SHELTER_B6_GROWTH_ROOM_DRIFT_PUFF, NULL, SHELTER_B6_GROWTH_ROOM_PUFF_SPAWN_ARG, &spawnPosition);
     }
     _shelterB6GrowthRoomDrawBottomGlow(task->spawnArg1.value, (task->spawnArg1.value >> 1) + SHELTER_B6_GROWTH_ROOM_GLOW_BASE_BRIGHTNESS);
@@ -784,7 +784,7 @@ static void _shelterB6GrowthRoomDrawBottomGlow(s16 heightPixels, s16 brightness)
            SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_HALF_WIDTH_PIXELS, SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_BOTTOM_Y_PIXELS - heightPixels,
            -SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_HALF_WIDTH_PIXELS, SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_BOTTOM_Y_PIXELS,
            SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_HALF_WIDTH_PIXELS, SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_BOTTOM_Y_PIXELS);
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_SORT_DEPTH << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), gradient);
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_SORT_DEPTH), gradient);
     gpuSetPrimitiveBlendMode(gradient, GPU_BLEND_ADD, SHELTER_B6_GROWTH_ROOM_BOTTOM_GLOW_SORT_DEPTH);
 }
 
@@ -845,10 +845,10 @@ void shelterB6GrowthRoomMistTask(Task* task)
 
         work->step      = driftSpeed;
         work->move.vy   = 0;
-        randomX         = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomX         = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomX;
         work->move.vx   = 0x80 - ((randomX >> 16) & 0xFF);
-        randomZ         = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomZ         = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomZ;
         velocityZ       = 0x80 - ((randomZ >> 16) & 0xFF);
         work->move.vz   = velocityZ;
@@ -947,7 +947,7 @@ static void _shelterB6GrowthRoomDrawMist(const GfxCoord* coord, u16 frame, s16 s
             edgePixels             = block->screenY + (u16)block->extent.corner.y;
             quad->y3               = edgePixels;
             quad->y2               = edgePixels;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
         }
     }
@@ -969,9 +969,9 @@ void shelterB6GrowthRoomDriftPuffTask(Task* task)
 
     work->age++;
     if (task->state == SHELTER_B6_GROWTH_ROOM_PARTICLE_STATE_INIT) {
-        work->scale     = task->spawnArg1.value & SHELTER_B6_GROWTH_ROOM_PARTICLE_SIZE_MASK;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->angle     = (gRandomLcgState >> 16) & SHELTER_B6_GROWTH_ROOM_PUFF_ANGLE_MASK;
+        work->scale = task->spawnArg1.value & SHELTER_B6_GROWTH_ROOM_PARTICLE_SIZE_MASK;
+        RANDOM_LCG_ADVANCE();
+        work->angle = RANDOM_LCG_DRAW() & SHELTER_B6_GROWTH_ROOM_PUFF_ANGLE_MASK;
 
         if (task->spawnArg1.value & SHELTER_B6_GROWTH_ROOM_PARTICLE_PERIOD_FIELD_MASK) {
             work->period = (task->spawnArg1.value >> SHELTER_B6_GROWTH_ROOM_PARTICLE_PERIOD_SHIFT) & SHELTER_B6_GROWTH_ROOM_PARTICLE_PERIOD_MASK;
@@ -990,10 +990,10 @@ void shelterB6GrowthRoomDriftPuffTask(Task* task)
 
         work->step      = driftSpeed;
         work->move.vy   = 0;
-        randomX         = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomX         = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomX;
         work->move.vx   = ((randomX >> 16) & 0x7F) + 0x40;
-        randomZ         = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomZ         = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomZ;
         velocityZ       = 0x40 - ((randomZ >> 16) & 0x7F);
         work->move.vz   = velocityZ;
@@ -1088,7 +1088,7 @@ static void _shelterB6GrowthRoomDrawDriftPuff(const GfxCoord* coord, u16 frame, 
             quad->x2               = block->screenX - (u16)block->extent.corner.x;
             quad->y1               = block->screenY - (u16)block->extent.corner.y;
             quad->y2               = block->screenY + (u16)block->extent.corner.y;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
         }
     }

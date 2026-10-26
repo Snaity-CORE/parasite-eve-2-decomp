@@ -327,21 +327,17 @@ static inline s32 _gameMainPauseBlocked(void)
 /// synchronously, leaving both packets reusable and average blending active.
 static inline void _gameMainDrawPauseBackdrop(TILE* tile, DR_TPAGE* drawMode)
 {
-    enum {
-        GAME_MAIN_PAUSE_WIDTH_PIXELS  = 320,
-        GAME_MAIN_PAUSE_HEIGHT_PIXELS = 240,
-    };
 
     setDrawTPage(drawMode, true, true, getTPage(0, GPU_BLEND_AVERAGE, 0, 0));
     DrawPrim(drawMode);
-    tile->x0 = -GAME_MAIN_PAUSE_WIDTH_PIXELS / 2;
-    tile->w  = GAME_MAIN_PAUSE_WIDTH_PIXELS;
-    tile->h  = GAME_MAIN_PAUSE_HEIGHT_PIXELS;
+    tile->x0 = -DISPLAY_SCREEN_WIDTH / 2;
+    tile->w  = DISPLAY_SCREEN_WIDTH;
+    tile->h  = DISPLAY_SCREEN_HEIGHT;
     // The packed black colour clears the command byte; install the tile code next.
     GPU_PRIMITIVE_COLOR_WORD(tile, 0) = 0;
     setTile(tile);
     setSemiTrans(tile, true);
-    tile->y0 = -GAME_MAIN_PAUSE_HEIGHT_PIXELS / 2 - gDisplayState.vramYOffset;
+    tile->y0 = -DISPLAY_SCREEN_HEIGHT / 2 - gDisplayState.vramYOffset;
     DrawPrim(tile);
 }
 
@@ -660,7 +656,6 @@ void gfxResetView(void)
 void displayUploadBackgroundImage(s32 bufferIndex)
 {
     enum {
-        DISPLAY_BACKGROUND_BUFFER_STRIDE    = 272,
         DISPLAY_BACKGROUND_STRIP_ROW_BYTES  = FILE_SYSTEM_IMAGE_STRIP_WIDTH * 2,
         DISPLAY_BACKGROUND_STRIP_INDEX_MASK = 0xFFFF,
     };
@@ -676,7 +671,7 @@ void displayUploadBackgroundImage(s32 bufferIndex)
     if (gCdCmdQueue.imageLayout == FILE_SYSTEM_IMAGE_CONTIGUOUS) {
         if (gDisplayState.vramYOffset >= 0) {
             if (bufferIndex != 0) {
-                rect.y = gDisplayState.vramYOffset + DISPLAY_BACKGROUND_BUFFER_STRIDE;
+                rect.y = gDisplayState.vramYOffset + DISPLAY_BUFFER_STRIDE_ROWS;
             } else {
                 rect.y = gDisplayState.vramYOffset;
             }
@@ -689,7 +684,7 @@ void displayUploadBackgroundImage(s32 bufferIndex)
         if (bufferIndex == 0) {
             rect.y = 0;
         } else {
-            rect.y = DISPLAY_BACKGROUND_BUFFER_STRIDE;
+            rect.y = DISPLAY_BUFFER_STRIDE_ROWS;
         }
         rect.x      = 0;
         rect.w      = FILE_SYSTEM_IMAGE_WIDTH;
@@ -702,7 +697,7 @@ void displayUploadBackgroundImage(s32 bufferIndex)
     sourceRowOffsetBytes = 0;
     // Each strip is one 16-pixel column of the image workspace.
     if (gCdCmdQueue.imageLayout == FILE_SYSTEM_IMAGE_STRIPS) {
-        framebufferY *= DISPLAY_BACKGROUND_BUFFER_STRIDE;
+        framebufferY *= DISPLAY_BUFFER_STRIDE_ROWS;
         rect.w        = FILE_SYSTEM_IMAGE_STRIP_WIDTH;
         offsetY       = gDisplayState.vramYOffset;
         rect.y        = framebufferY;

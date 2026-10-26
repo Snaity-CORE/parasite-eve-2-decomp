@@ -20,8 +20,8 @@ static void _oddStrangerSpawnHitEffect(Task* task, s16 hitYaw, s32 attackKey)
     yawMagnitude = (hitYaw >= 0) ? hitYaw : -hitYaw;
     work         = task->work;
     if (yawMagnitude < ACTOR_TRANSFORM_ANGLE_TURN / 8) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        switch ((s32)(gRandomLcgState >> 16) & 3) {
+        RANDOM_LCG_ADVANCE();
+        switch ((s32)RANDOM_LCG_DRAW() & 3) {
             case 0:
                 *hitOffset = _gOddStrangerHitOffsets[0];
                 break;
@@ -39,8 +39,8 @@ static void _oddStrangerSpawnHitEffect(Task* task, s16 hitYaw, s32 attackKey)
                 break;
         }
     } else if (yawMagnitude > 3 * ACTOR_TRANSFORM_ANGLE_TURN / 8) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        switch ((s32)(gRandomLcgState >> 16) & 2) {
+        RANDOM_LCG_ADVANCE();
+        switch ((s32)RANDOM_LCG_DRAW() & 2) {
             case 0:
                 *hitOffset = _gOddStrangerHitOffsets[5];
                 break;
@@ -52,15 +52,15 @@ static void _oddStrangerSpawnHitEffect(Task* task, s16 hitYaw, s32 attackKey)
                 break;
         }
     } else if (hitYaw > 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             *hitOffset = _gOddStrangerHitOffsets[8];
         } else {
             *hitOffset = _gOddStrangerHitOffsets[9];
         }
     } else {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             *hitOffset = _gOddStrangerHitOffsets[10];
         } else {
             *hitOffset = _gOddStrangerHitOffsets[11];
@@ -147,8 +147,8 @@ static void _oddStrangerTakeHit(Task* task)
         ODD_STRANGER_CRITICAL_EFFECT_ROLLED       = 0,
         ODD_STRANGER_CRITICAL_EFFECT_BEHIND       = 4,
         ODD_STRANGER_HIT_ANIM_FALL_BACK           = 10,
-        ODD_STRANGER_SOUND_HURT                   = SOUND_ACTOR_311500_HURT,
-        ODD_STRANGER_SOUND_DEATH                  = SOUND_ACTOR_311500_DEATH
+        ODD_STRANGER_SOUND_HURT                   = SOUND_LESSER_STRANGER_HURT,
+        ODD_STRANGER_SOUND_DEATH                  = SOUND_LESSER_STRANGER_DEATH
     };
     PlayerStatus*    playerStatus = &gPlayerStatus;
     OddStrangerWork* work;
@@ -268,7 +268,7 @@ static void _oddStrangerTakeHit(Task* task)
                 effectSpawn(EFFECT_CRITICAL_HIT, &task->extra.tmd->coords[2], (s32)(criticalEffectKind), NULL);
             }
             if (work->state == ODD_STRANGER_STATE_DORMANT_SCRIPTED) {
-                sndEvtRequestScriptStop(SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
+                sndEvtRequestScriptStop(SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
             }
             if ((work->state == ODD_STRANGER_STATE_GRAB_PULL || work->state == ODD_STRANGER_STATE_GRAB_STRIKE || work->state == ODD_STRANGER_STATE_GRAB_RELEASE) && playerStatus->hp > 0 && work->playerHeld == 1) {
                 taskMessageDispatch(gameGetTaskSlot(GAME_TASK_SLOT_PLAYER), GAME_ACTOR_MESSAGE_END_SCRIPTED, 0, 0);

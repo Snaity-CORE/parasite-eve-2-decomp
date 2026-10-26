@@ -100,7 +100,7 @@ void m4a1PykeNozzleTask(Task* task)
                     transientLight->framesLeft = M4A1_PYKE_NOZZLE_LIGHT_FRAMES;
                     pointLight->inner          = M4A1_PYKE_NOZZLE_IDLE_LIGHT_INNER;
                     pointLight->outer          = M4A1_PYKE_NOZZLE_IDLE_LIGHT_OUTER;
-                    lightRandom                = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    lightRandom                = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState            = lightRandom;
                     // Green halves the unsigned red halfword; blue quarters its signed value.
                     pointLight->head.color.r = ((lightRandom >> 16) & M4A1_PYKE_NOZZLE_LIGHT_RANDOM_MASK) + M4A1_PYKE_NOZZLE_IDLE_RED_MIN;
@@ -126,7 +126,7 @@ void m4a1PykeNozzleTask(Task* task)
                     transientLight->framesLeft = M4A1_PYKE_NOZZLE_LIGHT_FRAMES;
                     pointLight->inner          = M4A1_PYKE_NOZZLE_FIRE_LIGHT_INNER;
                     pointLight->outer          = M4A1_PYKE_NOZZLE_FIRE_LIGHT_OUTER;
-                    lightRandom                = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    lightRandom                = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState            = lightRandom;
                     pointLight->head.color.r   = ((lightRandom >> 16) & M4A1_PYKE_NOZZLE_LIGHT_RANDOM_MASK) + M4A1_PYKE_NOZZLE_FIRE_RED_MIN;
                     pointLight->head.color.g   = (u16)pointLight->head.color.r >> 1;
@@ -196,7 +196,7 @@ void m4a1PykeAttackState(Task* playerTask)
                 readyBlendFrames = M4A1_PYKE_MOVING_READY_BLEND_FRAMES;
             }
             playerActorPlayChildSlotsWithBlend(playerTask, PLAYER_ANIMATION_AIM_IDLE, 0, readyBlendFrames);
-            actor->movementMode = 0;
+            actor->movementMode = GAME_ACTOR_MOVEMENT_STOPPED;
             break;
         case M4A1_PYKE_PHASE_WAIT_READY:
             if (animationGetCurrentRecord(&actor->animationContext, actor->animationSlots + 1) !=

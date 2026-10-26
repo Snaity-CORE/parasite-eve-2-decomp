@@ -39,9 +39,8 @@
 // as EvsCommand* until the interpreter ends. This header and the other fragments
 // do not require either blackout binding.
 
-/// Scheduling and playback choices shared by the paired driveway scene recipes.
+/// Playback choices shared by the paired driveway scene recipes.
 enum {
-    DRIVEWAY_SCENE_TASK_PRIORITY                  = 32,
     DRIVEWAY_CAP_BLACKOUT                         = 3,
     DRIVEWAY_CAP_ENCOUNTER                        = 4,
     DRIVEWAY_BLACKOUT_FADE_FRAMES                 = 30,

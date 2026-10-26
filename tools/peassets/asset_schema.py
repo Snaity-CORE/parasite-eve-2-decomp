@@ -95,7 +95,9 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # color depth, `bits`; the page and palette stay the texture's. The model is built with it, and the binding states
     # the mismatch between the asset and its use (the M4A1 Grenade's projectile reads 8-bit texels below its
     # weapon's sheet).
-    "binding": {"payload": (), "stored": ("model", "textures", "override")},
+    # `unbound` places, per slot, what the faces name where no file uploads a texture there ({bits, page, palette}):
+    # the game draws whatever VRAM holds (the MIST gallery's demonstration target). The slot is drawn untextured.
+    "binding": {"payload": (), "stored": ("model", "textures", "override", "unbound")},
     # A texture is one page of pixels in one or more variants, each an indexed PNG (texture/); `bpp`,
     # `width` (texels) and `height` are what the game expects, against which a supplied PNG is checked.
     "texture": {"payload": (), "stored": ("bpp", "width", "height", "variants", "palettes_from", "no_palette", "cells")},
@@ -111,6 +113,9 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # A rectangle of VRAM in halfwords that pages and palettes are placed in by name, `within` another region where
     # it is part of it (texture/declaration.py).
     "vram_region": {"payload": (), "stored": ("within", "shares", "at", "size")},
+    # A place in RAM one package occupies at a time: its address, and the overlays.toml families or splat configs
+    # linked for it (package.py).
+    "memory_slot": {"payload": (), "stored": ("at", "families", "configs")},
     # Data of a declared shape (tools/peassets/shape/): its `shape`, and in `outputs` the stored asset each of the
     # shape's outputs is. Its instance, `<group>/<local name>.toml`, is decoded from them and encodes back exactly.
     "shaped": {"payload": (), "stored": ("shape", "outputs", "include")},
@@ -124,7 +129,7 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # where the asset's own name differs from it (a package filed in a room's group is `<room>_package`).
     # `embedded` lists the EMBEDDED_ASSETS located inside the package, by address: a package is a container, as a
     # bundle or a bank is.
-    "pe2pkg": {"payload": (), "stored": ("parent", "package_name", "embedded")},
+    "pe2pkg": {"payload": (), "stored": ("parent", "package_name", "embedded", "entries")},
     # A room's package, stored as a package is: the room's entry points besides those the stage's per-area tables and
     # gameplay's area table give, by module (`entries`); its instance, `<group>/room.toml`, is decoded from the
     # package (tools/peassets/room/).
@@ -133,6 +138,10 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # objects, map, image memory, music and rewards - from gameplay's per-stage tables, its rooms' variants and its
     # `entries`; its per-area tables follow from its rooms. Its instance is `<group>/stage.toml`.
     "stage": {"payload": (), "stored": ("parent", "package_name", "embedded", "entries")},
+    # An overlay image that states where it loads, what is resident with it, what fills the slots it points into and
+    # the tables it offers others (package.py).
+    "package": {"payload": (), "stored": ("parent", "package_name", "embedded", "entries", "load", "requires", "slots",
+                                          "exports")},
     "bs": {"payload": (), "stored": ()},
     # A bank is a container: `samples` names the sample in each slot, in slot order.
     "spk": {"payload": ("samples",), "stored": ("sounds",)},
@@ -173,7 +182,10 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # SkelAnimation in its group's directory and encoded from it; the rig gives the joint paths and the rest pose the
     # decoded file shows. Placed (with its address: it holds pointers) by every package that carries it; a clip
     # several packages carry belongs to a shared group (characters/aya).
-    "clip": {"payload": (), "stored": ("rig", "symbol")},
+    "clip": {"payload": (), "stored": ("rig", "symbol", "copy_of")},
+    # A camera track a scene plays frame by frame (`include` and `layout`: how the build takes it back in, as an
+    # embedded record says): placed by its package, as a clip is.
+    "camera_path": {"payload": (), "stored": ("include", "layout")},
     # The slots a table of clips is indexed by, as the code indexes it: `slots` names each index ("" where none is
     # used). The player's schema serves every weapon and companion.
     "animation_schema": {"payload": (), "stored": ("slots",)},
@@ -182,7 +194,8 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
     # like an embedded asset, a bank is defined in C as `AnimationSet* symbol[N]` by the build
     # (gen_animation_source.py), N its placement's size in words, entries past the slots NULL. Unplaced, it is a
     # layer only other banks use: Aya's own clips, a carry style's locomotion, a weapon family's combat clips.
-    "animation_bank": {"payload": (), "stored": ("schema", "base", "clips", "symbol")},
+    # `borrows` names packages resident with the bank's own whose placed clips it binds as well.
+    "animation_bank": {"payload": (), "stored": ("schema", "base", "clips", "symbol", "borrows")},
     # A dialogue's glyph atlas: an on-disc image chunk, stored and decoded as a pe2img, but not drawn by anyone - the
     # tool that built the dialogue laid it out from its text and the font (doc/CAP_FORMAT.md §9). `generated_by` names
     # that dialogue, or one per page where the image holds several pages side by side (the shooting gallery's two);
@@ -196,8 +209,11 @@ SCHEMA: dict[str, dict[str, tuple[str, ...]]] = {
 # its size always, its position only when the record fixes one.
 EMBEDDED_FIELDS = ("source", "vram", "offset", "address", "size", "ext", "type", "include", "layout", "deps", "notes",
                    "group")
+# The package types: an overlay image, whichever kind it is declared as (package.py; pe2pkg, room and stage are the
+# older kinds the `package` type replaces).
+PACKAGE_TYPES = frozenset({"pe2pkg", "room", "stage", "package"})
 # Types with no bytes of their own: declared by hand, carried over unchanged by dump_asset_db.py.
-DECLARED_TYPES = frozenset({"binding", "texture", "file", "atlas", "font", "vram_region", "rig", "clip", "animation_schema",
+DECLARED_TYPES = frozenset({"binding", "texture", "file", "atlas", "font", "vram_region", "memory_slot", "rig", "clip", "camera_path", "animation_schema",
                             "animation_bank", "sound_bank", "sound", "shaped", "room", "stage"})
 
 # Embedded types the code reaches by their address in memory - a model through pointers in the code, an image or a
@@ -338,7 +354,7 @@ def package_name(key: str, rec: dict[str, Any] | None = None) -> str:
 
 def package_names(assets: dict) -> dict[str, str]:
     """Every package asset -> its overlay name."""
-    return {k: r.get("package_name", k) for k, r in assets.items() if r.get("type") in ("pe2pkg", "room", "stage")}
+    return {k: r.get("package_name", k) for k, r in assets.items() if r.get("type") in PACKAGE_TYPES}
 
 
 def package_asset(name: str, assets: dict | None = None) -> str:
@@ -346,7 +362,7 @@ def package_asset(name: str, assets: dict | None = None) -> str:
     if assets is None:
         assets = load()[0]
     for key, rec in assets.items():
-        if rec.get("type") in ("pe2pkg", "room", "stage") and rec.get("package_name") == name:
+        if rec.get("type") in PACKAGE_TYPES and rec.get("package_name") == name:
             return key
     return name
 
@@ -354,7 +370,7 @@ def package_asset(name: str, assets: dict | None = None) -> str:
 def implied_deps(key: str, assets: dict, embedded: dict) -> list[str]:
     """Dependencies the manifest states in another form."""
     rec = assets.get(key)
-    if not rec or rec.get("type") not in ("pe2pkg", "room", "stage"):
+    if not rec or rec.get("type") not in PACKAGE_TYPES:
         return []
     source = package_name(key, rec) + ".pe2pkg"
     return sorted(k for k, e in embedded.items() if e.get("source") == source)
@@ -399,7 +415,7 @@ def parents_of(key: str, assets: dict, tree: dict) -> list[str]:
             if any(key in (n.get("chunks") or {}).values() for n in fnode["files"].values()):
                 for node in tree[0]["files"].values():
                     if int(node["id"]) == 900000 + stage:
-                        return [c for c in node["chunks"].values() if assets.get(c, {}).get("type") in ("pe2pkg", "room", "stage")][:1] or ["gameplay"]
+                        return [c for c in node["chunks"].values() if assets.get(c, {}).get("type") in PACKAGE_TYPES][:1] or ["gameplay"]
     return ["gameplay"]
 
 
@@ -443,7 +459,7 @@ TYPE_DIR_BY_EXT: dict[str, str] = {
     ".wav": "sample",
 }
 # The extension of the stored bytes of each manifest type that does not state one (`ext`, on an embedded asset).
-EXT_BY_TYPE: dict[str, str] = {"pe2pkg": ".pe2pkg", "room": ".pe2pkg", "stage": ".pe2pkg", "pe2img": ".pe2img", "pe2clut": ".pe2clut", "pe2bundle": ".pe2bundle",
+EXT_BY_TYPE: dict[str, str] = {"pe2pkg": ".pe2pkg", "room": ".pe2pkg", "stage": ".pe2pkg", "package": ".pe2pkg", "pe2img": ".pe2img", "pe2clut": ".pe2clut", "pe2bundle": ".pe2bundle",
                                "cap": ".cap", "stf": ".stf", "demo": ".demo", "font_atlas": ".pe2img", "collision": ".collision", "bs": ".bs",
                                # embedded types: a placement's extension follows from its type
                                "animation": ".anim", "camera_path": ".path", "movie_path": ".path", "clut": ".clut",
@@ -916,6 +932,11 @@ def validate(assets: dict, embedded: dict) -> list[str]:
                     problems.append(f"{key}: names slot {slot!r}, which {rec.get('model')} does not have")
                 if assets.get(texture, {}).get("type") != "texture" or variant not in assets[texture].get("variants", ()):
                     problems.append(f"{key}: textures.{slot} must name a texture variant, <texture>.<variant>")
+            for slot, at in rec.get("unbound", {}).items():
+                if slot not in model.get("slots", ()) or slot in rec.get("textures", {}):
+                    problems.append(f"{key}: unbound names slot {slot!r}, which is not a slot of the model the binding leaves empty")
+                elif not (isinstance(at, dict) and set(at) == {"bits", "page", "palette"} and at["bits"] in (4, 8, 16)):
+                    problems.append(f"{key}: unbound.{slot} is {{bits = 4|8|16, page = [x, y], palette = [x, y]}}")
             for slot, at in rec.get("override", {}).items():
                 if slot not in rec.get("textures", {}):
                     problems.append(f"{key}: override names slot {slot!r}, which the binding does not bind")
@@ -926,6 +947,10 @@ def validate(assets: dict, embedded: dict) -> list[str]:
             if not isinstance(joints, list) or not all(isinstance(j, str) and NAME.match(j) for j in joints) or \
                     len(set(joints)) != len(joints):
                 problems.append(f"{key}: joints names each joint once (lower-case letters, digits and _)")
+        if kind == "clip" and "copy_of" in rec:
+            original = assets.get(rec["copy_of"], {})
+            if original.get("type") != "clip" or "copy_of" in original or original.get("rig") != rec.get("rig"):
+                problems.append(f"{key}: copy_of names a clip on its rig that is no copy itself")
         if kind in ("model", "clip") and "rig" in rec:
             rig = assets.get(rec["rig"], {})
             if rig.get("type") != "rig":
@@ -955,6 +980,12 @@ def validate(assets: dict, embedded: dict) -> list[str]:
                 problems.append(f"{key}: states the schema {stated[0]}, its base {schema_name}")
             if "symbol" in rec and key not in embedded:
                 problems.append(f"{key}: only a placed bank is a table in C, with a symbol")
+            if "borrows" in rec and key not in embedded:
+                problems.append(f"{key}: only a placed bank binds clips other packages place")
+            packages = {r.get("package_name", k) for k, r in assets.items() if r.get("type") in PACKAGE_TYPES}
+            for package in rec.get("borrows", ()):
+                if package not in packages:
+                    problems.append(f"{key}: borrows {package!r}, which is not a package")
             for slot, clip in rec.get("clips", {}).items():
                 if slot not in schema.get("slots", ()):
                     problems.append(f"{key}: binds slot {slot!r}, which {schema_name} does not have")
@@ -971,6 +1002,12 @@ def validate(assets: dict, embedded: dict) -> list[str]:
             problems += texture_declaration.check_font(key, rec, assets, embedded, frozenset(text_encoding.ENCODINGS))
         if kind == "vram_region":
             problems += texture_declaration.check_region(key, rec, assets)
+        if kind == "memory_slot":
+            import package
+            problems += package.check_memory_slot(key, rec, assets)
+        if kind == "package":
+            import package
+            problems += package.check_package(key, rec, assets)
         if kind == "shaped":
             import shape
             problems += shape.check_asset(key, rec, assets, shape.declarations())

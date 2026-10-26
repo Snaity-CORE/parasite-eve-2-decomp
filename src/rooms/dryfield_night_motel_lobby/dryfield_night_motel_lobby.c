@@ -24,6 +24,7 @@
 
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/fs.h"
 #include "main/gameflag.h"
 #include "main/mc.h"
@@ -40,8 +41,6 @@
 #include "main/ui_types.h"
 
 #include "overlay.h"
-
-#include "rooms/akropolis_square.h"
 
 #include "rooms/room.h"
 
@@ -67,8 +66,8 @@ static void _dryfieldNightMotelLobbyCashRegisterOwnerTask(Task* task);
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -91,15 +90,13 @@ static const TaskMessageEntry _gDryfieldNightMotelLobbyRoomMessages[6] SECTION("
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { DRYFIELD_NIGHT_MOTEL_LOBBY_REGISTER_OWNER_PRIORITY = 32 };
-
 /// Bodyless cash-register owner recipe at index 0, followed by `TASK_DESC_END`.
 ///
 /// Spawning copies the recipe with zero payloads and retains no table pointer.
 /// The owner waits for the register controller's exit before releasing itself;
 /// callback code must stay loaded through the interaction.
 static TaskDesc _gDryfieldNightMotelLobbyCashRegisterOwnerTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_NIGHT_MOTEL_LOBBY_REGISTER_OWNER_PRIORITY } }, _dryfieldNightMotelLobbyCashRegisterOwnerTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldNightMotelLobbyCashRegisterOwnerTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -150,7 +147,7 @@ static inline void _dryfieldNightMotelLobbyPrepareRevisitCutscene(void)
            LATE_CAP_FILE         = 2 };
     gDryfieldNightMotelLobbyRevisitCutscene.view    = REVISIT_VIEW;
     gDryfieldNightMotelLobbyRevisitCutscene.capSlot = REVISIT_CAP_SLOT;
-    if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) < REVISIT_CHAPTER_SPLIT) {
+    if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) < REVISIT_CHAPTER_SPLIT) {
         gDryfieldNightMotelLobbyRevisitCutscene.capTPageX = EARLY_CAP_TPAGE_X;
         gDryfieldNightMotelLobbyRevisitCutscene.capFile   = EARLY_CAP_FILE;
     } else {
@@ -280,7 +277,7 @@ static void _dryfieldNightMotelLobbyUpdateMasterkeyObjective(Task* unusedTask)
 
     masterkeyCollected = inventoryHasCollectedBit(INVENTORY_COLLECTION_ID_BRONCO_MASTERKEY);
     if ((masterkeyCollected != 0) && (gDryfieldNightMotelLobbyPreviousMasterkeyCollected == 0)) {
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, MASTERKEY_COLLECTED_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, MASTERKEY_COLLECTED_OBJECTIVE);
     }
     gDryfieldNightMotelLobbyPreviousMasterkeyCollected = masterkeyCollected;
 }

@@ -22,6 +22,7 @@
 
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/fs.h"
 #include "main/gameflag.h"
 #include "main/mc.h"
@@ -37,8 +38,6 @@
 #include "main/text.h"
 #include "main/ui.h"
 #include "main/ui_types.h"
-
-#include "rooms/akropolis_square.h"
 
 #include "rooms/room.h"
 
@@ -69,19 +68,17 @@ static void _dryfieldGasStationArrivalSupervisorTask(Task* task);
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
-
-enum { DRYFIELD_GAS_STATION_ARRIVAL_SUPERVISOR_TASK_PRIORITY = 32 };
 
 /// Bodyless arrival-supervisor recipe at slot 0, followed by TASK_DESC_END.
 ///
 /// Spawned with zero payloads on saved warp 1. Spawning consumes the recipe;
 /// callback code must remain loaded until it collects the arrival task's result.
 static TaskDesc _gDryfieldGasStationArrivalSupervisorTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_GAS_STATION_ARRIVAL_SUPERVISOR_TASK_PRIORITY } }, _dryfieldGasStationArrivalSupervisorTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldGasStationArrivalSupervisorTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -218,7 +215,7 @@ static void _dryfieldGasStationInitRoomTask(Task* task)
     gameSetTaskSlot(task, GAME_TASK_SLOT_ROOM);
     if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.warp == ARRIVAL_WARP) {
         taskSpawnFromTable(_gDryfieldGasStationArrivalSupervisorTaskDescs, 0, 0, 0);
-        gameFlagSetNibble(GAME_FLAG_STORY_CHAPTER, ARRIVAL_STORY_CHAPTER);
+        gameFlagSetNibble(EVENT_FLAG_STORY_CHAPTER, ARRIVAL_STORY_CHAPTER);
         gameFlagSetNibble(EVENT_FLAG_TELEPHONE_DIALOGUE_COUNTER, EVENT_FLAG_TELEPHONE_DIALOGUE_UNHEARD);
         gameFlagSetNibble(EVENT_FLAG_STORY_DIALOGUE_INDEX, 0);
     } else {

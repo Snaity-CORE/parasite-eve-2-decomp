@@ -11,7 +11,7 @@
 #include "actor_521100_private.h"
 
 #include "actors/actor.h"
-#include "actors/task_tables.h"
+#include "actors/actor_521100.h"
 
 #include "gameplay/actor.h"
 #include "gameplay/actor_render.h"
@@ -104,7 +104,7 @@ enum {
         }                                                                                                   \
         (bodyWork)->animationId  = ACTOR_521100_ANIM_IDLE;                                                  \
         waitFrames               = (waitFrameTable);                                                        \
-        randomState              = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;          \
+        randomState              = RANDOM_LCG_NEXT(gRandomLcgState);                                        \
         gRandomLcgState          = randomState;                                                             \
         (bodyWork)->stateCounter = waitFrames[(randomState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK]; \
     }
@@ -209,18 +209,15 @@ static void      _actor521100GunbladeTask(Task* task);
 
 #include "assets/enemies/golem/no_9/package_dryfield_clips_2.inc"
 
-/// Distinct, status-free player hit presentation of the golem's weapon attacks.
-enum { ACTOR_521100_WEAPON_HIT_REACTION = 7 };
-
 /// No. 9 GOLEM damage rows for slash, long slash, stance swing and held-player strikes.
 ///
 /// Rows 0..2 have powers 15, 25 and 40 with hit presentation 7; row 3 has
 /// power 10 and the ordinary reaction. The enemy parameters and both attack
 /// spheres borrow these entries; keep them loaded through the fight.
 static DamageAttack _gActor521100Attacks[4] = {
-    { 15, ACTOR_521100_WEAPON_HIT_REACTION },
-    { 25, ACTOR_521100_WEAPON_HIT_REACTION },
-    { 40, ACTOR_521100_WEAPON_HIT_REACTION },
+    { 15, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 25, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 40, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 10, GAME_ACTOR_REACTION_ORDINARY },
 };
 
@@ -441,8 +438,8 @@ static s16 _gActor521100WeaponHitResponses[48] = {
 };
 
 TaskDesc gActor521100No9GolemTaskDescs[2] = {
-    { { { TASK_BODY_TMD, 96 } }, _actor521100BodyTask, { .model = &_gGolemNo9BodyDryfield } },
-    { { { TASK_BODY_TMD, 96 } }, _actor521100GunbladeTask, { .model = &_gGolemNo9Gunblade } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor521100BodyTask, { .model = &_gGolemNo9BodyDryfield } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor521100GunbladeTask, { .model = &_gGolemNo9Gunblade } },
 };
 
 /// No. 9 GOLEM body message bindings, terminated by TASK_MESSAGE_TABLE_END.
@@ -762,7 +759,7 @@ static void _actor521100ResolveContacts(Task* task)
         }
         switch (hitResponse) {
             case ACTOR_521100_HIT_RESPONSE_NORMAL:
-                twistRandomState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                twistRandomState = RANDOM_LCG_NEXT(gRandomLcgState);
                 twistRandomBits  = twistRandomState >> 0x10;
                 pitchTwist       = (twistRandomBits & 0x7F) + 0x40;
                 gRandomLcgState  = twistRandomState;
@@ -785,7 +782,7 @@ static void _actor521100ResolveContacts(Task* task)
                 if ((work->state == ACTOR_521100_STATE_APPROACH) && (work->flinchCooldown <= 0)) {
                     work->state          = ACTOR_521100_STATE_FLINCH;
                     work->subState       = ACTOR_521100_REACTION_BEGIN;
-                    flinchRandomState    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    flinchRandomState    = RANDOM_LCG_NEXT(gRandomLcgState);
                     work->flinchCooldown = ((flinchRandomState >> 0x10) & 0xFF) + 0x96;
                     gRandomLcgState      = flinchRandomState;
                     soundScript          = (((u16)enemy->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | ACTOR_521100_SOUND_FLINCH;
@@ -816,8 +813,8 @@ static void _actor521100ResolveContacts(Task* task)
                 } else {
                     damage >>= 1;
                 }
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                if ((gRandomLcgState >> 16) & 1) {
+                RANDOM_LCG_ADVANCE();
+                if (RANDOM_LCG_DRAW() & 1) {
                     soundScript = (((u16)enemy->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | ACTOR_521100_SOUND_STAGGER_FIRST;
                 } else {
                     soundScript = (((u16)enemy->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | ACTOR_521100_SOUND_STAGGER_SECOND;
@@ -912,7 +909,7 @@ static void _actor521100ApproachState(Task* task)
                     work->subState     = ACTOR_521100_APPROACH_WALK;
                     work->animationId  = ACTOR_521100_ANIM_WALK;
                     walkDurationTable  = _gActor521100WalkDurationFrames;
-                    walkRandomState    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    walkRandomState    = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState    = walkRandomState;
                     work->stateCounter = walkDurationTable[(walkRandomState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
                 } else if (_actor521100TryStartGrab(task) == 0) {
@@ -942,7 +939,7 @@ static void _actor521100ApproachState(Task* task)
                     work->turnSpeed    = 0x78;
                     work->forwardSpeed = 0;
                     idleWaitTable      = _gActor521100ApproachWaitFrames;
-                    idleRandomState    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    idleRandomState    = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState    = idleRandomState;
                     remainingFrames    = idleWaitTable[(idleRandomState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
                     work->stateCounter = remainingFrames;
@@ -950,7 +947,7 @@ static void _actor521100ApproachState(Task* task)
                         _actor521100TryStartAttack(task);
                         if (work->state == ACTOR_521100_STATE_APPROACH) {
                             retryWalkDurationTable = _gActor521100WalkDurationFrames;
-                            retryRandomState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                            retryRandomState       = RANDOM_LCG_NEXT(gRandomLcgState);
                             gRandomLcgState        = retryRandomState;
                             work->stateCounter     = retryWalkDurationTable[(retryRandomState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
                         }
@@ -1063,19 +1060,19 @@ static void _actor521100AttackState(Task* task)
             if (((u32)((u8)gAttachmentState.mode - ATTACHMENT_MODE_ARMED) >= 2U) && (gGameSession->location.view != 2)) {
                 if (work->playerDistance < 0x8FC) {
                     if (work->prevAttackChoice == work->attackChoice) {
-                        nextAttack = _gActor521100NearAttackChoicesAfterRepeat[work->attackChoice][((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & 1];
+                        nextAttack = _gActor521100NearAttackChoicesAfterRepeat[work->attackChoice][((RANDOM_LCG_ADVANCE()) >> 16) & 1];
                     } else {
                         nearChoiceTable = _gActor521100NearAttackChoices;
-                        nearRandomState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        nearRandomState = RANDOM_LCG_NEXT(gRandomLcgState);
                         nextAttack      = nearChoiceTable[(nearRandomState >> 16) & 0xF];
                         gRandomLcgState = nearRandomState;
                     }
                 } else {
                     if (work->prevAttackChoice == work->attackChoice) {
-                        nextAttack = _gActor521100FarAttackChoicesAfterRepeat[work->attackChoice][((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & 1];
+                        nextAttack = _gActor521100FarAttackChoicesAfterRepeat[work->attackChoice][((RANDOM_LCG_ADVANCE()) >> 16) & 1];
                     } else {
                         farChoiceTable  = _gActor521100FarAttackChoices;
-                        farRandomState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                        farRandomState  = RANDOM_LCG_NEXT(gRandomLcgState);
                         nextAttack      = farChoiceTable[(farRandomState >> 16) & 0xF];
                         gRandomLcgState = farRandomState;
                     }
@@ -1190,12 +1187,12 @@ static void _actor521100SlashAttack(Task* task)
     }
     work->forwardSpeed = forwardSpeed;
     if (work->animationFrame >= blendFrames + ACTOR_521100_SLASH_RECOVERY_END_FRAME) {
-        work->animationId  = ACTOR_521100_ANIM_IDLE;
-        work->state        = ACTOR_521100_STATE_APPROACH;
-        work->subState     = ACTOR_521100_APPROACH_WAIT;
-        recoveryWaitTable  = _gActor521100ApproachWaitFrames;
-        gRandomLcgState    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->stateCounter = recoveryWaitTable[(gRandomLcgState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
+        work->animationId = ACTOR_521100_ANIM_IDLE;
+        work->state       = ACTOR_521100_STATE_APPROACH;
+        work->subState    = ACTOR_521100_APPROACH_WAIT;
+        recoveryWaitTable = _gActor521100ApproachWaitFrames;
+        RANDOM_LCG_ADVANCE();
+        work->stateCounter = recoveryWaitTable[RANDOM_LCG_DRAW() & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
         work->attackLive   = 0;
     }
     SCRATCH_STACK_RELEASE_BLOCK(SVECTOR);
@@ -1285,7 +1282,7 @@ static void _actor521100LongSlashAttack(Task* task)
         work->state         = ACTOR_521100_STATE_APPROACH;
         work->subState      = ACTOR_521100_APPROACH_WAIT;
         recoveryWaitTable   = _gActor521100ApproachWaitFrames;
-        recoveryRandomState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        recoveryRandomState = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState     = recoveryRandomState;
         work->stateCounter  = recoveryWaitTable[(recoveryRandomState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
         work->attackLive    = 0;
@@ -1331,9 +1328,9 @@ static void _actor521100StanceAttack(Task* task)
                 u16* waitFrameTable = _gActor521100StanceHoldFrames;
                 work->animationId   = ACTOR_521100_ANIM_STANCE_HOLD;
                 work->attackStep    = ACTOR_521100_STANCE_HOLD;
-                gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->stateCounter  = waitFrameTable[(gRandomLcgState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
-                soundScript         = (((u16)((Enemy*)task->spawnArg2.pointer)->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | ACTOR_521100_SOUND_STANCE_HOLD;
+                RANDOM_LCG_ADVANCE();
+                work->stateCounter = waitFrameTable[RANDOM_LCG_DRAW() & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
+                soundScript        = (((u16)((Enemy*)task->spawnArg2.pointer)->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << 8) | ACTOR_521100_SOUND_STANCE_HOLD;
                 sndEvtRequestScriptStart(soundScript, (s8)worldCoordGetOriginAudioPan(rootCoord),
                                          (s8)worldCoordGetOriginAudioDepth(rootCoord));
             }
@@ -1350,8 +1347,8 @@ static void _actor521100StanceAttack(Task* task)
                 work->subState      = ACTOR_521100_APPROACH_WAIT;
                 work->attackStep    = ACTOR_521100_STANCE_ENTER;
                 work->animationId   = ACTOR_521100_ANIM_IDLE;
-                gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->stateCounter  = waitFrameTable[(gRandomLcgState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
+                RANDOM_LCG_ADVANCE();
+                work->stateCounter = waitFrameTable[RANDOM_LCG_DRAW() & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
             } else {
                 work->attackStep        = ACTOR_521100_STANCE_SWING;
                 work->animationId       = ACTOR_521100_ANIM_STANCE_SWING;
@@ -1407,8 +1404,8 @@ static void _actor521100StanceAttack(Task* task)
                 work->state         = ACTOR_521100_STATE_APPROACH;
                 work->subState      = ACTOR_521100_APPROACH_WAIT;
                 work->animationId   = ACTOR_521100_ANIM_IDLE;
-                gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->stateCounter  = waitFrameTable[(gRandomLcgState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
+                RANDOM_LCG_ADVANCE();
+                work->stateCounter = waitFrameTable[RANDOM_LCG_DRAW() & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
             }
             work->attackLive = 0;
             break;
@@ -1674,7 +1671,7 @@ static void _actor521100GrabState(Task* task)
                 work->animationId   = ACTOR_521100_ANIM_IDLE;
                 work->state         = ACTOR_521100_STATE_APPROACH;
                 work->subState      = ACTOR_521100_APPROACH_WAIT;
-                recoveryRandomState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                recoveryRandomState = RANDOM_LCG_NEXT(gRandomLcgState);
                 gRandomLcgState     = recoveryRandomState;
                 work->stateCounter  = recoveryWaitTable[(recoveryRandomState >> 16) & ACTOR_521100_RECOVERY_WAIT_INDEX_MASK];
             }
@@ -2118,9 +2115,9 @@ static void _actor521100TickEventFire(Task* task)
         work->stateCounter = 0U;
         effectSpawnHit(EFFECT_HIT_KIND_BLAST, &task->extra.tmd->coords[3], NULL, &work->hitEffectArg);
         if (work->eventBurnStage == ACTOR_521100_FIRE_FULL) {
-            fireParts       = gActor521100AnimationFireTables.tables.eventFireParts;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            partIndex       = fireParts[(gRandomLcgState >> 16) & (ARRAY_SIZE(gActor521100AnimationFireTables.tables.eventFireParts) - 1)];
+            fireParts = gActor521100AnimationFireTables.tables.eventFireParts;
+            RANDOM_LCG_ADVANCE();
+            partIndex = fireParts[RANDOM_LCG_DRAW() & (ARRAY_SIZE(gActor521100AnimationFireTables.tables.eventFireParts) - 1)];
             effectSpawnHit(EFFECT_HIT_KIND_BLAST, &task->extra.tmd->coords[partIndex], NULL, &work->hitEffectArg);
         }
     }

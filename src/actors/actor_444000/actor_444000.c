@@ -569,10 +569,8 @@ static EvsCommand _gActor444000DescentSkipScript[15] = {
     { .opcode = EVENT_SCRIPT_OPCODE_END },
 };
 
-enum { ACTOR_444000_INCINERATOR_EVENT_PRIORITY = 192 };
-
 TaskDesc gActor444000IncineratorEventTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, ACTOR_444000_INCINERATOR_EVENT_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _actor444000IncineratorEventTask,
     .data     = { .value = 0 },
 };
@@ -2446,9 +2444,6 @@ static TmdSource _gGluttonLimb;
 extern TmdSource gGluttonActor403200Model18BE4;
 static TmdSource _gActor444000GluttonEscort6ModelSource;
 
-/// Execution priority shared by the host and its attached-part recipes.
-enum { ACTOR_444000_GLUTTON_TASK_PRIORITY = 96 };
-
 /// Recipes indexed by the host's seven attached-part slots.
 ///
 /// Slots 0/1 are the animated right/left legs; 2..5 are additional attached
@@ -2456,13 +2451,13 @@ enum { ACTOR_444000_GLUTTON_TASK_PRIORITY = 96 };
 /// both room placements suppress it. Its zero-filled source has no recovered
 /// initialization. All seven callbacks have the same prop-task lifecycle.
 static TaskDesc _gActor444000GluttonAttachedTaskDescs[7] = {
-    { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _gluttonPropTask, { .model = &gGluttonLegRight } },
-    { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _gluttonPropTask, { .model = &gGluttonLegLeft } },
-    { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _gluttonPropTask, { .model = &gGluttonActor403200Model12884 } },
-    { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _gluttonPropTask, { .model = &gGluttonActor403200Model13774 } },
-    { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _gluttonPropTask, { .model = &_gGluttonLimb } },
-    { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _gluttonPropTask, { .model = &gGluttonActor403200Model18BE4 } },
-    { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _gluttonEscort6Task, { .model = &_gActor444000GluttonEscort6ModelSource } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonPropTask, { .model = &gGluttonLegRight } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonPropTask, { .model = &gGluttonLegLeft } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonPropTask, { .model = &gGluttonActor403200Model12884 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonPropTask, { .model = &gGluttonActor403200Model13774 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonPropTask, { .model = &_gGluttonLimb } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonPropTask, { .model = &gGluttonActor403200Model18BE4 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonEscort6Task, { .model = &_gActor444000GluttonEscort6ModelSource } },
 };
 
 /// Launch translations for the eight rain blobs, indexed by spawnArg1's low half.
@@ -2525,10 +2520,10 @@ static u8 _gGluttonRainPointIndex[GLUTTON_RAIN_GROUP_COUNT][GLUTTON_RAIN_BLOB_CO
 /// the incinerator owns its spinner descriptor separately. Callbacks are private
 /// instances and each spawned task owns its body and work until teardown.
 static TaskDesc _gGluttonProjectileTaskDescs[GLUTTON_PROJECTILE_TASK_COUNT] = {
-    { { { TASK_BODY_TMD, GLUTTON_PROJECTILE_TASK_PRIORITY } }, _gluttonGlobTask, { .model = &_gGluttonGlob } },
-    { { { TASK_BODY_COORD, GLUTTON_PROJECTILE_TASK_PRIORITY } }, _gluttonRainTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, GLUTTON_PROJECTILE_TASK_PRIORITY } }, _gluttonThrowTask, { .value = 0 } },
-    { { { TASK_BODY_TMD, GLUTTON_PROJECTILE_TASK_PRIORITY } }, _gluttonChunkTask, { .model = &_gGluttonChunk } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonGlobTask, { .model = &_gGluttonGlob } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _gluttonRainTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _gluttonThrowTask, { .value = 0 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _gluttonChunkTask, { .model = &_gGluttonChunk } },
 };
 
 /// Unspawned recipe for a Glutton floor spinner with its own TMD body.
@@ -2537,7 +2532,7 @@ static TaskDesc _gGluttonProjectileTaskDescs[GLUTTON_PROJECTILE_TASK_COUNT] = {
 /// half of spawnArg1 (0 short, 1 medium, otherwise long). Model geometry and
 /// callbacks belong to this overlay and must outlive the task.
 static TaskDesc _gActor444000UnusedGluttonSpinnerTaskDesc = {
-    .header   = { .fields = { TASK_BODY_TMD, GLUTTON_PROJECTILE_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } },
     .callback = _gluttonSpinnerTask,
     .data     = { .model = &_gGluttonSpinner },
 };
@@ -2562,7 +2557,7 @@ static TaskMessageEntry _gActor444000GluttonMessages[7] = {
 /// remains in 0..2 and persists between host states and spawns in this overlay.
 static s16 _gActor444000GluttonDebrisCoordIndex = 0;
 
-TaskDesc gActor444000GluttonHostTaskDesc = { { { TASK_BODY_TMD, ACTOR_444000_GLUTTON_TASK_PRIORITY } }, _actor444000GluttonTask, { .model = &gGluttonBody } };
+TaskDesc gActor444000GluttonHostTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor444000GluttonTask, { .model = &gGluttonBody } };
 
 /// Borrowed live post-boss event task used by this package's script callbacks.
 ///
@@ -5956,15 +5951,15 @@ static void _actor444000ChooseAttackState(Task* task)
                                                rangeScratch->toPlayer.vz * rangeScratch->toPlayer.vz);
     if (rangeScratch->playerDistance < ACTOR_444000_FAR_ATTACK_DISTANCE) {
         if (rangeScratch->playerDistance >= ACTOR_444000_NEAR_ATTACK_DISTANCE) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
                 work->state = ACTOR_444000_STATE_THROW_DEBRIS;
             } else {
                 work->state = GLUTTON_STATE_INHALE;
             }
         } else {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
                 work->state = GLUTTON_STATE_INHALE;
             } else {
                 work->state = GLUTTON_STATE_SWIPE;
@@ -6115,15 +6110,15 @@ static void _actor444000SummonState(Task* task)
                 case 0:
                 case 1:
                     if (summonScratch->slot == 0) {
-                        gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-                        if (!((gRandomLcgState >> 16) & 1)) {
+                        RANDOM_LCG_ADVANCE();
+                        if (!(RANDOM_LCG_DRAW() & 1)) {
                             _gActor444000GluttonMadChaserCommand.command.command = 3;
                         } else {
                             _gActor444000GluttonMadChaserCommand.command.command = 4;
                         }
                     } else {
-                        gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-                        if (!((gRandomLcgState >> 16) & 1)) {
+                        RANDOM_LCG_ADVANCE();
+                        if (!(RANDOM_LCG_DRAW() & 1)) {
                             _gActor444000GluttonMadChaserCommand.command.command = 5;
                         } else {
                             _gActor444000GluttonMadChaserCommand.command.command = 6;
@@ -6133,15 +6128,15 @@ static void _actor444000SummonState(Task* task)
                 case 2:
                 case 3:
                     if (summonScratch->slot == 0) {
-                        gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-                        if (!((gRandomLcgState >> 16) & 1)) {
+                        RANDOM_LCG_ADVANCE();
+                        if (!(RANDOM_LCG_DRAW() & 1)) {
                             _gActor444000GluttonMadChaserCommand.command.command = 0xd;
                         } else {
                             _gActor444000GluttonMadChaserCommand.command.command = 8;
                         }
                     } else {
-                        gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-                        if (!((gRandomLcgState >> 16) & 1)) {
+                        RANDOM_LCG_ADVANCE();
+                        if (!(RANDOM_LCG_DRAW() & 1)) {
                             _gActor444000GluttonMadChaserCommand.command.command = 7;
                         } else {
                             _gActor444000GluttonMadChaserCommand.command.command = 0xe;
@@ -6151,15 +6146,15 @@ static void _actor444000SummonState(Task* task)
                 case 4:
                 case 5:
                     if (summonScratch->slot == 0) {
-                        gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-                        if (((gRandomLcgState >> 16) & 1)) {
+                        RANDOM_LCG_ADVANCE();
+                        if ((RANDOM_LCG_DRAW() & 1)) {
                             _gActor444000GluttonMadChaserCommand.command.command = 9;
                         } else {
                             _gActor444000GluttonMadChaserCommand.command.command = 0xf;
                         }
                     } else {
-                        gRandomLcgState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-                        if (!((gRandomLcgState >> 16) & 1)) {
+                        RANDOM_LCG_ADVANCE();
+                        if (!(RANDOM_LCG_DRAW() & 1)) {
                             _gActor444000GluttonMadChaserCommand.command.command = 9;
                         } else {
                             _gActor444000GluttonMadChaserCommand.command.command = 0xf;
@@ -6169,7 +6164,7 @@ static void _actor444000SummonState(Task* task)
             }
             // Bits 8..11 choose the room spot; bits 4..7 choose one of three emergence moves.
             _gActor444000GluttonMadChaserCommand.command.command <<= ACTOR_444000_SUMMON_SPOT_SHIFT;
-            nextRandomState                                        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            nextRandomState                                        = RANDOM_LCG_NEXT(gRandomLcgState);
             _gActor444000GluttonMadChaserCommand.command.command  |= (s16)(((((u32)nextRandomState >> 16) % 3) * ACTOR_444000_SUMMON_MOVE_STRIDE) | MAD_CHASER_COMMAND_EMERGE);
             gRandomLcgState                                        = nextRandomState;
             TASK_MESSAGE_DISPATCH_POINTER(work->summons[summonScratch->slot]->task, ACTOR_COMMAND_MESSAGE_APPLY, &_gActor444000GluttonMadChaserCommand.command, 0);

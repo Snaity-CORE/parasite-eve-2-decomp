@@ -15,7 +15,8 @@
 #include "actors/actor_04400.h"
 #include "actors/actor_341700.h"
 #include "actors/actor_403200.h"
-#include "actors/task_tables.h"
+#include "actors/actor_07000.h"
+#include "actors/actor_342100.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -79,7 +80,10 @@
 #include "overlay.h"
 
 #include "rooms/room_common.h"
+#include "../../shared/screen/screen_fade.h"
 #include "../../shared/effects/glow_draw.h"
+
+#include "assets/engine/animation/player_schema.h"
 
 /// Selects this room's billboard declaration with `s32` frame and size arguments.
 ///
@@ -108,7 +112,7 @@ static void _effectSpriteDrawRotated(const GfxCoord* coord, u16 frameAndPalette,
 /// and addition wrap unsigned at 32 bits before the logical shift. Each
 /// invocation consumes one draw; conditional jitter consumes only its chosen
 /// branch's draw. Keep separate invocations in their existing evaluation order.
-#define SHELTER_B3_DUMPING_HOLE_RANDOM_U16() ((s32)((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16))
+#define SHELTER_B3_DUMPING_HOLE_RANDOM_U16() ((s32)((RANDOM_LCG_ADVANCE()) >> 16))
 
 /// Advances a sprite frame and returns from its task after killing the closing frame.
 ///
@@ -824,9 +828,8 @@ static EvsCommand _gShelterB3DumpingHoleDebrisEventSkipScript[14] = {
     { .opcode = EVENT_SCRIPT_OPCODE_END },
 };
 
-/// Execution priority and direct sprite-recipe indices for the debris event's effects.
+/// Direct sprite-recipe indices of the debris event's effects.
 enum {
-    SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY    = 192,
     SHELTER_B3_DUMPING_HOLE_DEBRIS_SPRITE_TASK_INDEX = 0,
     SHELTER_B3_DUMPING_HOLE_ACTOR_SPRITE_TASK_INDEX  = 1,
 };
@@ -836,11 +839,11 @@ enum {
 /// The director and fade have no body; rubble borrows its selected model
 /// source and allocates its own primitive buffer. No terminator is present.
 static TaskDesc _gShelterB3DumpingHoleDebrisEventTaskDescriptors[5] = {
-    { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHoleDebrisEventTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHoleFadeFromBlackTask, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHoleDebrisModelTask, { .model = &gShelterB3DumpingHoleModel0A0CC } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHoleDebrisModelTask, { .model = &gShelterB3DumpingHoleModel0A348 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHoleDebrisModelTask, { .model = &gShelterB3DumpingHoleModel0A5EC } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleDebrisEventTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleFadeFromBlackTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleDebrisModelTask, { .model = &gShelterB3DumpingHoleModel0A0CC } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleDebrisModelTask, { .model = &gShelterB3DumpingHoleModel0A348 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleDebrisModelTask, { .model = &gShelterB3DumpingHoleModel0A5EC } },
 };
 
 /// Coordinate-body sprite recipes: debris (0), actor (1) and player (3).
@@ -848,10 +851,10 @@ static TaskDesc _gShelterB3DumpingHoleDebrisEventTaskDescriptors[5] = {
 /// Slot 2 retains a NULL callback and must not be spawned. Recipes are read
 /// during spawning; their callbacks require this room overlay to stay loaded.
 static TaskDesc _gShelterB3DumpingHoleSpriteTaskDescriptors[4] = {
-    { { { TASK_BODY_COORD, SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHoleDebrisSpriteTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHoleActorSpriteTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, NULL, { .value = 0 } },
-    { { { TASK_BODY_COORD, SHELTER_B3_DUMPING_HOLE_EVENT_EFFECT_PRIORITY } }, _shelterB3DumpingHolePlayerSpriteTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleDebrisSpriteTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleActorSpriteTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, NULL, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHolePlayerSpriteTask, { .value = 0 } },
 };
 
 static TmdBone _gShelterB3DumpingHoleModel0BAC8Skeleton[4] = {
@@ -972,11 +975,9 @@ static EvsCommand _gShelterB3DumpingHoleCollapseEventSkipScript[13] = {
     { .opcode = EVENT_SCRIPT_OPCODE_END },
 };
 
-enum { SHELTER_B3_DUMPING_HOLE_COLLAPSE_TASK_PRIORITY = 192 };
-
 TaskDesc gShelterB3DumpingHoleCollapseTaskDescriptors[2] = {
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), SHELTER_B3_DUMPING_HOLE_COLLAPSE_TASK_PRIORITY } }, _shelterB3DumpingHoleCollapseEventTask, { .model = &_gShelterB3DumpingHoleModel0BAC8 } },
-    { { { TASK_BODY_COORD, SHELTER_B3_DUMPING_HOLE_COLLAPSE_TASK_PRIORITY } }, _shelterB3DumpingHoleShardTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleCollapseEventTask, { .model = &_gShelterB3DumpingHoleModel0BAC8 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleShardTask, { .value = 0 } },
 };
 
 static AnimationPackedPose _gShelterB3DumpingHoleAnimation0C810Bank1[6] = {
@@ -1049,7 +1050,6 @@ enum {
     SHELTER_B3_DUMPING_HOLE_ARRIVAL_VARIABLE_MOTOR_SEGMENT = 0,
     SHELTER_B3_DUMPING_HOLE_ARRIVAL_BINARY_MOTOR_SEGMENT   = 1,
     SHELTER_B3_DUMPING_HOLE_ARRIVAL_VIBRATION_FRAMES       = 9,
-    SHELTER_B3_DUMPING_HOLE_ARRIVAL_SHAKE_PRIORITY         = 192,
     SHELTER_B3_DUMPING_HOLE_ARRIVAL_CLIP_48                = ANIMATION_BANK_BASE_SET_COUNT + 1,
     SHELTER_B3_DUMPING_HOLE_ARRIVAL_CLIP_49                = ANIMATION_BANK_BASE_SET_COUNT + 2,
     SHELTER_B3_DUMPING_HOLE_ARRIVAL_CLIP_50                = ANIMATION_BANK_BASE_SET_COUNT + 3,
@@ -1079,7 +1079,7 @@ static PadScriptVibrationSegment _gShelterB3DumpingHoleArrivalVibrationSegments[
 /// Bodyless arrival-scene task that shakes the display vertically and clears it on completion.
 ///
 /// No work or spawn payload is required; the callback initializes its own amplitude and timer.
-static TaskDesc _gShelterB3DumpingHoleArrivalShakeTaskDescriptor = { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_ARRIVAL_SHAKE_PRIORITY } }, _shelterB3DumpingHoleShakeTask, { .value = 0 } };
+static TaskDesc _gShelterB3DumpingHoleArrivalShakeTaskDescriptor = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterB3DumpingHoleShakeTask, { .value = 0 } };
 
 /// Arrival-scene player clips at bank-extension indices 47..50.
 ///
@@ -1207,10 +1207,8 @@ EvsCommand gShelterB3DumpingHoleArrivalEventSkipScript[14] = {
 
 #include "../../shared/room/cap_captions_settings.inc.c"
 
-enum { SHELTER_B3_DUMPING_HOLE_ENCOUNTER_CAPTION_TASK_PRIORITY = 32 };
-
 TaskDesc gShelterB3DumpingHoleEncounterCaptionTaskDescriptors[1] = {
-    { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_ENCOUNTER_CAPTION_TASK_PRIORITY } }, _capCaptionRunSchedule, { .value = 0 } }
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _capCaptionRunSchedule, { .value = 0 } }
 };
 
 #include "../../shared/room/cap_captions_schedule.inc.c"
@@ -1288,12 +1286,11 @@ static OverlayEncounterSlot _gShelterB3DumpingHoleEncounterSlots[16] = {
 };
 
 enum {
-    SHELTER_B3_DUMPING_HOLE_ENCOUNTER_CONTROLLER_PRIORITY = 32,
-    SHELTER_B3_DUMPING_HOLE_ENCOUNTER_SPAWNER_PRIORITY    = 97,
+    SHELTER_B3_DUMPING_HOLE_ENCOUNTER_SPAWNER_PRIORITY = 97,
 };
 
 TaskDesc gShelterB3DumpingHoleEncounterTaskDescriptors[4] = {
-    { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_ENCOUNTER_CONTROLLER_PRIORITY } }, _shelterB3DumpingHoleEncounterTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB3DumpingHoleEncounterTask, { .value = 0 } },
     { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_ENCOUNTER_SPAWNER_PRIORITY } }, _shelterB3DumpingHoleEncounterMadChaserTask, { .value = 0 } },
     { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_ENCOUNTER_SPAWNER_PRIORITY } }, _shelterB3DumpingHoleEncounterSlouchTask, { .value = 0 } },
     { { { TASK_BODY_NONE, SHELTER_B3_DUMPING_HOLE_ENCOUNTER_SPAWNER_PRIORITY } }, _shelterB3DumpingHoleEncounterPairTask, { .value = 0 } },
@@ -2806,13 +2803,13 @@ static void _shelterB3DumpingHoleDebrisSpriteTask(Task* task)
             if (eventWork->debrisSpriteSignal != SHELTER_B3_DUMPING_HOLE_DEBRIS_SPRITES_RISE) {
                 return;
             }
-            work->frame     = SHELTER_B3_DUMPING_HOLE_DEBRIS_SPRITE_FIRST_FRAME;
-            work->vel.vx    = 0;
-            work->vel.vz    = 0;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->vel.vy    = -SHELTER_B3_DUMPING_HOLE_DEBRIS_SPRITE_RISE_SPEED - ((gRandomLcgState >> 16) & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->delay     = (gRandomLcgState >> 16) & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK;
+            work->frame  = SHELTER_B3_DUMPING_HOLE_DEBRIS_SPRITE_FIRST_FRAME;
+            work->vel.vx = 0;
+            work->vel.vz = 0;
+            RANDOM_LCG_ADVANCE();
+            work->vel.vy = -SHELTER_B3_DUMPING_HOLE_DEBRIS_SPRITE_RISE_SPEED - (RANDOM_LCG_DRAW() & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK);
+            RANDOM_LCG_ADVANCE();
+            work->delay = RANDOM_LCG_DRAW() & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK;
             task->state++;
             return;
         case SHELTER_B3_DUMPING_HOLE_DEBRIS_SPRITE_WAIT_DELAY:
@@ -2898,13 +2895,13 @@ static void _shelterB3DumpingHoleActorSpriteTask(Task* task)
             coord->coord.t[0] = sourceWorldPos.vx + work->offset.vx;
             coord->coord.t[1] = sourceWorldPos.vy + work->offset.vy;
             coord->coord.t[2] = sourceWorldPos.vz + work->offset.vz;
-            gRandomLcgState   = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->vel.vy      = -SHELTER_B3_DUMPING_HOLE_ACTOR_SPRITE_RISE_SPEED - ((gRandomLcgState >> 16) & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK);
-            work->vel.vx      = 0;
-            work->vel.vz      = 0;
-            work->frame       = 0;
-            gRandomLcgState   = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->delay       = ((gRandomLcgState >> 16) & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK) + SHELTER_B3_DUMPING_HOLE_ACTOR_SPRITE_DELAY;
+            RANDOM_LCG_ADVANCE();
+            work->vel.vy = -SHELTER_B3_DUMPING_HOLE_ACTOR_SPRITE_RISE_SPEED - (RANDOM_LCG_DRAW() & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK);
+            work->vel.vx = 0;
+            work->vel.vz = 0;
+            work->frame  = 0;
+            RANDOM_LCG_ADVANCE();
+            work->delay = (RANDOM_LCG_DRAW() & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK) + SHELTER_B3_DUMPING_HOLE_ACTOR_SPRITE_DELAY;
             task->state++;
             return;
         case SHELTER_B3_DUMPING_HOLE_ACTOR_SPRITE_WAIT_DELAY:
@@ -3010,36 +3007,36 @@ static void _shelterB3DumpingHolePlayerSpriteTask(Task* task)
             work->vel.vz     = 0;
             work->seed.scale = ONE;
             work->vel.vx     = 0;
-            riseRandomState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            riseRandomState  = RANDOM_LCG_NEXT(gRandomLcgState);
             work->vel.vy     = -SHELTER_B3_DUMPING_HOLE_PLAYER_SPRITE_RISE_SPEED - ((riseRandomState >> 16) & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK);
             baseDriftZ       = task->spawnArg1.value;
             gRandomLcgState  = riseRandomState;
             // Retain the halfword wrap and the original random-draw order for Z drift.
             if (baseDriftZ == 0) {
-                directionRandomState = riseRandomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                directionRandomState = RANDOM_LCG_NEXT(riseRandomState);
                 currentDriftZ        = work->vel.vz;
                 gRandomLcgState      = directionRandomState;
                 if ((directionRandomState >> 16) & 1) {
-                    gRandomLcgState = directionRandomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    randomDriftZ    = currentDriftZ + ((gRandomLcgState >> 16) & 1);
+                    gRandomLcgState = RANDOM_LCG_NEXT(directionRandomState);
+                    randomDriftZ    = currentDriftZ + (RANDOM_LCG_DRAW() & 1);
                 } else {
-                    gRandomLcgState = directionRandomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    randomDriftZ    = currentDriftZ - ((gRandomLcgState >> 16) & 1);
+                    gRandomLcgState = RANDOM_LCG_NEXT(directionRandomState);
+                    randomDriftZ    = currentDriftZ - (RANDOM_LCG_DRAW() & 1);
                 }
                 work->vel.vz = randomDriftZ;
             } else {
                 if (baseDriftZ < 0) {
-                    gRandomLcgState = riseRandomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    biasedDriftZ    = (u16)work->vel.vz + ((u16)task->spawnArg1.value - ((gRandomLcgState >> 16) & 1));
+                    gRandomLcgState = RANDOM_LCG_NEXT(riseRandomState);
+                    biasedDriftZ    = (u16)work->vel.vz + ((u16)task->spawnArg1.value - (RANDOM_LCG_DRAW() & 1));
                 } else {
-                    gRandomLcgState = riseRandomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    biasedDriftZ    = (u16)work->vel.vz + ((u16)task->spawnArg1.value + ((gRandomLcgState >> 16) & 1));
+                    gRandomLcgState = RANDOM_LCG_NEXT(riseRandomState);
+                    biasedDriftZ    = (u16)work->vel.vz + ((u16)task->spawnArg1.value + (RANDOM_LCG_DRAW() & 1));
                 }
                 work->vel.vz = biasedDriftZ;
             }
-            work->frame     = 0;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->delay     = (gRandomLcgState >> 16) & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK;
+            work->frame = 0;
+            RANDOM_LCG_ADVANCE();
+            work->delay = RANDOM_LCG_DRAW() & SHELTER_B3_DUMPING_HOLE_SPRITE_JITTER_MASK;
             task->state++;
             return;
         case SHELTER_B3_DUMPING_HOLE_PLAYER_SPRITE_WAIT_DELAY:
@@ -3245,7 +3242,6 @@ static void _shelterB3DumpingHoleDebrisEventHandlePlayerCommand(Task* directorTa
         SHELTER_B3_DUMPING_HOLE_DEBRIS_PREPARE_DELAY_TICKS     = 6,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_RISE_DELAY_TICKS        = 16,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_ACTOR_COMMAND_RISE_PROP = 1,
-        SHELTER_B3_DUMPING_HOLE_DEBRIS_RESTORE_CLIP            = 9,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_BLEND_FRAMES            = 10,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_CLIP_47                 = 47,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_CLIP_48                 = 48,
@@ -3273,9 +3269,7 @@ static void _shelterB3DumpingHoleDebrisEventHandlePlayerCommand(Task* directorTa
         _ShelterB3DumpingHoleDebrisEventWork* animationWork = (directorTaskValue)->work;                                              \
         s32                                   weaponId      = gPlayerStatus.weapon;                                                   \
         (animationRequest)->source.index =                                                                                            \
-            (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == SHELTER_B3_DUMPING_HOLE_PRIMARY_CHARACTER)                       \
-                ? weaponId + SHELTER_B3_DUMPING_HOLE_PRIMARY_ANIMATION_BANK_OFFSET                                                    \
-                : weaponId + SHELTER_B3_DUMPING_HOLE_NONPRIMARY_ANIMATION_BANK_OFFSET;                                                \
+            PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);                                                                                 \
         (animationRequest)->animationId          = (clipId);                                                                          \
         (animationRequest)->blend                = (blendMode);                                                                       \
         (animationRequest)->blendFrames          = (blendFrameCount);                                                                 \
@@ -3321,7 +3315,7 @@ static void _shelterB3DumpingHoleDebrisEventHandlePlayerCommand(Task* directorTa
         case SHELTER_B3_DUMPING_HOLE_DEBRIS_PLAYER_COMMAND_RESTORE_PLAYER:
             taskMessageDispatch(work->player, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO, 0);
             TASK_MESSAGE_DISPATCH_POINTER(work->player, GAME_ACTOR_MESSAGE_PLACE, &_gShelterB3DumpingHoleDebrisPlayerFinalTransform, 0);
-            SHELTER_B3_DUMPING_HOLE_PLAY_DEBRIS_PLAYER_ANIMATION(directorTask, &request.animation, SHELTER_B3_DUMPING_HOLE_DEBRIS_RESTORE_CLIP, ANIMATION_BLEND_RESET, 0);
+            SHELTER_B3_DUMPING_HOLE_PLAY_DEBRIS_PLAYER_ANIMATION(directorTask, &request.animation, PLAYER_ANIMATION_AIM_IDLE, ANIMATION_BLEND_RESET, 0);
             break;
         case SHELTER_B3_DUMPING_HOLE_DEBRIS_PLAYER_COMMAND_PLAY_ANIMATION_48:
             switch (work->playerStep) {
@@ -3537,7 +3531,6 @@ static void _shelterB3DumpingHoleDebrisEventTask(Task* directorTask)
         SHELTER_B3_DUMPING_HOLE_DEBRIS_EVENT_ACTOR_YAW    = 0x400,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_EVENT_SCENE_EVENT  = 12,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_EVENT_MUSIC_ENTRY  = 3,
-        SHELTER_B3_DUMPING_HOLE_DEBRIS_EVENT_IDLE_CLIP    = 1,
         SHELTER_B3_DUMPING_HOLE_DEBRIS_EVENT_BLEND_FRAMES = 10,
     };
     _ShelterB3DumpingHoleDebrisEventWork* allocatedWork;
@@ -3603,8 +3596,8 @@ static void _shelterB3DumpingHoleDebrisEventTask(Task* directorTask)
             TASK_MESSAGE_DISPATCH_POINTER(animationWork->player, ANIMATION_MESSAGE_COPY_BANK_EXTENSION, &bankCopyRequest, 0);
             weaponId                       = gPlayerStatus.weapon;
             animationRequest               = &animation;
-            animation.source.index         = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == SHELTER_B3_DUMPING_HOLE_PRIMARY_CHARACTER) ? weaponId + SHELTER_B3_DUMPING_HOLE_PRIMARY_ANIMATION_BANK_OFFSET : weaponId + SHELTER_B3_DUMPING_HOLE_NONPRIMARY_ANIMATION_BANK_OFFSET;
-            animationRequest->animationId  = SHELTER_B3_DUMPING_HOLE_DEBRIS_EVENT_IDLE_CLIP;
+            animation.source.index         = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
+            animationRequest->animationId  = PLAYER_ANIMATION_IDLE;
             animationRequest->blend        = ANIMATION_BLEND_INTERPOLATE;
             animationRequest->blendFrames  = SHELTER_B3_DUMPING_HOLE_DEBRIS_EVENT_BLEND_FRAMES;
             animation.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -3648,9 +3641,8 @@ s16 shelterB3DumpingHoleIsIncineratorExitBlocked(void)
 static void _shelterB3DumpingHoleFadeFromBlackTask(Task* task)
 {
     enum {
-        SHELTER_B3_DUMPING_HOLE_FADE_SETUP          = 0,
-        SHELTER_B3_DUMPING_HOLE_FADE_RUN            = 1,
-        SHELTER_B3_DUMPING_HOLE_FADE_FULL_INTENSITY = 0xFF,
+        SHELTER_B3_DUMPING_HOLE_FADE_SETUP = 0,
+        SHELTER_B3_DUMPING_HOLE_FADE_RUN   = 1,
     };
     ScreenFadeWork*                       fade;
     ScreenFadeWork*                       allocatedFade;
@@ -3671,9 +3663,9 @@ static void _shelterB3DumpingHoleFadeFromBlackTask(Task* task)
                 return;
             }
             fade         = allocatedFade;
-            fade->b      = SHELTER_B3_DUMPING_HOLE_FADE_FULL_INTENSITY;
-            fade->g      = SHELTER_B3_DUMPING_HOLE_FADE_FULL_INTENSITY;
-            fade->r      = SHELTER_B3_DUMPING_HOLE_FADE_FULL_INTENSITY;
+            fade->b      = SCREEN_FADE_FULL_INTENSITY;
+            fade->g      = SCREEN_FADE_FULL_INTENSITY;
+            fade->r      = SCREEN_FADE_FULL_INTENSITY;
             task->state += 1;
             /* fallthrough */
         case SHELTER_B3_DUMPING_HOLE_FADE_RUN:
@@ -4057,8 +4049,6 @@ static void _shelterB3DumpingHoleCollapseEventHandleCommand(Task* task)
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_FLICKER_HIDE_THIRD       = 5,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_FLICKER_WAIT_BLEND       = 6,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_FLICKER_RESTORE          = 7,
-        SHELTER_B3_DUMPING_HOLE_COLLAPSE_RESTORE_CLIP             = 9,
-        SHELTER_B3_DUMPING_HOLE_COLLAPSE_IDLE_CLIP                = 1,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_BLEND_FRAMES             = 10,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_ACTOR_COMMAND_START      = 10,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_ACTOR_COMMAND_SKIP_SHORT = 11,
@@ -4121,7 +4111,7 @@ static void _shelterB3DumpingHoleCollapseEventHandleCommand(Task* task)
             roomEffectRequestCancelAll();
             gAttachmentState.flags                |= ATTACHMENT_FLAG_EVENT_LOCK;
             scratch.animation.source.index         = gPlayerStatus.weapon + (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == SHELTER_B3_DUMPING_HOLE_PRIMARY_CHARACTER ? SHELTER_B3_DUMPING_HOLE_PRIMARY_ANIMATION_BANK_OFFSET : SHELTER_B3_DUMPING_HOLE_NONPRIMARY_ANIMATION_BANK_OFFSET);
-            scratch.animation.animationId          = SHELTER_B3_DUMPING_HOLE_COLLAPSE_RESTORE_CLIP;
+            scratch.animation.animationId          = PLAYER_ANIMATION_AIM_IDLE;
             scratch.animation.blend                = ANIMATION_BLEND_INTERPOLATE;
             scratch.animation.blendFrames          = SHELTER_B3_DUMPING_HOLE_COLLAPSE_BLEND_FRAMES;
             scratch.animation.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -4264,7 +4254,7 @@ static void _shelterB3DumpingHoleCollapseEventHandleCommand(Task* task)
             TASK_MESSAGE_DISPATCH_POINTER(gameGetTaskSlot(GAME_TASK_SLOT_SCENE), SCENE_MESSAGE_BROADCAST_TO_ACTORS, finishCommand, ACTOR_COMMAND_MESSAGE_APPLY);
             animationRequest               = &animation;
             animation.source.index         = gPlayerStatus.weapon + (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == SHELTER_B3_DUMPING_HOLE_PRIMARY_CHARACTER ? SHELTER_B3_DUMPING_HOLE_PRIMARY_ANIMATION_BANK_OFFSET : SHELTER_B3_DUMPING_HOLE_NONPRIMARY_ANIMATION_BANK_OFFSET);
-            animationRequest->animationId  = SHELTER_B3_DUMPING_HOLE_COLLAPSE_IDLE_CLIP;
+            animationRequest->animationId  = PLAYER_ANIMATION_IDLE;
             animationRequest->blend        = ANIMATION_BLEND_INTERPOLATE;
             animationRequest->blendFrames  = SHELTER_B3_DUMPING_HOLE_COLLAPSE_BLEND_FRAMES;
             animation.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -4327,7 +4317,6 @@ static void _shelterB3DumpingHoleCollapseEventSkip(void)
 {
     enum {
         SHELTER_B3_DUMPING_HOLE_ACTOR_COMMAND_COLLAPSE_SKIP_LONG = 19,
-        SHELTER_B3_DUMPING_HOLE_COLLAPSE_PLAYER_IDLE_CLIP        = 1,
         SHELTER_B3_DUMPING_HOLE_ACTOR0_DRAW_SHOW_ALLOCATE        = 1,
     };
     _ShelterB3DumpingHoleCollapseEventWork* work;
@@ -4356,7 +4345,7 @@ static void _shelterB3DumpingHoleCollapseEventSkip(void)
 
     animationRequest               = &animation;
     animation.source.index         = gPlayerStatus.weapon + (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == SHELTER_B3_DUMPING_HOLE_PRIMARY_CHARACTER ? SHELTER_B3_DUMPING_HOLE_PRIMARY_ANIMATION_BANK_OFFSET : SHELTER_B3_DUMPING_HOLE_NONPRIMARY_ANIMATION_BANK_OFFSET);
-    animationRequest->animationId  = SHELTER_B3_DUMPING_HOLE_COLLAPSE_PLAYER_IDLE_CLIP;
+    animationRequest->animationId  = PLAYER_ANIMATION_IDLE;
     animation.blend                = ANIMATION_BLEND_RESET;
     animation.blendFrames          = 0;
     animation.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -4377,7 +4366,6 @@ static void _shelterB3DumpingHoleCollapseEventTask(Task* task)
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_EVENT_SETUP        = 0,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_EVENT_START_SCRIPT = 1,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_EVENT_RUN_SCRIPT   = 2,
-        SHELTER_B3_DUMPING_HOLE_COLLAPSE_EVENT_RESTORE_CLIP = 9,
         SHELTER_B3_DUMPING_HOLE_COLLAPSE_EVENT_BLEND_FRAMES = 10,
     };
     union {
@@ -4413,7 +4401,7 @@ static void _shelterB3DumpingHoleCollapseEventTask(Task* task)
             ((_ShelterB3DumpingHoleCollapseEventWork*)task->work)->savedView = gGameSession->location.view;
             playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);
             scratch.animation.source.index         = gPlayerStatus.weapon + (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == SHELTER_B3_DUMPING_HOLE_PRIMARY_CHARACTER ? SHELTER_B3_DUMPING_HOLE_PRIMARY_ANIMATION_BANK_OFFSET : SHELTER_B3_DUMPING_HOLE_NONPRIMARY_ANIMATION_BANK_OFFSET);
-            scratch.animation.animationId          = SHELTER_B3_DUMPING_HOLE_COLLAPSE_EVENT_RESTORE_CLIP;
+            scratch.animation.animationId          = PLAYER_ANIMATION_AIM_IDLE;
             scratch.animation.blend                = ANIMATION_BLEND_INTERPOLATE;
             scratch.animation.blendFrames          = SHELTER_B3_DUMPING_HOLE_COLLAPSE_EVENT_BLEND_FRAMES;
             scratch.animation.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -5365,9 +5353,9 @@ void shelterB3DumpingHoleGluttonRainParticleTask(Task* task)
     work->age++;
     switch (task->state) {
         case SHELTER_B3_DUMPING_HOLE_RAIN_SETUP:
-            work->scale     = task->spawnArg1.halves.low & SHELTER_B3_DUMPING_HOLE_RAIN_SIZE_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->angle     = (gRandomLcgState >> 16) & SHELTER_B3_DUMPING_HOLE_RAIN_ANGLE_MASK;
+            work->scale = task->spawnArg1.halves.low & SHELTER_B3_DUMPING_HOLE_RAIN_SIZE_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->angle = RANDOM_LCG_DRAW() & SHELTER_B3_DUMPING_HOLE_RAIN_ANGLE_MASK;
             if (task->spawnArg1.value & SHELTER_B3_DUMPING_HOLE_RAIN_PERIOD_BITS) {
                 framePeriod = (task->spawnArg1.value >> SHELTER_B3_DUMPING_HOLE_RAIN_PERIOD_SHIFT) & 0xF;
             } else {
@@ -5393,28 +5381,28 @@ void shelterB3DumpingHoleGluttonRainParticleTask(Task* task)
                         work->step = 0;
                         break;
                     case SHELTER_B3_DUMPING_HOLE_RAIN_RANDOM_UPWARD:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = SHELTER_B3_DUMPING_HOLE_RAIN_UPWARD_Y_BITS - ((gRandomLcgState >> 16) & 0x7F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = SHELTER_B3_DUMPING_HOLE_RAIN_UPWARD_Y_BITS - (RANDOM_LCG_DRAW() & 0x7F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
                         break;
                     case SHELTER_B3_DUMPING_HOLE_RAIN_RANDOM_ALL_AXES:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
                         break;
                     case SHELTER_B3_DUMPING_HOLE_RAIN_RANDOM_NARROW_UPWARD:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = -((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = -(RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
                         break;
                     case SHELTER_B3_DUMPING_HOLE_RAIN_OFFSET_DIRECTION:
                         work->move.vx = work->pos.vx;

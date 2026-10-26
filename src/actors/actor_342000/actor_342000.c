@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_342000.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -52,7 +52,10 @@
 #include "overlay.h"
 
 #include "rooms/shelter_b3_garbage_incinerator.h"
+#include "../../shared/screen/screen_fade.h"
 #include "../../shared/actor/actor_messages.h"
+
+#include "assets/engine/animation/player_schema.h"
 
 /// Work block of each task that makes up the Glutton's display model: the
 /// body, its two legs and the three further parts hung off the body.
@@ -453,20 +456,17 @@ static EvsCommand _gActor342000IncineratorSkipScript[19] = {
     { .opcode = EVENT_SCRIPT_OPCODE_END },
 };
 
-/// Execution priority shared by the incinerator event's controller and children.
-enum { ACTOR_342000_EVENT_TASK_PRIORITY = 192 };
-
 TaskDesc gActor342000IncineratorEventTaskDescs[ACTOR_342000_EVENT_TASK_COUNT] = {
-    { { { TASK_BODY_NONE, ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000IncineratorEventTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000FadeInTask, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000GluttonBodyTask, { .model = &gGluttonBody } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000GluttonPartTask, { .model = &gGluttonLegRight } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000GluttonPartTask, { .model = &gGluttonLegLeft } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000GluttonPartTask, { .model = &gGluttonActor403200Model12884 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000GluttonPartTask, { .model = &gGluttonActor403200Model13774 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000GluttonPartTask, { .model = &gGluttonActor403200Model18BE4 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000IncineratorDoorTask, { .model = &gActor444000Model1C814 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_342000_EVENT_TASK_PRIORITY } }, _actor342000IncineratorDoorTask, { .model = &gActor444000Model1D36C } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor342000IncineratorEventTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor342000FadeInTask, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000GluttonBodyTask, { .model = &gGluttonBody } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000GluttonPartTask, { .model = &gGluttonLegRight } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000GluttonPartTask, { .model = &gGluttonLegLeft } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000GluttonPartTask, { .model = &gGluttonActor403200Model12884 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000GluttonPartTask, { .model = &gGluttonActor403200Model13774 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000GluttonPartTask, { .model = &gGluttonActor403200Model18BE4 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000IncineratorDoorTask, { .model = &gActor444000Model1C814 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor342000IncineratorDoorTask, { .model = &gActor444000Model1D36C } },
 };
 
 /// Borrowed live incinerator event task used by script callbacks without a task argument.
@@ -871,19 +871,15 @@ static void _actor342000UpdatePlayerAction(Task* eventTask)
     }
 
     enum {
-        ACTOR_342000_PLAYER_WALK_SEND           = 0,
-        ACTOR_342000_PLAYER_WALK_WAIT           = 1,
-        ACTOR_342000_PLAYER_WALK_DELAY          = 2,
-        ACTOR_342000_PLAYER_WALK_DELAY_TICKS    = 11,
-        ACTOR_342000_PLAYER_BLEND_FRAMES        = 10,
-        ACTOR_342000_PRIMARY_CHARACTER          = 1,
-        ACTOR_342000_PRIMARY_WEAPON_BANK_BASE   = 1,
-        ACTOR_342000_ALTERNATE_WEAPON_BANK_BASE = 34,
-        ACTOR_342000_PLAYER_EVENT_CLIP_AT_MARK  = 0,
-        ACTOR_342000_PLAYER_EVENT_CLIP_1        = 1,
-        ACTOR_342000_PLAYER_WEAPON_CLIP         = 1,
-        ACTOR_342000_PLAYER_EVENT_CLIP_2        = 2,
-        ACTOR_342000_PLAYER_EVENT_CLIP_ALERT    = 3,
+        ACTOR_342000_PLAYER_WALK_SEND          = 0,
+        ACTOR_342000_PLAYER_WALK_WAIT          = 1,
+        ACTOR_342000_PLAYER_WALK_DELAY         = 2,
+        ACTOR_342000_PLAYER_WALK_DELAY_TICKS   = 11,
+        ACTOR_342000_PLAYER_BLEND_FRAMES       = 10,
+        ACTOR_342000_PLAYER_EVENT_CLIP_AT_MARK = 0,
+        ACTOR_342000_PLAYER_EVENT_CLIP_1       = 1,
+        ACTOR_342000_PLAYER_EVENT_CLIP_2       = 2,
+        ACTOR_342000_PLAYER_EVENT_CLIP_ALERT   = 3,
     };
     _Actor342000EventWork* work;
     _Actor342000EventWork* publishedEventWork;
@@ -934,9 +930,9 @@ static void _actor342000UpdatePlayerAction(Task* eventTask)
             s32 animationBankIndex;
 
             weaponId                              = gPlayerStatus.weapon;
-            animationBankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_342000_PRIMARY_CHARACTER) ? weaponId + ACTOR_342000_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_342000_ALTERNATE_WEAPON_BANK_BASE;
+            animationBankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
             animationRequest.source.index         = animationBankIndex;
-            animationRequest.animationId          = ACTOR_342000_PLAYER_WEAPON_CLIP;
+            animationRequest.animationId          = PLAYER_ANIMATION_IDLE;
             animationRequest.blend                = ANIMATION_BLEND_RESET;
             animationRequest.blendFrames          = 0;
             animationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -951,9 +947,9 @@ static void _actor342000UpdatePlayerAction(Task* eventTask)
             s32 animationBankIndex;
 
             weaponId                              = gPlayerStatus.weapon;
-            animationBankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_342000_PRIMARY_CHARACTER) ? weaponId + ACTOR_342000_PRIMARY_WEAPON_BANK_BASE : weaponId + ACTOR_342000_ALTERNATE_WEAPON_BANK_BASE;
+            animationBankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
             animationRequest.source.index         = animationBankIndex;
-            animationRequest.animationId          = ACTOR_342000_PLAYER_WEAPON_CLIP;
+            animationRequest.animationId          = PLAYER_ANIMATION_IDLE;
             animationRequest.blend                = ANIMATION_BLEND_INTERPOLATE;
             animationRequest.blendFrames          = ACTOR_342000_PLAYER_BLEND_FRAMES;
             animationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;
@@ -1476,7 +1472,6 @@ static void _actor342000FadeInTask(Task* task)
     enum {
         ACTOR_342000_FADE_STATE_INITIALIZE = 0,
         ACTOR_342000_FADE_STATE_RAMP       = 1,
-        ACTOR_342000_FADE_MAX_INTENSITY    = 255,
     };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
@@ -1491,9 +1486,9 @@ static void _actor342000FadeInTask(Task* task)
                 return;
             }
             fade         = allocatedFade;
-            fade->b      = ACTOR_342000_FADE_MAX_INTENSITY;
-            fade->g      = ACTOR_342000_FADE_MAX_INTENSITY;
-            fade->r      = ACTOR_342000_FADE_MAX_INTENSITY;
+            fade->b      = SCREEN_FADE_FULL_INTENSITY;
+            fade->g      = SCREEN_FADE_FULL_INTENSITY;
+            fade->r      = SCREEN_FADE_FULL_INTENSITY;
             task->state += ACTOR_342000_FADE_STATE_RAMP - ACTOR_342000_FADE_STATE_INITIALIZE;
             /* fallthrough */
         case ACTOR_342000_FADE_STATE_RAMP:
@@ -1712,12 +1707,6 @@ static void _actor342000SetPlayerDrawMode(s32 drawMode)
 /// stack request synchronously; its selected resources must outlive playback.
 static void _actor342000RestorePlayerAfterSkip(void)
 {
-    enum {
-        ACTOR_342000_PRIMARY_CHARACTER          = 1,
-        ACTOR_342000_PRIMARY_WEAPON_BANK_BASE   = 1,
-        ACTOR_342000_ALTERNATE_WEAPON_BANK_BASE = 34,
-        ACTOR_342000_WEAPON_CLIP                = 1,
-    };
     _Actor342000EventWork* work;
     AnimationPlayRequest   animationRequest;
     s32                    weaponId;
@@ -1728,11 +1717,9 @@ static void _actor342000RestorePlayerAfterSkip(void)
     shelterB3GarbageIncineratorSetExitCollisionWalls();
     // Resume clip 1 in the current character's equipped-weapon bank.
     weaponId                              = gPlayerStatus.weapon;
-    animationBankIndex                    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_342000_PRIMARY_CHARACTER)
-                                                ? weaponId + ACTOR_342000_PRIMARY_WEAPON_BANK_BASE
-                                                : weaponId + ACTOR_342000_ALTERNATE_WEAPON_BANK_BASE;
+    animationBankIndex                    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     animationRequest.source.index         = animationBankIndex;
-    animationRequest.animationId          = ACTOR_342000_WEAPON_CLIP;
+    animationRequest.animationId          = PLAYER_ANIMATION_IDLE;
     animationRequest.blend                = ANIMATION_BLEND_RESET;
     animationRequest.blendFrames          = 0;
     animationRequest.enableWorldCollision = ANIMATION_WORLD_COLLISION_DISABLE;

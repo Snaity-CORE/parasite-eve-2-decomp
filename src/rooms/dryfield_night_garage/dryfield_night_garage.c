@@ -91,12 +91,11 @@ static s32 _dryfieldNightGarageIgnoreCommand(Task* unusedTask, s32 unusedMessage
 #include "../../shared/room/shop_data.inc.c"
 
 enum {
-    DRYFIELD_NIGHT_GARAGE_SHOP_TASK_PRIORITY  = 192,
     DRYFIELD_NIGHT_GARAGE_COMPANION_POSE_CLIP = 1,
 };
 
 TaskDesc gDryfieldNightGarageShopSessionTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, DRYFIELD_NIGHT_GARAGE_SHOP_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _shopSessionTask,
     .data     = { .value = 0 },
 };
@@ -463,7 +462,7 @@ static s32 _dryfieldNightGarageHandleRoomAction(Task* task, s32 messageId, const
                     evsStartScriptWithSkip(gDryfieldNightGarageRefuelingScript, EVENT_SCRIPT_HUD_HIDE_RESTORE,
                                            gDryfieldNightGarageSkipRefuelingScript);
                     gameFlagSetNibble(GAME_FLAG_NIGHT_GARAGE_PROGRESS, REFUELING_STARTED);
-                    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, REFUELED_OBJECTIVE);
+                    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, REFUELED_OBJECTIVE);
                     inventoryClearCollectedBit(INVENTORY_COLLECTION_ID_GASOLINE);
                     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = REFUELED_SCENE_EVENT;
                 }

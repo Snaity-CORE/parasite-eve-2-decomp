@@ -10,7 +10,9 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_205200.h"
+#include "actors/actor_350500.h"
 
 #include "gameplay/display.h"
 #include "gameplay/animation.h"
@@ -114,14 +116,12 @@ static s32 _shelterB6CorridorHandlePartCommand(Task* unusedTask, s32 unusedMessa
 static s32 _shelterB6CorridorIgnoreRoomAction(Task* unusedTask, s32 unusedMessageId, DirectionActionRequest* unusedRequest, s32 unusedArg);
 static s32 _shelterB6CorridorStartBattleEndScene(Task* unusedTask, s32 unusedMessageId, s32 unusedFirstArg, s32 unusedSecondArg);
 
-enum { SHELTER_B6_CORRIDOR_SCREEN_WAVE_PRIORITY = 192 };
-
-/// Retained bodyless screen-wave recipe at priority 192, followed by a terminator.
+/// Retained bodyless screen-wave recipe at priority `TASK_PRIORITY_CONTROL`, followed by a terminator.
 ///
 /// No recovered caller spawns this table. Entry 0 requires a persistent
 /// `ScreenWaveCtx` in spawn argument 2; entry 1 must never be spawned.
 static TaskDesc _gShelterB6CorridorScreenWaveTasks[2] = {
-    { { { TASK_BODY_NONE, SHELTER_B6_CORRIDOR_SCREEN_WAVE_PRIORITY } }, _screenWaveGridTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveGridTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -131,8 +131,6 @@ static TaskDesc _gShelterB6CorridorScreenWaveTasks[2] = {
 /// the initial 256 to zero; the context must have a positive span while drawing.
 static s32 _gScreenWaveAmplitude = 256;
 
-enum { SHELTER_B6_CORRIDOR_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Five room-message handlers and the end marker for unsupported requests.
 ///
 /// Resolves departures, rejects key items, ignores room actions, selects
@@ -140,7 +138,7 @@ enum { SHELTER_B6_CORRIDOR_MESSAGE_USE_KEY_ITEM = 0x13F1 };
 /// until teardown; the records and callbacks must remain loaded.
 static TaskMessageEntry _gShelterB6CorridorRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB6CorridorResolveRoomTransition },
-    { SHELTER_B6_CORRIDOR_MESSAGE_USE_KEY_ITEM, _shelterB6CorridorRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB6CorridorRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB6CorridorIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _shelterB6CorridorHandlePartCommand },
     { ROOM_MESSAGE_ACTOR_EVENT, _shelterB6CorridorStartBattleEndScene },
@@ -294,8 +292,6 @@ enum {
     SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER     = 0,
     SHELTER_B6_CORRIDOR_PLACED_EVE_CONTROLLER = 2,
     SHELTER_B6_CORRIDOR_PLACED_EVE_BODY       = 3,
-    SHELTER_B6_CORRIDOR_ACTOR_HIDE            = 0,
-    SHELTER_B6_CORRIDOR_ACTOR_SHOW            = 1,
     SHELTER_B6_CORRIDOR_BATTLE_END_VIEW       = 5,
     SHELTER_B6_CORRIDOR_BATTLE_END_SOUND      = SOUND_AREA(GAME_STAGE_SHELTER_NEO_ARK, GAME_AREA_SHELTER_B6_CORRIDOR, 4),
     SHELTER_B6_CORRIDOR_WAIT_NEXT_TICK        = 0,
@@ -319,9 +315,9 @@ static EvsCommand _gShelterB6CorridorBattleEndScript[34] = {
     { EVENT_SCRIPT_OPCODE_RETURN_SECONDARY_FADE, { .value = SHELTER_B6_CORRIDOR_FADE_KEEP_DURATION }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     // Replace the battle body with the walker and stage its backward approach.
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_CORRIDOR_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_CONTROLLER }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gShelterB6CorridorStopEveControllerCommand } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_BODY }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_CORRIDOR_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_BODY }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_BODY }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gShelterB6CorridorDestroyEveBodyCommand } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = SHELTER_B6_CORRIDOR_BATTLE_END_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gShelterB6CorridorEveWalkBackwardCommand } }, { .value = 0 } },
@@ -337,7 +333,7 @@ static EvsCommand _gShelterB6CorridorBattleEndScript[34] = {
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 30 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RETURN_SECONDARY_FADE, { .value = SHELTER_B6_CORRIDOR_FADE_KEEP_DURATION }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_CORRIDOR_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CLEAR_AMBIENT_RGB, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RESTORE_VIEW, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     // Disable skipping before releasing combat and restoring player control.
@@ -361,9 +357,9 @@ static EvsCommand _gShelterB6CorridorBattleEndSkipScript[18] = {
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_COPY_BANK_EXTENSION }, { .message = { .animationBankCopy = &_gShelterB6CorridorBattleEndAnimationBankCopy } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gShelterB6CorridorBattleEndPlayerAnimation }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_CORRIDOR_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_WALKER }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_CONTROLLER }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gShelterB6CorridorStopEveControllerCommand } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_BODY }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_CORRIDOR_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_BODY }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_CORRIDOR_PLACED_EVE_BODY }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gShelterB6CorridorDestroyEveBodyCommand } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CLEAR_AMBIENT_RGB, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RESTORE_VIEW, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -898,7 +894,7 @@ static s32 _shelterB6CorridorStartBattleEndScene(Task* unusedTask, s32 unusedMes
     enum { SHELTER_B6_CORRIDOR_OBJECTIVE_AFTER_BATTLE = 0x2F };
 
     evsStartScriptWithSkip(_gShelterB6CorridorBattleEndScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gShelterB6CorridorBattleEndSkipScript);
-    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_B6_CORRIDOR_OBJECTIVE_AFTER_BATTLE);
+    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_B6_CORRIDOR_OBJECTIVE_AFTER_BATTLE);
     return 0;
 }
 
@@ -1081,10 +1077,10 @@ void shelterB6CorridorDrawBodyGlow(Task* task)
         effectDrawGouraudDisc(anchorCoord, SHELTER_B6_CORRIDOR_BODY_GLOW_INNER_RADIUS, rgb);
         effectDrawGouraudDisc(anchorCoord, SHELTER_B6_CORRIDOR_BODY_GLOW_OUTER_RADIUS, rgb);
         // Advance once for eligibility, and only on success for the joint choice.
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (((gRandomLcgState >> 16) & SHELTER_B6_CORRIDOR_BODY_GLOW_FLASH_CHANCE_MASK) == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            effectSpawn(EFFECT_FLASH_BURST, task->extra.tmd->coords + (((gRandomLcgState >> 16) & SHELTER_B6_CORRIDOR_BODY_GLOW_FLASH_JOINT_MASK) + SHELTER_B6_CORRIDOR_BODY_GLOW_FIRST_FLASH_JOINT), SHELTER_B6_CORRIDOR_BODY_GLOW_FLASH_SIZE_PALETTE, NULL);
+        RANDOM_LCG_ADVANCE();
+        if ((RANDOM_LCG_DRAW() & SHELTER_B6_CORRIDOR_BODY_GLOW_FLASH_CHANCE_MASK) == 0) {
+            RANDOM_LCG_ADVANCE();
+            effectSpawn(EFFECT_FLASH_BURST, task->extra.tmd->coords + ((RANDOM_LCG_DRAW() & SHELTER_B6_CORRIDOR_BODY_GLOW_FLASH_JOINT_MASK) + SHELTER_B6_CORRIDOR_BODY_GLOW_FIRST_FLASH_JOINT), SHELTER_B6_CORRIDOR_BODY_GLOW_FLASH_SIZE_PALETTE, NULL);
         }
     }
 }

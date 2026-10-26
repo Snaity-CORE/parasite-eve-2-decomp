@@ -15,76 +15,17 @@
 /// `GAME_FLAG_<HHH>` are placeholders for flags whose meaning is not yet known,
 /// named by the room that uses them where it is a single one.
 enum {
-    /// Akropolis progress along the security room -> forked road -> observatory ->
-    /// promenade route: 2 after the security-room panel releases its first lock, 3 when
-    /// the forked-road cutscene to the observatory plays, 4 when leaving the
-    /// observatory for the promenade, 5 on reaching the promenade/sanctuary. The
-    /// security-room enemy (actor_311900) is removed from 3 on.
-    GAME_FLAG_OBSERVATORY_ROUTE_PROGRESS = 0x001,
-    /// Sanctuary/bridge progress: 0 until the sanctuary is entered from the promenade
-    /// (warp 3), then 2; 3 once the bridge cutscene completes and the bridge room
-    /// switches to room 2. The promenade's bridge door is refused while 0 and leads to
-    /// room 2 at 3; the fire escape's bridge warp likewise picks room 2 at 3.
-    GAME_FLAG_AKROPOLIS_BRIDGE_PROGRESS = 0x002,
-    /// Set to 1 once the sanctuary scene has been passed (on first reaching the roof
-    /// garden or the bridge from the fire escape); the sanctuary then pushes its
-    /// blocker cage collision aside instead of across the doorway and skips arming its
-    /// slot-4 actor.
-    GAME_FLAG_SANCTUARY_BLOCKER_CLEARED = 0x006,
-    /// One-shot latch for the sanctuary's scripted event: 1 when the sanctuary hotspot
-    /// (0x13EF sub-id 1) spawns the room task, 2 when the player leaves to the
-    /// promenade or reaches the roof garden first (also raising bit-2 flag 0x13), which
-    /// suppresses the event.
-    GAME_FLAG_SANCTUARY_EVENT_LATCH = 0x007,
-    /// Patio door to the cafeteria: 0/1 locked (trying it plays CAP 3 and sets 1), 2
-    /// once the east elevator hall scene has run (door can be opened: spawns the
-    /// opening task and marks item 0x101 seen), 3 after the opening CAP reports key 2
-    /// and the warp to the cafeteria starts.
-    GAME_FLAG_PATIO_CAFETERIA_DOOR_STATE = 0x008,
-    /// Bitmask of one-shot security-monitor events: bit 0 once camera view 0xB has been
-    /// shown (starts CAP slot 0xD), bit 1 once camera view 0xA's enemy scene has played
-    /// (actor_311900 sets it, and is torn down on later loads).
-    GAME_FLAG_SECURITY_MONITOR_SCENES_SEEN = 0x00A,
-    /// Unidentified. Written every tick by enemy actor_510900 with a value from its
-    /// table `_gActor510900HelipadStatusFlagValues` indexed by source phase and light-2 status; no reader found.
-    GAME_FLAG_00D = 0x00D,
-    /// Set to 1 the first time the bridge is entered from the fire escape, which plays
-    /// the bridge's arrival scene (and also sets flag 6); passed to the bridge's view-
-    /// sprite helper on entry.
-    GAME_FLAG_BRIDGE_ARRIVAL_SCENE_SEEN = 0x010,
-    /// Unidentified. Set to 1 when fountain point 4 is examined (CAP slot 4 starts and
-    /// a collision trigger is swapped in); the swap is reapplied on later entries while
-    /// set.
-    GAME_FLAG_AKROPOLIS_FOUNTAIN_012 = 0x012,
-    /// Set to 1 the first time the path between the fountain and the forked road is
-    /// used (from the fountain side, or from the forked road after flag 0 reaches 3,
-    /// which plays CAP slot 1 step 3 once).
-    GAME_FLAG_FOUNTAIN_FORKED_ROAD_PATH_USED = 0x013,
     /// Unidentified. Set to 1 together with 0x18 and other story flags in a shelter B2
     /// laboratory story sequence; no reader found.
     GAME_FLAG_SHELTER_B2_LABORATORY_017 = 0x017,
     /// Unidentified. Set to 1 together with 0x17 and other story flags in a shelter B2
     /// laboratory story sequence; no reader found.
     GAME_FLAG_SHELTER_B2_LABORATORY_018 = 0x018,
-    /// Set to 1 when the patio's cafeteria door is used while flag 0 is 2, which plays
-    /// a scene once; afterwards the door runs CAP 8 instead.
-    GAME_FLAG_PATIO_CAFETERIA_DOOR_SCENE_SEEN = 0x023,
-    /// Set to 1 the first time the observatory is left for the forked road; later uses
-    /// answer warp 5 instead. Also set when the sanctuary scene runs.
-    GAME_FLAG_OBSERVATORY_EXIT_USED = 0x025,
-    /// Unidentified. One-shot patio scene: set to 1 when trigger 2 is hit while flag 0
-    /// is 2, playing a scene; while clear, entering the patio as variant 2 sends slot-4
-    /// actors 2 and 3 a command.
-    GAME_FLAG_AKROPOLIS_PATIO_026 = 0x026,
     /// Dryfield junk yard / trailer coach story counter: 1 when first entering the
     /// trailer coach from the junk yard (also companion flag 0x4B = 4), 2 after the
     /// trailer coach scene (sets 0x3A=1, 0x4B=1), 3 after a later trailer coach scene.
     /// Junk yard plays a one-shot scene once it reaches 2.
     GAME_FLAG_TRAILER_COACH_PROGRESS = 0x028,
-    /// Index (0-4) into the security-room camera table
-    /// _gAcropolisSecurityRoomMonitorWashDetents of the feed on screen when the monitor was
-    /// last left (0 if not in the table); the monitor reopens on that camera.
-    GAME_FLAG_SECURITY_MONITOR_LAST_CAMERA = 0x02A,
     /// Unidentified. Set to 1 by the factory's first action-1 hotspot use (starts CAP
     /// 0xB) and by the garage Gary cutscene actor; no other reader found.
     GAME_FLAG_02C = 0x02C,
@@ -359,11 +300,6 @@ enum {
     /// Latched (1) when the night parking lot's action point 1 on variant 3 plays its
     /// script; once set the room entry sets actor01600Wave to 2.
     GAME_FLAG_NIGHT_PARKING_LOT_EVENT_SEEN = 0x079,
-    /// Global story chapter: 0 start (MIST arrival caption); 1 Akropolis west elevator
-    /// hall scene; 2 Dryfield gas station arrival; 3 night dilapidated house; 4 end of
-    /// Dryfield night (actor_136300 event); 5 shelter B2 main corridor; 6 shelter 1F
-    /// bulwark. Drives boot captions, music, room variants and cutscene choices.
-    GAME_FLAG_STORY_CHAPTER = 0x07A,
     /// Set to 2 at the end of the night water tank event; then 3, 4 and 5 as the item
     /// with collected bit 0x119 is handed to actor_146300's character (bit cleared each
     /// time). >=2 enables the main street talk.
@@ -633,18 +569,6 @@ enum {
     /// arrival 1 (script plays). Once set, the underpass resolves to rooms 1-4 from
     /// switch nibbles 0x53/0x51, otherwise to 5 or 6.
     GAME_FLAG_UNDERPASS_EVENT_SEEN = 0x0C9,
-    /// Set to 1 when the observatory's sub-id 1 trigger spawns its event task on room
-    /// 2; while clear room-2 entries set combat wave 1, and the forked road's path-back
-    /// message answers room 2.
-    GAME_FLAG_AKROPOLIS_OBSERVATORY_EVENT_SEEN = 0x0CA,
-    /// Roof garden scene progress on places 1/7: 0 -> 1 on arrival 1, 1 -> 2 on arrival
-    /// 2 (plays its script); at 2 the maggot/caterpillar actor spawns in its alternate
-    /// placement.
-    GAME_FLAG_ROOF_GARDEN_PROGRESS = 0x0CB,
-    /// Set to 1 when the forked road's action-1 script plays on place 4 or 8 (after
-    /// nibble 9 bit 1); at 1 the maggot/caterpillar actor spawns in its alternate
-    /// placement.
-    GAME_FLAG_FORKED_ROAD_EVENT_SEEN = 0x0CC,
     /// Unidentified. One-shot mine mesa event on variant 1 with the companion present:
     /// the actor-event handler sets it to 1 (and raises the attachment event lock in `gAttachmentState.flags`),
     /// and the room tick then plays a scripted scene once the fight state clears.
@@ -772,10 +696,6 @@ enum {
     /// sets the quad angle, and at 4 the closing sound and cap 2 play and the puzzle is
     /// complete.
     GAME_FLAG_NEO_ARK_PYRAMID_TURN_COUNT = 0x0EC,
-    /// Unidentified. Set to 1 by the MIST parking action 2 scene; afterwards the
-    /// shooting gallery switches Pierce's (actor_215100/113100) scripts and slot-4
-    /// chain, and parking event 15 spawns a task.
-    GAME_FLAG_0ED = 0x0ED,
     /// Shelter B1 main corridor: the first transition to the armory plays CAP 3. Set to
     /// 1 when the latched one-shot event starts; while set the transition goes through
     /// with no event.
@@ -788,10 +708,6 @@ enum {
     /// the transition into the armory is refused, and the lock glow uses tint 0x5C00
     /// instead of 0x50C0.
     GAME_FLAG_SHELTER_B1_ARMORY_UNLOCKED = 0x0F0,
-    /// Unidentified. MIST parking variant-2 progress: set by script callback
-    /// func_80183780 and stepped 1->2->3 by event 15, each step playing a script; while
-    /// nonzero part of Pierce's model (actor_113100) is hidden.
-    GAME_FLAG_0F1 = 0x0F1,
     /// Bitmask of one-shot cap messages already shown in the sterilization room: bit 2
     /// for action 5 (cap 5), bit 8 for action 8 (cap 3).
     GAME_FLAG_STERILIZATION_ROOM_NOTES_SHOWN = 0x0F2,
@@ -803,9 +719,6 @@ enum {
     /// 1/6/7/8. 1 after the cap choice (item seen 0x123), 2 after the follow-up scene,
     /// 3 set by the sterilization room event.
     GAME_FLAG_UNDERGROUND_PARKING_STATE = 0x0F4,
-    /// Conversation counter for actor_215100 (Pierce) at the MIST shooting gallery:
-    /// 0->1->2 each talk plays the next script.
-    GAME_FLAG_PIERCE_TALK_PROGRESS = 0x0F5,
     /// Set to 1 together with 0xDE when Power Plant 1 is cleared; while clear the north
     /// promenade refuses the transition to the Forest Zone.
     GAME_FLAG_NEO_ARK_FOREST_ZONE_UNLOCKED = 0x0F6,
@@ -849,10 +762,6 @@ enum {
     /// Conversation counter (0-3) for the companion in the Neo Ark observatory
     /// (actor_450200), advanced each time action 3 is used in view 2.
     GAME_FLAG_OBSERVATORY_COMPANION_TALK_COUNT = 0x101,
-    /// Set to 1 by actor_311900 once its scripted movement (seen on the Akropolis
-    /// security-room monitor, view 0xA) has run for 0x5A frames; while clear, selecting
-    /// monitor view 0xA in the security room starts CAP slot 0xC.
-    GAME_FLAG_SECURITY_MONITOR_CAM_A_SCENE_DONE = 0x102,
     /// Dialogue counter of the soldier actor actor_161500 (soldier_b model), first
     /// conversation set: selects the line (separate tables for variant 1) and
     /// increments 0..3, staying at 3.
@@ -865,10 +774,6 @@ enum {
     /// actor_161500 (0: D_801352A8, non-zero: D_801354B8). No writer found by direct
     /// gameFlagSetNibble.
     GAME_FLAG_105 = 0x105,
-    /// Set to 1 the first time directed action 4 in the MIST shooting gallery is used,
-    /// which runs its one-shot scene (and sets caption state 0xA2 to 0x3B); later uses
-    /// do nothing.
-    GAME_FLAG_SHOOTING_GALLERY_ACTION_4_SEEN = 0x106,
     /// Dryfield night garage: 0 until the garage CAP sequence's second step has run
     /// once, then 1; the step starts its CAP slot at entry flag+1, so the first run
     /// plays entry 1 and later runs entry 2.
@@ -966,20 +871,12 @@ enum {
     /// Set to 1 the first time trigger 0x16 in the Shelter B2 breeding room runs its
     /// scripted scene; afterwards the trigger replays CAP 0x16.
     GAME_FLAG_BREEDING_ROOM_FIRST_SCENE_SEEN = 0x120,
-    /// Set to 1 when actor_215100 (shooting-gallery helper) first runs its introductory
-    /// scene (caption state 0x3A); later runs skip straight to spawning the gallery
-    /// task.
-    GAME_FLAG_SHOOTING_GALLERY_INTRO_SEEN = 0x121,
     /// Set to 1 on first entry to the Shelter B1 elevator hall (caption state 0xA2 set
     /// to 0x1D).
     GAME_FLAG_SHELTER_B1_ELEVATOR_HALL_VISITED = 0x122,
     /// Unidentified. Set once in the B1 underground parking room setup when progress
     /// 0x7A is at least 6, triggering a one-time room update (func_8018390C).
     GAME_FLAG_SHELTER_B1_UNDERGROUND_PARKING_123 = 0x123,
-    /// Prize state of shooting-gallery difficulty 4 (flags 0x125+difficulty): 1 or 2
-    /// when earned, 2 meaning it waits at MIST parking; collecting it there gives item
-    /// 0x6C and sets 3.
-    GAME_FLAG_SHOOTING_GALLERY_PRIZE_4_STATE = 0x129,
     /// Shelter room R48 (Brahman) scene state: 1 on room setup, 2 after the follow-up
     /// script or 3 after spawning the three tasks, 4 when the trigger ends the fight
     /// phase (with 0x100 = 2). actor_503500's effect task fades differently by state.
@@ -1167,9 +1064,6 @@ enum {
     /// One-shot: request 1 in the Shelter 1F tent runs CAP 0x18 the first time and sets
     /// it; afterwards the room cutscene path is used.
     GAME_FLAG_TENT_FIRST_SCENE = 0x169,
-    /// One-shot: event 4 on the Akropolis fire escape runs CAP 0xB the first time and
-    /// sets it; afterwards the room cutscene (view 9) runs.
-    GAME_FLAG_FIRE_ESCAPE_FIRST_SCENE = 0x16A,
     /// One-shot: request 1 at the Dryfield gas station runs CAP 0xB the first time and
     /// sets it; afterwards the room cutscene runs.
     GAME_FLAG_GAS_STATION_FIRST_SCENE = 0x16B,
@@ -1312,11 +1206,6 @@ enum {
     /// the table entry carries bit 0x800), 0 hides it. Shelter entry 0 (forced to the
     /// 0x800 sprite while 0x7A is 6); set to 2 at first arrival in the Shelter 1F tent.
     GAME_FLAG_MAP_MARK_SHELTER_1CD = 0x1CD,
-    /// Map marker: listed in the stage map-marker tables read by menuMapGetMarkerState;
-    /// _menuMapDrawFlagMarkers draws a marker icon while the value is 2 (alternate sprite when
-    /// the table entry carries bit 0x800), 0 hides it. Akropolis entry 4; cleared in
-    /// the Akropolis security room's event task.
-    GAME_FLAG_MAP_MARK_SECURITY_ROOM = 0x1EE,
 };
 
 #endif // MAIN_GAMEFLAG_IDS_H

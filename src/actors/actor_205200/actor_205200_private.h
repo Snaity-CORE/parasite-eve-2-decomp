@@ -9,9 +9,6 @@
 
 #include "overlay.h"
 
-/// Execution priority of this package's controller, parts and stationary body.
-enum { ACTOR_205200_ENEMY_TASK_PRIORITY = 96 };
-
 extern TmdSource gEveMaskedBody;
 
 /// Borrowed context of this renderer's active wave task.

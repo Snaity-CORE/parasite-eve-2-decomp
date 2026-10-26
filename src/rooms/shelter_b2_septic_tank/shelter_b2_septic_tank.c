@@ -10,7 +10,9 @@
 #include "common.h"
 
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_02100.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/animation.h"
@@ -115,7 +117,6 @@ static s32 _shelterB2SepticTankIgnoreCommand(Task* task, s32 messageId, s32 comm
 static s32 _shelterB2SepticTankHandleRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unused);
 
 enum {
-    SHELTER_B2_SEPTIC_TANK_MESSAGE_USE_KEY_ITEM     = 5105,
     SHELTER_B2_SEPTIC_TANK_ENCOUNTER_INTRO_COMPLETE = 1,
     SHELTER_B2_SEPTIC_TANK_ENCOUNTER_COMBAT_READY   = 2
 };
@@ -127,7 +128,6 @@ enum {
 };
 
 enum {
-    SHELTER_B2_SEPTIC_TANK_STAGED_EVENT_PRIORITY  = 32,
     SHELTER_B2_SEPTIC_TANK_ENCOUNTER_BLEND_FRAMES = 8,
     SHELTER_B2_SEPTIC_TANK_COMBAT_SETUP_ANIMATION = 1
 };
@@ -166,7 +166,7 @@ static AnimationSet _gShelterB2SepticTankAnimation05958 = {
 /// The gate copies the destination and event records before spawning this
 /// task at state zero with unused zero payloads. The loaded room owns those
 /// records until the task finishes CAP/sound playback and requests reload.
-static TaskDesc _gShelterB2SepticTankStagedEventTaskDesc = { { { TASK_BODY_NONE, SHELTER_B2_SEPTIC_TANK_STAGED_EVENT_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gShelterB2SepticTankStagedEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Room-message routes: resolve departures, refuse key items, handle encounter actions, ignore commands.
 ///
@@ -175,7 +175,7 @@ static TaskDesc _gShelterB2SepticTankStagedEventTaskDesc = { { { TASK_BODY_NONE,
 /// Keep the room overlay and callback code loaded while the receiver is live.
 static TaskMessageEntry _gShelterB2SepticTankRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB2SepticTankResolveRoomEvent },
-    { SHELTER_B2_SEPTIC_TANK_MESSAGE_USE_KEY_ITEM, _shelterB2SepticTankRejectKeyItem },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB2SepticTankRejectKeyItem },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB2SepticTankHandleRoomAction },
     { ROOM_MESSAGE_COMMAND, _shelterB2SepticTankIgnoreCommand },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -281,7 +281,6 @@ enum {
     SHELTER_B2_SEPTIC_TANK_COMBAT_CAP_COMMAND   = 2,
     SHELTER_B2_SEPTIC_TANK_COMBAT_VIEW          = 3,
     SHELTER_B2_SEPTIC_TANK_COMBAT_SETTLE_FRAMES = 3,
-    SHELTER_B2_SEPTIC_TANK_WATER_TASK_PRIORITY  = 96,
 };
 
 /// Turns the player toward the diver, synchronizes CAP 2 and hands the encounter to combat.
@@ -317,7 +316,7 @@ s16 gShelterB2SepticTankWaterY = 150;
 ///
 /// Spawning reads the recipe synchronously; water drawing borrows this room's
 /// geometry and reserved actor-load buffer until task teardown and GPU completion.
-static TaskDesc _gShelterB2SepticTankWaterTaskDesc = { { { TASK_BODY_NONE, SHELTER_B2_SEPTIC_TANK_WATER_TASK_PRIORITY } }, _shelterB2SepticTankWaterTask, { .value = 0 } };
+static TaskDesc _gShelterB2SepticTankWaterTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, _shelterB2SepticTankWaterTask, { .value = 0 } };
 
 /// Two water rectangles starting at Z = -13500, drawn first, followed by the list end.
 static RoomWaterSurface _gShelterB2SepticTankFirstWaterWaveSurfaces[] = {

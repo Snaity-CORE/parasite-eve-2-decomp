@@ -6,7 +6,7 @@
 #include "common.h"
 
 #include "actors/actor.h"
-#include "actors/task_tables.h"
+#include "actors/actor_443500.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/animation.h"
@@ -55,9 +55,6 @@ enum {
 
 /// Tick of each pass of the default clip on which the clip's sound is started.
 enum { ACTOR_443500_PIERCE_CARRADINE_LOOP_SOUND_TICK = 15 };
-
-/// Execution priority of this package's actor and fade tasks.
-enum { ACTOR_443500_TASK_PRIORITY = 192 };
 
 /// Pierce's playback bank, fallback clip and room placement index.
 ///
@@ -166,7 +163,7 @@ static void _actor443500FadeFromBlackTask(Task* task);
 /// Spawn at entry 0 with zero arguments. The task owns its elapsed-tick counter;
 /// this overlay must remain loaded until the fade kills the task.
 static TaskDesc _gActor443500FadeFromBlackTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, ACTOR_443500_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _actor443500FadeFromBlackTask,
     .data     = { .value = 0 },
 };
@@ -1609,8 +1606,8 @@ static AnimationPlayRequest _gActor443500PierceDefaultAnimationRequest = {
 static TmdSource _gPierceGlasses;
 
 TaskDesc gActor443500PierceTaskDescs[2] = {
-    { .header = { .fields = { TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER, ACTOR_443500_TASK_PRIORITY } }, .callback = _actor443500PierceTask, .data = { .model = &_gPierceBody } },
-    { .header = { .fields = { TASK_BODY_TMD, ACTOR_443500_TASK_PRIORITY } }, .callback = _actor443500ChildModelTask, .data = { .model = &_gPierceGlasses } },
+    { .header = { .fields = { TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER, TASK_PRIORITY_CONTROL } }, .callback = _actor443500PierceTask, .data = { .model = &_gPierceBody } },
+    { .header = { .fields = { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, .callback = _actor443500ChildModelTask, .data = { .model = &_gPierceGlasses } },
 };
 
 /// Pierce synchronous playback, placement and model-draw messages, followed by the end marker.
@@ -2105,7 +2102,6 @@ static s32 _actor443500PlayAnimation(Task* task, s32 messageId, const AnimationP
 /// and fourth argument. Unrelated flags and existing buffers remain intact.
 static s32 _actor443500SetModelDraw(Task* task, s32 messageId, s32 drawMode, s32 unusedArg)
 {
-    enum { ACTOR_443500_DRAW_SHOW_SKIP_AUTO_BUFFER = 3 };
     TmdObject*                       model;
     s32                              result;
     _Actor443500PierceCarradineWork* work;
@@ -2128,7 +2124,7 @@ static s32 _actor443500SetModelDraw(Task* task, s32 messageId, s32 drawMode, s32
             work->freeCountdown = drawMode;
             model->flags       |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_443500_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             model->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             model->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

@@ -9,7 +9,7 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_120500.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -61,8 +61,6 @@
 #include "main/wipsys_types.h"
 
 #include "mapui/map_dryfield.h"
-
-#include "rooms/akropolis_square.h"
 
 #include "rooms/room.h"
 
@@ -131,22 +129,13 @@ static s32                              _dryfieldMotelRoom6HandleRoomAction(Task
 static s32                              _dryfieldMotelRoom6IgnoreSoundMessage(Task* receiver, s32 messageId, s32 soundCommand, s32 unusedSecondArg);
 static void                             _dryfieldMotelRoom6RunActorEventTask(Task* task);
 
-/// Key-item use request sent to the room task by the inventory menu.
-enum { DRYFIELD_MOTEL_ROOM_6_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 #include "../../shared/room/telephone_data.inc.c"
 
 #include "../../shared/room/planar_reflection_data.inc.c"
 
-/// Execution priority shared by this carrier's two reflection recipes.
-enum { DRYFIELD_MOTEL_ROOM_6_REFLECTION_TASK_PRIORITY = 112 };
-
-/// Execution priority of this room's bodyless actor-event runner.
-enum { DRYFIELD_MOTEL_ROOM_6_ACTOR_EVENT_TASK_PRIORITY = 32 };
-
 TaskDesc gDryfieldMotelRoom6ReflectionTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_MOTEL_ROOM_6_REFLECTION_TASK_PRIORITY } }, dryfieldMotelRoom6PlayerReflectionTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_MOTEL_ROOM_6_REFLECTION_TASK_PRIORITY } }, _planarReflectionAttachmentTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, dryfieldMotelRoom6PlayerReflectionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, _planarReflectionAttachmentTask, { .value = 0 } },
 };
 
 /// Borrows this overlay's two reflection task descriptors.
@@ -166,8 +155,8 @@ static inline TaskDesc* _planarReflectionGetTaskTable(void)
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -178,7 +167,7 @@ static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
 /// contract. The terminal record is not dispatched.
 static TaskMessageEntry _gDryfieldMotelRoom6MessageTable[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _dryfieldMotelRoom6GateWaterTowerExit },
-    { DRYFIELD_MOTEL_ROOM_6_MESSAGE_USE_KEY_ITEM, _dryfieldMotelRoom6RejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldMotelRoom6RejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldMotelRoom6HandleRoomAction },
     { ROOM_MESSAGE_SOUND, _dryfieldMotelRoom6IgnoreSoundMessage },
     { ROOM_MESSAGE_COMMAND, _motelRoom6CutsceneMessage },
@@ -187,11 +176,11 @@ static TaskMessageEntry _gDryfieldMotelRoom6MessageTable[6] = {
 
 /// Bodyless actor-event runner recipe, followed by TASK_DESC_END.
 ///
-/// Entry 0 runs at priority 32 with unused spawn arguments. The action-zero
+/// Entry 0 runs at priority `TASK_PRIORITY_SCENE` with unused spawn arguments. The action-zero
 /// receiver spawns it once, after latching progress. Spawning copies the recipe;
 /// keep this room and actor_120500 loaded until the event's stop handshake ends.
 static TaskDesc _gDryfieldMotelRoom6ActorEventTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_MOTEL_ROOM_6_ACTOR_EVENT_TASK_PRIORITY } }, _dryfieldMotelRoom6RunActorEventTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldMotelRoom6RunActorEventTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -2229,9 +2218,7 @@ static void _dryfieldMotelRoom6IgnoreCommand(Task* unusedTask, s32 unusedMessage
 /// returns 0 so the inventory menu reports that the item cannot be used here.
 static s32 _dryfieldMotelRoom6RejectKeyItemMessage(Task* receiver, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_MOTEL_ROOM_6_KEY_ITEM_RESULT_REFUSED = 0 };
-
-    return DRYFIELD_MOTEL_ROOM_6_KEY_ITEM_RESULT_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Intercepts the first departure toward the water tower with a CAP event.
@@ -2273,8 +2260,8 @@ static s32 _dryfieldMotelRoom6GateWaterTowerExit(Task* task, s32 messageId, cons
 /// spawn is not retried. Other actions and repeated requests still return one.
 /// The receiver, message ID and zero second payload are unused. Requires the
 /// room and actor_120500 resources to remain loaded through the spawned event.
-/// The sibling `_acropolisSecurityRoomHandleAction` leaves its reply unspecified;
-/// `_acropolisSanctuaryHandleRoomAction` answers zero.
+/// The sibling `_akropolisSecurityRoomHandleRoomAction` leaves its reply unspecified;
+/// `_akropolisSanctuaryHandleRoomAction` answers zero.
 static s32 _dryfieldMotelRoom6HandleRoomAction(Task* unusedTask, s32 unusedMessageId, const DirectionActionRequest* request, s32 unusedSecondArg)
 {
     enum { DRYFIELD_MOTEL_ROOM_6_ACTION_ACTOR_EVENT = 0,

@@ -10,7 +10,10 @@
 
 #include "neo_ark_power_plant_1_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_03800.h"
+#include "actors/actor_105400.h"
 
 #include "gameplay/animation.h"
 #include "gameplay/area.h"
@@ -947,8 +950,8 @@ static inline void _neoArkPowerPlant1DrawGeneratorGlow(void)
     };
     if (gameFlagGetNibble(GAME_FLAG_POWER_PLANT_1_GENERATOR_PART_DOWN) != 0) {
         if (gRoomEffectState->effectControl == ROOM_EFFECT_CONTROL_RUNNING && gameFlagGetNibble(GAME_FLAG_NEO_ARK_POWER_PLANT_1_CLEARED) == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if (((gRandomLcgState >> 16) & NEO_ARK_POWER_PLANT_1_GENERATOR_FLASH_CHANCE_MASK) == 0) {
+            RANDOM_LCG_ADVANCE();
+            if ((RANDOM_LCG_DRAW() & NEO_ARK_POWER_PLANT_1_GENERATOR_FLASH_CHANCE_MASK) == 0) {
                 effectSpawn(EFFECT_FLASH_BURST, NULL, NEO_ARK_POWER_PLANT_1_GENERATOR_FLASH_BASE_SIZE, &_gNeoArkPowerPlant1GeneratorGlowPosition);
             }
         }

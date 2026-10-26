@@ -14,7 +14,7 @@
 
 #include "actors/actor_521100.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_521100.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/display.h"
@@ -26,6 +26,7 @@
 #include "gameplay/attachment_state.h"
 #include "gameplay/attachments.h"
 #include "gameplay/captions.h"
+#include "gameplay/game_debug.h"
 #include "gameplay/player_actor.h"
 #include "gameplay/player_state.h"
 #include "gameplay/collision.h"
@@ -130,8 +131,6 @@ typedef struct {
 } _DryfieldDilapidatedHouseConeWork;
 STATIC_ASSERT_SIZEOF(_DryfieldDilapidatedHouseConeWork, 0x40);
 
-extern void func_80724608(void* owner, s32 arg1, s32 arg2, void* name);
-
 static s32 _gScreenWaveAmplitude;
 
 static ScreenWaveCtx* _gScreenWaveContext;
@@ -147,12 +146,8 @@ enum {
     DRYFIELD_DILAPIDATED_HOUSE_ENCOUNTER_FINISH_REQUESTED = 3,
 };
 
-/// Execution priorities of the room's script effects and encounter helpers.
-enum {
-    DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_NEGATIVE_CAPTURE = 32,
-    DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_HEAD_TRACK       = 97,
-    DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT           = 192,
-};
+/// Execution priority of the encounter's head tracking, after the actors'.
+enum { DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_HEAD_TRACK = 97 };
 
 enum {
     DRYFIELD_DILAPIDATED_HOUSE_BEAM_CAP_POINT_COUNT = 6,
@@ -240,7 +235,7 @@ static void                             _dryfieldDilapidatedHouseMorphConeTask(T
 /// Argument 2 borrows the room's writable ramp context through the final draw.
 /// Only one wave may use the package's shared ramp and oscillators at a time.
 static TaskDesc _gDryfieldDilapidatedHouseScreenWaveTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _screenWaveTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -255,7 +250,7 @@ static s32 _gScreenWaveAmplitude = 256;
 /// Argument 2 borrows the room's writable duration/completion block. Capture
 /// runs before the priority-192 blackout helper; only one capture may be active.
 static TaskDesc _gDryfieldDilapidatedHouseNegativeCaptureTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_NEGATIVE_CAPTURE } }, _dryfieldDilapidatedHouseNegativeCaptureTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldDilapidatedHouseNegativeCaptureTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -286,9 +281,9 @@ static const TaskMessageEntry _gDryfieldDilapidatedHouseRoomMessageTable[] SECTI
 /// count; the other entries start with zero payloads and use room-owned state.
 static TaskDesc _gDryfieldDilapidatedHouseEncounterTaskDescriptors[4] = {
     { { { TASK_BODY_NONE, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_HEAD_TRACK } }, _dryfieldDilapidatedHouseHeadTrackTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseShakeYTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseBlackoutTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseEncounterFinishTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseShakeYTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseBlackoutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseEncounterFinishTask, { .value = 0 } },
 };
 
 /// Retained stage-exit countdown recipe at index 0, followed by a non-spawnable terminator.
@@ -296,7 +291,7 @@ static TaskDesc _gDryfieldDilapidatedHouseEncounterTaskDescriptors[4] = {
 /// No room code spawns it. Argument 1 is a signed tick count; a nonnegative
 /// count exits after count + 2 updates. Argument 2 is unused.
 static TaskDesc _gDryfieldDilapidatedHouseModeExitCountdownTaskDescriptors[] = {
-    { { { TASK_BODY_NONE, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseModeExitCountdownTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseModeExitCountdownTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -930,8 +925,6 @@ static const EvsSceneKey _gDryfieldDilapidatedHouseEncounterClosingSceneKey SECT
 /// Message and draw requests used by the two placed encounter actors.
 enum {
     DRYFIELD_DILAPIDATED_HOUSE_MESSAGE_ACTIVATE_NO9        = 2007,
-    DRYFIELD_DILAPIDATED_HOUSE_ACTOR_HIDE                  = 0,
-    DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW                  = 1,
     DRYFIELD_DILAPIDATED_HOUSE_ACTOR_HIDE_SKIP_AUTO_BUFFER = 2,
 };
 
@@ -959,7 +952,7 @@ static EvsCommand _gDryfieldDilapidatedHouseEncounterIntroScript[] = {
     { EVENT_SCRIPT_OPCODE_START_SECONDARY_FADE, { .value = 0 }, { .value = 30 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_HIDE_SKIP_AUTO_BUFFER }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHousePlayerIntroArrivalPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHouseAnmcWomanIntroOpeningPlacement } }, { .value = 0 } },
@@ -973,7 +966,7 @@ static EvsCommand _gDryfieldDilapidatedHouseEncounterIntroScript[] = {
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gDryfieldDilapidatedHouseActorCommand0 } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .pointer = &_gDryfieldDilapidatedHouseAnmcWomanClip1Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHouseAnmcWomanIntroClip1Placement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -993,18 +986,18 @@ static EvsCommand _gDryfieldDilapidatedHouseEncounterIntroScript[] = {
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _dryfieldDilapidatedHouseSetHeadTrackState }, { .value = DRYFIELD_DILAPIDATED_HOUSE_HEAD_TRACK_INIT }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldDilapidatedHousePlayerClip51Request }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .pointer = &_gDryfieldDilapidatedHouseNo9Clip22Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_START_VIBRATION, { .padCommands = _gDryfieldDilapidatedHouseIntroVibrationCommands }, { .vibrationSegments = _gDryfieldDilapidatedHouseIntroVibrationSegments }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_START_AREA_MUSIC, { .value = 1 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RESTORE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldDilapidatedHousePlayerAimHoldRequest }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHouseNo9IntroAimPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .pointer = &_gDryfieldDilapidatedHouseNo9Clip23Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .pointer = &_gDryfieldDilapidatedHouseNo9Clip27Request } }, { .value = 0 } },
@@ -1017,9 +1010,9 @@ static EvsCommand _gDryfieldDilapidatedHouseEncounterIntroScript[] = {
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHouseAnmcWomanFlattenPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .pointer = &_gDryfieldDilapidatedHouseAnmcWomanClip10Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .pointer = &_gDryfieldDilapidatedHouseAnmcWomanFlattenCommand } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .pointer = &_gDryfieldDilapidatedHouseNo9Clip21Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_HIDE_SKIP_AUTO_BUFFER }, { .value = 0 } },
@@ -1057,7 +1050,7 @@ static EvsCommand _gDryfieldDilapidatedHouseEncounterIntroSkipScript[] = {
     { EVENT_SCRIPT_OPCODE_CLEANUP_SCENE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RESTORE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 1 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_HIDE_SKIP_AUTO_BUFFER }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHouseNo9BattlePlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHousePlayerBattlePlacement } }, { .value = 0 } },
@@ -1093,7 +1086,7 @@ static EvsCommand _gDryfieldDilapidatedHouseEncounterClosingScript[] = {
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHousePlayerClosingAimPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldDilapidatedHousePlayerAimHoldRequest }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_DILAPIDATED_HOUSE_ACTOR_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .pointer = &_gDryfieldDilapidatedHouseNo9ClosingOpeningPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_RETURN_SECONDARY_FADE, { .value = 0 }, { .value = 30 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -1437,10 +1430,10 @@ static SVECTOR _gDryfieldDilapidatedHouseConeRingCenters[] = {
 /// beams take a mirror selector and cones an initial phase advance in frames.
 /// Entry 1 is retained but never spawned by this room. Each model has 40 vertices.
 static TaskDesc _gDryfieldDilapidatedHouseMorphTaskDescriptors[4] = {
-    { { { TASK_BODY_TMD, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseMorphAttachmentTask, { .model = &_gDryfieldDilapidatedHouseModel08794 } },
-    { { { TASK_BODY_TMD, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseCurveDebugTask, { .model = &_gDryfieldDilapidatedHouseModel08D0C } },
-    { { { TASK_BODY_COORD, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseCappedBeamTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, DRYFIELD_DILAPIDATED_HOUSE_PRIORITY_EFFECT } }, _dryfieldDilapidatedHouseMorphConeTask, { .value = 0 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseMorphAttachmentTask, { .model = &_gDryfieldDilapidatedHouseModel08794 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseCurveDebugTask, { .model = &_gDryfieldDilapidatedHouseModel08D0C } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseCappedBeamTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _dryfieldDilapidatedHouseMorphConeTask, { .value = 0 } },
 };
 
 /// Corners of the left, middle and right room light prisms, in local game units.
@@ -3465,7 +3458,6 @@ static inline void _dryfieldDilapidatedHouseDrawBlackout(void)
 {
     enum { COVER_LEFT_PIXELS   = -160,
            COVER_TOP_PIXELS    = -128,
-           COVER_WIDTH_PIXELS  = 320,
            COVER_HEIGHT_PIXELS = 256 };
     TILE* tile;
 
@@ -3474,7 +3466,7 @@ static inline void _dryfieldDilapidatedHouseDrawBlackout(void)
     SetTile(tile);
     tile->x0 = COVER_LEFT_PIXELS;
     tile->y0 = COVER_TOP_PIXELS;
-    tile->w  = COVER_WIDTH_PIXELS;
+    tile->w  = DISPLAY_SCREEN_WIDTH;
     tile->h  = COVER_HEIGHT_PIXELS;
     tile->r0 = 0;
     tile->g0 = 0;
@@ -4456,12 +4448,12 @@ static void _dryfieldDilapidatedHouseDrawMorphCone(Task* task, const SVECTOR* ri
             screenWord[4] = screenPositions[2 * CONE_RING_VERTEX_COUNT - 1];
             screenWord[6] = screenPositions[CONE_RING_VERTEX_COUNT];
         }
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)depths[segmentIndex] << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)) + CONE_OT_OFFSET, quad);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(depths[segmentIndex]) + CONE_OT_OFFSET, quad);
         drawMode       = gGpuPrimCursor;
         gGpuPrimCursor = drawMode + 1;
         setlen(drawMode, 1);
         drawMode->code[0] = CONE_DRAW_MODE_COMMAND | getTPage(0, GPU_BLEND_ADD_QUARTER, 320, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)depths[segmentIndex] << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)) + CONE_OT_OFFSET, drawMode);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(depths[segmentIndex]) + CONE_OT_OFFSET, drawMode);
     }
 }
 
@@ -5009,7 +5001,7 @@ static void _dryfieldDilapidatedHouseDrawLightPrism(GfxCoord* coord, s16 firstVe
         setRGB1(quad, intensity, intensity, intensity);
         setRGB2(quad, 0, 0, 0);
         setRGB3(quad, 0, 0, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->depth);
     }
@@ -5037,7 +5029,7 @@ static void _dryfieldDilapidatedHouseDrawLightPrism(GfxCoord* coord, s16 firstVe
     setRGB1(quad, intensity, intensity, intensity);
     setRGB2(quad, intensity, intensity, intensity);
     setRGB3(quad, intensity, intensity, intensity);
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), quad);
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth), quad);
     gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->depth);
     SCRATCH_STACK_RELEASE_BLOCK(EffectQuadCornersScratch);
 #undef DRYFIELD_DILAPIDATED_HOUSE_TRANSFORM_PRISM_CORNER
@@ -5221,7 +5213,7 @@ static void _dryfieldDilapidatedHouseDrawTwinTrail(s16 newestSlot, s16 colorMult
             setRGB1(quad, newerIntensity * (colorMultipliers >> 8), newerIntensity * ((colorMultipliers >> 4) & TRAIL_COLOR_CHANNEL_MASK), newerIntensity * (colorMultipliers & TRAIL_COLOR_CHANNEL_MASK));
             setRGB2(quad, olderIntensity * (colorMultipliers >> 8), olderIntensity * ((colorMultipliers >> 4) & TRAIL_COLOR_CHANNEL_MASK), olderIntensity * (colorMultipliers & TRAIL_COLOR_CHANNEL_MASK));
             setRGB3(quad, olderIntensity * (colorMultipliers >> 8), olderIntensity * ((colorMultipliers >> 4) & TRAIL_COLOR_CHANNEL_MASK), olderIntensity * (colorMultipliers & TRAIL_COLOR_CHANNEL_MASK));
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->otz);
         }
@@ -5273,21 +5265,21 @@ void dryfieldDilapidatedHouseFireBlastTask(Task* task)
 /// random generator once for Q12 red intensity 2048..3840, with half/quarter
 /// green/blue. Expiration is four gameplay frames; the slot remains borrowed.
 /// No arguments are evaluated; use as a standalone statement. Undefined below.
-#define DRYFIELD_DILAPIDATED_HOUSE_SEED_FIRE_BLAST_LIGHT()                                                                                         \
-    {                                                                                                                                              \
-        s16 lightIntensityQ12;                                                                                                                     \
-        gWorldCoordTransientPointLights[0].framesLeft      = FIRE_BLAST_LIGHT_FRAMES;                                                              \
-        pointLight->inner                                  = FIRE_BLAST_LIGHT_INNER_RADIUS;                                                        \
-        pointLight->outer                                  = FIRE_BLAST_LIGHT_OUTER_RADIUS;                                                        \
-        gRandomLcgState                                    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                       \
-        lightIntensityQ12                                  = ((gRandomLcgState >> 16) & FIRE_BLAST_LIGHT_RANDOM_MASK) + FIRE_BLAST_LIGHT_BASE_Q12; \
-        pointLight->head.color.r                           = lightIntensityQ12;                                                                    \
-        pointLight->head.color.g                           = lightIntensityQ12 >> 1;                                                               \
-        pointLight->head.color.b                           = lightIntensityQ12 >> 2;                                                               \
-        pointLight->head.transform.coord.coord.t[0]        = coord->coord.t[0];                                                                    \
-        pointLight->head.transform.coord.coord.t[1]        = coord->coord.t[1];                                                                    \
-        pointLight->head.transform.coord.coord.t[2]        = coord->coord.t[2];                                                                    \
-        lightSlot->light.head.transform.coord.composeStamp = GRAPHICS_COORD_DIRTY;                                                                 \
+#define DRYFIELD_DILAPIDATED_HOUSE_SEED_FIRE_BLAST_LIGHT()                                                                                   \
+    {                                                                                                                                        \
+        s16 lightIntensityQ12;                                                                                                               \
+        gWorldCoordTransientPointLights[0].framesLeft = FIRE_BLAST_LIGHT_FRAMES;                                                             \
+        pointLight->inner                             = FIRE_BLAST_LIGHT_INNER_RADIUS;                                                       \
+        pointLight->outer                             = FIRE_BLAST_LIGHT_OUTER_RADIUS;                                                       \
+        RANDOM_LCG_ADVANCE();                                                                                                                \
+        lightIntensityQ12                                  = (RANDOM_LCG_DRAW() & FIRE_BLAST_LIGHT_RANDOM_MASK) + FIRE_BLAST_LIGHT_BASE_Q12; \
+        pointLight->head.color.r                           = lightIntensityQ12;                                                              \
+        pointLight->head.color.g                           = lightIntensityQ12 >> 1;                                                         \
+        pointLight->head.color.b                           = lightIntensityQ12 >> 2;                                                         \
+        pointLight->head.transform.coord.coord.t[0]        = coord->coord.t[0];                                                              \
+        pointLight->head.transform.coord.coord.t[1]        = coord->coord.t[1];                                                              \
+        pointLight->head.transform.coord.coord.t[2]        = coord->coord.t[2];                                                              \
+        lightSlot->light.head.transform.coord.composeStamp = GRAPHICS_COORD_DIRTY;                                                           \
     }
 
     switch (task->state) {
@@ -5300,11 +5292,11 @@ void dryfieldDilapidatedHouseFireBlastTask(Task* task)
                 return;
             }
             // Seed the flash before resetting the radius for the expanding phase.
-            work->scale     = FIRE_BLAST_INTENSITY;
-            work->angle     = FIRE_BLAST_FLASH_RADIUS;
-            work->index     = 0;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->period    = (gRandomLcgState >> 16) & ACTOR_TRANSFORM_ANGLE_MASK;
+            work->scale = FIRE_BLAST_INTENSITY;
+            work->angle = FIRE_BLAST_FLASH_RADIUS;
+            work->index = 0;
+            RANDOM_LCG_ADVANCE();
+            work->period = RANDOM_LCG_DRAW() & ACTOR_TRANSFORM_ANGLE_MASK;
             effectSpawn(EFFECT_DRYFIELD_DILAPIDATED_HOUSE_FLAME_CONE, coord, 0, NULL);
             flashRgb[0] = 0xFF;
             flashRgb[1] = 0x7F;

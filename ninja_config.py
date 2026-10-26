@@ -224,6 +224,7 @@ GEN_ASSET_INC = TOOLS_DIR / "buildsteps" / "gen_asset_inc.py"
 GEN_MODEL_INC = TOOLS_DIR / "buildsteps" / "gen_model_inc.py"
 GEN_MODEL_SOURCE = TOOLS_DIR / "buildsteps" / "gen_model_source.py"
 GEN_ANIMATION_SOURCE = TOOLS_DIR / "buildsteps" / "gen_animation_source.py"
+GEN_SOUND_HEADER = TOOLS_DIR / "buildsteps" / "gen_sound_header.py"
 GEN_ANIMATION_INC = TOOLS_DIR / "buildsteps" / "gen_animation_inc.py"
 GEN_COLLISION_INC = TOOLS_DIR / "buildsteps" / "gen_collision_inc.py"
 GEN_SHAPE_INC = TOOLS_DIR / "buildsteps" / "gen_shape_inc.py"
@@ -292,14 +293,20 @@ def room_includes(version: str) -> list[tuple[str, Path, list[Path]]]:
     data, _schema = asset_tables()
     out = []
     for key, rec in data.ASSETS.items():
-        if rec.get("type") not in ("room", "stage"):
+        slot = str((rec.get("load") or {}).get("slot", "")) if rec.get("type") == "package" else ""
+        kind = (rec.get("type") if rec.get("type") in ("room", "stage") else slot if slot in ("room", "stage")
+                else "actor" if "entries" in rec and slot.startswith("actor_") else None)
+        if kind is None:
             continue
-        instance = ASSETS_DIR / version / rec["group"] / ("stage.toml" if rec["type"] == "stage" else "room.toml")
+        own = f"{rec['group']}/{key.rsplit('/', 1)[1]}" if kind == "actor" else rec["group"]
+        instance = ASSETS_DIR / version / own / ("stage.toml" if kind == "stage" else "room.toml")
         if not instance.exists():
             continue
         modules = [k for k, v in tomllib.loads(instance.read_text()).items() if isinstance(v, dict) and k != "entry"]
-        outdir = BUILD_DIR / "include" / "assets" / rec["group"]
-        out.append((key, instance, [outdir / f"{m}.inc" for m in modules] + [outdir / "declarations.inc"]))
+        if (instance.parent / "events.evs").exists():
+            modules.append("events")
+        outdir = BUILD_DIR / "include" / "assets" / own
+        out.append((key, instance, [outdir / f"{m}.inc" for m in dict.fromkeys(modules)] + [outdir / "declarations.inc"]))
     return out
 
 
@@ -322,6 +329,46 @@ def asset_tables():
             _ASSET_TABLES.append(importlib.util.module_from_spec(spec))
             spec.loader.exec_module(_ASSET_TABLES[-1])
     return _ASSET_TABLES
+
+
+EXPORTS_DIR = BUILD_DIR / "exports"
+
+
+def write_export_symbols() -> None:
+    """build/exports/<overlay>.txt: for each package that binds others (asset type `package`, `slots`), the absolute
+    address of every export its bindings name - `symbol = address;`, the address the export's offset at its package's
+    memory slot - which the overlay's link resolves its C's references to them by (package.py). Rewritten only when
+    its content changes, since the split reads it (split_inputs)."""
+    import importlib.util
+    data, _schema = asset_tables()
+    spec = importlib.util.spec_from_file_location("package", TOOLS_DIR / "peassets" / "package.py")
+    package = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(TOOLS_DIR / "peassets"))
+    spec.loader.exec_module(package)
+    EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    for key, rec in data.ASSETS.items():
+        if rec.get("type") != "package" or not rec.get("slots"):
+            continue
+        # the exports its decoded data references, `<binding>.<export>` (room/), each once
+        own = rec["group"] if rec.get("load", {}).get("slot") in ("room", "stage") else f"{rec['group']}/{key.rsplit('/', 1)[1]}"
+        texts = [p.read_text() for p in (ASSETS_DIR / "USA" / own).glob("*.toml")] + \
+                [p.read_text() for p in (ASSETS_DIR / "USA" / own).glob("*.evs")]
+        used = {m for t in texts for m in re.findall(r'"?\b([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)\b"?', t)}
+        lines, seen = [], {}
+        for binding, bound in sorted(rec["slots"].items()):
+            base = package.load_address(bound, data.ASSETS)
+            for export, e in sorted((data.ASSETS[bound].get("exports") or {}).items()):
+                if f"{binding}.{export}" not in used:
+                    continue
+                address = base + e["at"]
+                if seen.setdefault(e["symbol"], address) != address:
+                    raise SystemExit(f"{key}: {e['symbol']} names 0x{seen[e['symbol']]:08X} and 0x{address:08X}: "
+                                     "give one of the packages its own symbol for it")
+                lines.append(f"{e['symbol']} = 0x{address:08X}; // {binding}.{export}")
+        path = EXPORTS_DIR / f"{rec.get('package_name', key)}.txt"
+        text = "\n".join(sorted(set(lines))) + "\n"
+        if not path.is_file() or path.read_text() != text:
+            path.write_text(text)
 
 
 def include_path(name: str, rec: dict) -> str:
@@ -355,7 +402,7 @@ def asset_placements(name: str) -> list[tuple[str, int]]:
         place = data.EMBEDDED_ASSETS[name]
         out.append((place["source"].removesuffix(".pe2pkg"), schema.embedded_offset(place)))
     for key, rec in data.ASSETS.items():
-        if rec.get("type") in ("pe2pkg", "room", "stage"):
+        if rec.get("type") in ("pe2pkg", "room", "stage", "package"):
             package = rec.get("package_name", key)
             out += [(package, p["offset"]) for p in rec.get("embedded", ())
                     if isinstance(p, dict) and p["name"] == name and (package, p["offset"]) not in out]
@@ -435,7 +482,7 @@ def declared_animation_sources(version: str) -> tuple[list, list]:
     tables = (data.ASSETS, data.EMBEDDED_ASSETS)
     clips, banks = [], []
     for key, rec in data.ASSETS.items():
-        if rec.get("type") in ("pe2pkg", "room", "stage"):
+        if rec.get("type") in ("pe2pkg", "room", "stage", "package"):
             placed = [p["name"] for p in rec.get("embedded", ()) if isinstance(p, dict)
                       and data.ASSETS[p["name"]]["type"] == "clip"]
             if placed:
@@ -445,8 +492,9 @@ def declared_animation_sources(version: str) -> tuple[list, list]:
                 stem = "clips" if local == "package" else f"{local.removesuffix('_package')}_clips"
                 # One include per run of back-to-back clips: `clips.inc`, or `clips_1.inc`, `clips_2.inc`, ...
                 for k, run in enumerate(runs, 1):
+                    files = [data.ASSETS[n].get("copy_of", n) for n in run]        # a stored copy is the original's
                     usd = [ASSETS_DIR / version / schema.asset_dir(n, data.ASSETS[n], tables=tables) / f"{schema.file_name(n)}.usda"
-                           for n in run]
+                           for n in files]
                     name = rec.get("package_name", key) + (f":{k}" if len(runs) > 1 else "")
                     inc = f"{stem}.inc" if len(runs) == 1 else f"{stem}_{k}.inc"
                     clips.append((name, usd, BUILD_DIR / "include" / "assets" / rec["group"] / inc))
@@ -1053,6 +1101,12 @@ def append_overlay_absolute_imports(basename: str, imports_path: str | None = No
             m = re.match(r"^(\w+)\s*=\s*(0x[0-9A-Fa-f]+)", line.strip())
             if m:
                 extra.append(f"{m.group(1)} = {m.group(2)};")
+    exports = EXPORTS_DIR / f"{basename}.txt"           # the exports its package's bindings name
+    if exports.is_file():
+        for line in exports.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"^(\w+)\s*=\s*(0x[0-9A-Fa-f]+)", line.strip())
+            if m:
+                extra.append(f"{m.group(1)} = {m.group(2)};")
     if not extra:
         return
     text = dest.read_text(encoding="utf-8")
@@ -1244,6 +1298,11 @@ def ninja_build(
         command=f"{PYTHON} {GEN_ANIMATION_SOURCE} $kind $name $out --assets {ASSETS_DIR / 'USA'}",
     )
     ninja_rules_file.rule(
+        "sound-header",
+        description="sound-header $name",
+        command=f"{PYTHON} {GEN_SOUND_HEADER} $name $out",
+    )
+    ninja_rules_file.rule(
         "animation-inc",
         description="animation-inc $in $source",
         command=f"{PYTHON} {GEN_ANIMATION_INC} $in $load $source {BUILD_DIR / 'include' / 'assets'}",
@@ -1290,13 +1349,22 @@ def ninja_build(
             writer.build(outputs=str(inc), rule="shape-inc", inputs=str(instance), implicit=shape_deps + instances,
                          variables={"name": name})
         ASSET_INC_OUTPUTS.append(str(inc))
-    room_deps = [str(GEN_ROOM_INC), str(peassets / "asset_data.py"), str(peassets / "asset_schema.py"),
+    # The includes a room's generated files name come from an index of include/ (room/c_headers.py): a stamp of the
+    # headers' paths, rewritten only when the set changes, regenerates them when a header moves or appears.
+    header_stamp = BUILD_DIR / "include_headers.txt"
+    header_list = "".join(f"{h.as_posix()}\n" for h in sorted(Path("include").rglob("*.h")))
+    if not header_stamp.is_file() or header_stamp.read_text() != header_list:
+        header_stamp.parent.mkdir(parents=True, exist_ok=True)
+        header_stamp.write_text(header_list)
+    room_deps = [str(header_stamp), str(GEN_ROOM_INC), str(peassets / "asset_data.py"), str(peassets / "asset_schema.py"),
                  *sorted(str(p) for p in (peassets / "room").glob("*.py")), str(peassets / "shape" / "__init__.py"),
                  str(CONFIG_DIR / version / "overlays.toml"),
                  *sorted(str(p) for p in (peassets / "groups").rglob("*.toml"))]
     for name, instance, incs in room_includes(version):
         for writer in asset_writers:
-            writer.build(outputs=[str(i) for i in incs], rule="room-inc", inputs=str(instance), implicit=room_deps,
+            evs = instance.parent / "events.evs"
+            writer.build(outputs=[str(i) for i in incs], rule="room-inc", inputs=str(instance),
+                         implicit=room_deps + ([str(evs)] if evs.exists() else []),
                          variables={"name": name, "outdir": str(incs[0].parent)})
         ASSET_INC_OUTPUTS.extend(str(i) for i in incs)
     font_deps = [str(GEN_FONT_INC), str(peassets / "asset_data.py"), str(peassets / "asset_schema.py"),
@@ -1366,6 +1434,14 @@ def ninja_build(
         for writer in asset_writers:
             writer.build(outputs=str(header), rule="animation-source", implicit=animation_deps,
                          variables={"kind": "schema", "name": name})
+        ASSET_INC_OUTPUTS.append(str(header))
+    # A sound bank's named sounds as constants (`assets/<bank>.h`): the entries code requests them by.
+    sound_deps = [str(GEN_SOUND_HEADER), str(peassets / "asset_data.py"), str(peassets / "asset_groups.py"),
+                  *sorted(str(p) for p in (peassets / "groups").rglob("*.toml"))]
+    for name in sorted(k for k, r in data.ASSETS.items() if r.get("type") == "sound_bank" and r.get("sounds")):
+        header = BUILD_DIR / "include" / "assets" / f"{name}.h"
+        for writer in asset_writers:
+            writer.build(outputs=str(header), rule="sound-header", implicit=sound_deps, variables={"name": name})
         ASSET_INC_OUTPUTS.append(str(header))
 
     # Thousands of resource fragments can be embedded across the overlays.
@@ -1634,6 +1710,7 @@ def split_inputs(yaml: str, version_dir: str, basename: str, c_sources: list[str
     paths = [config, base / options["target_path"]]
     paths += [base / p for p in listed("symbol_addrs_path") + listed("reloc_addrs_path")]
     paths += [CONFIG_DIR / version_dir / f"sym.{basename}.imports.txt"]
+    paths += [EXPORTS_DIR / f"{basename}.txt"]          # the exports its bindings name (write_export_symbols)
     paths += [Path(c) for c in c_sources]
     if options.get("extensions_path"):
         # The segment types that place a library or variant unit's source.
@@ -1910,7 +1987,7 @@ def extract_files(
         cmd.append("--raw-only")
     elif minimal_inflate:
         cmd.append("--minimal-inflate")
-    subprocess.call(cmd)
+    subprocess.check_call(cmd)   # a failed extraction has already removed the old assets: fail loudly
 
 
 def main():
@@ -2071,6 +2148,7 @@ def main():
         shutil.rmtree(PERMUTER_DIR, ignore_errors=True)
 
     version_dir = GAME_VERSIONS[game_version_option].metadata.version_dir
+    write_export_symbols()
     jobs = [
         (
             yaml,
@@ -2208,7 +2286,11 @@ def main():
     )
 
     if objdiff_config_option:
-        subprocess.call([PYTHON, "-m", "ninja", "-f", "objdiff.ninja"])
+        # The target objects and objdiff.json: a failure here is the step's, not the report's that finds no
+        # configuration later.
+        status = subprocess.call([PYTHON, "-m", "ninja", "-f", "objdiff.ninja"])
+        if status:
+            sys.exit(status)
 
 
 if __name__ == "__main__":

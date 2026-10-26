@@ -11,7 +11,11 @@
 
 #include "neo_ark_shrine_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_03800.h"
+#include "actors/actor_402200.h"
+#include "actors/actor_403900.h"
 
 #include "gameplay/display.h"
 #include "gameplay/action_prompt.h"
@@ -2164,7 +2168,7 @@ static void _neoArkShrineDrawFlare(const SVECTOR* worldPoint, s32 textureIndex, 
         // Size the square in screen pixels and sort it at the projected depth.
         projection->radius = (signedRadiusScale * GLOW_FLARE_CELL_LAST_TEXEL) / projection->otz;
         _neoArkShrineSetFlareBounds(flare, projection);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->otz << display->otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(projection->otz, display->otDepthShift),
                 flare);
     }
     SCRATCH_STACK_RELEASE_BLOCK(GlowCentreScratch);

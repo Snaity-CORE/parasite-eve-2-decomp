@@ -115,8 +115,6 @@ static AnimationSet _gStrangerOddWalkClip;
 static AnimationSet _gStrangerOddRunClip;
 static AnimationSet _gStrangerOddRiseBackClip;
 
-enum { ACTOR_401800_PLAYER_REACTION_SPARK_AND_PUFFS = 7 };
-
 /// Odd Stranger's two damage-key rows, borrowed by its enemy parameter record.
 ///
 /// Row 0 deals base damage 26 during the held-player strike; row 1 retains
@@ -124,8 +122,8 @@ enum { ACTOR_401800_PLAYER_REACTION_SPARK_AND_PUFFS = 7 };
 /// a status effect. Contact keys copy the row values; the parameter record
 /// borrows the table for this package's lifetime.
 static DamageAttack _gActor401800OddStrangerAttacks[2] = {
-    { 26, ACTOR_401800_PLAYER_REACTION_SPARK_AND_PUFFS },
-    { 18, ACTOR_401800_PLAYER_REACTION_SPARK_AND_PUFFS },
+    { 26, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 18, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
 };
 
 /// Odd Stranger's health, rewards and hit-reaction parameters, borrowed by live enemies.
@@ -1130,7 +1128,7 @@ static void _actor401800Dormant(Task* task)
     elapsedTicks = (u16)work->stateTimer;
     // The late random skip also skips awareness and animation advancement.
     if (work->stateTimer >= ACTOR_401800_DORMANT_RECHECK_TICKS) {
-        randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         if (!((randomState >> 16) & ACTOR_401800_DORMANT_SKIP_MASK)) {
             return;
@@ -1148,7 +1146,7 @@ static void _actor401800Dormant(Task* task)
     _oddStrangerDriveAnimation(task);
     if (work->animId == ACTOR_401800_ANIM_DORMANT) {
         if (work->rig.slots[1].status.fields.flags & ANIMATION_SLOT_FOLLOWED_JUMP) {
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = randomState;
             if ((randomState >> 16) & 1) {
                 work->animId      = ACTOR_401800_ANIM_DORMANT_VARIATION;

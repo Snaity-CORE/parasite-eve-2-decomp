@@ -5,7 +5,8 @@
 
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_04000.h"
+#include "actors/actor_223600.h"
 
 #include "gameplay/animation.h"
 #include "gameplay/area.h"
@@ -86,12 +87,6 @@ static s32  _dryfieldGeneralStoreHandleRoomAction(Task* unusedTask, s32 unusedMe
 static void _dryfieldGeneralStorePlaySceneCueTask(Task* task);
 static void _dryfieldGeneralStoreDropInActorsTask(Task* task);
 
-/// Inventory's room request and the reply refusing key-item use.
-enum {
-    DRYFIELD_GENERAL_STORE_MESSAGE_USE_KEY_ITEM  = 0x13F1,
-    DRYFIELD_GENERAL_STORE_KEY_ITEM_USE_REJECTED = 0,
-};
-
 /// Room actor commands in the Dryfield/General Store namespace.
 enum {
     DRYFIELD_GENERAL_STORE_ACTOR_COMMAND_AWAIT_BATTLE      = 0,
@@ -113,10 +108,9 @@ enum {
     DRYFIELD_GENERAL_STORE_STAGED_BLOOD_SUCKLER_ENTRY = 140,
 };
 
-/// Execution priority shared by the encounter cue and retained drop-in recipes.
+/// Frames the encounter script waits after the actors' entrance before the battle starts.
 enum {
-    DRYFIELD_GENERAL_STORE_ENCOUNTER_TASK_PRIORITY = 192,
-    DRYFIELD_GENERAL_STORE_ENTRANCE_WAIT_FRAMES    = 70,
+    DRYFIELD_GENERAL_STORE_ENTRANCE_WAIT_FRAMES = 70,
 };
 
 /// Bodyless transition task spawned by this room's event gate at priority 32.
@@ -125,18 +119,16 @@ enum {
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
-
-enum { GENERAL_STORE_TASK_PRIORITY = 32 };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// General Store prompt recipes: flag toggle at slot 0, underpass departure at slot 1.
 ///
-/// Both are bodyless at priority 32; slot 2 is a task-bank end marker. Toggle
+/// Both are bodyless at priority `TASK_PRIORITY_SCENE`; slot 2 is a task-bank end marker. Toggle
 /// payloads are a flag index and CAP command, while departure payloads are unused.
 /// Spawn reads these recipes synchronously; callbacks and latched state stay loaded.
 static TaskDesc _gGeneralStoreTaskDescriptors[3] = {
-    { { { TASK_BODY_NONE, GENERAL_STORE_TASK_PRIORITY } }, _generalStoreToggleFlagTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, GENERAL_STORE_TASK_PRIORITY } }, _generalStoreUnderpassTransitionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _generalStoreToggleFlagTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _generalStoreUnderpassTransitionTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -147,7 +139,7 @@ static TaskDesc _gGeneralStoreTaskDescriptors[3] = {
 /// actions borrow DirectionActionRequest, and the other payloads are integers.
 static TaskMessageEntry _gDryfieldGeneralStoreRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _roomVariantGeneralStoreMsg },
-    { DRYFIELD_GENERAL_STORE_MESSAGE_USE_KEY_ITEM, _dryfieldGeneralStoreRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldGeneralStoreRejectKeyItemUse },
     { ROOM_MESSAGE_COMMAND, _generalStoreCommandMsg },
     { ROOM_MESSAGE_SOUND, _generalStoreSoundMsg },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldGeneralStoreHandleRoomAction },
@@ -189,24 +181,24 @@ static AnimationSet _gDryfieldGeneralStoreAnimation00ED8 = {
 
 /// Bodyless recipe for the encounter sound cue and its timed wait.
 ///
-/// Priority 192, no owned body, unused metadata and ignored spawn payloads.
+/// Priority `TASK_PRIORITY_CONTROL`, no owned body, unused metadata and ignored spawn payloads.
 /// Spawning reads the recipe synchronously; actor/player resources and callback
 /// code must remain live through the spawned task.
 /// Direction action 1 starts it once before the encounter script.
 static TaskDesc _gDryfieldGeneralStoreSceneCueTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = DRYFIELD_GENERAL_STORE_ENCOUNTER_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
     .callback = _dryfieldGeneralStorePlaySceneCueTask,
     .data     = { .value = 0 },
 };
 
 /// Retained bodyless recipe for the staged actor drop-in and player hold.
 ///
-/// Priority 192, no owned body, unused metadata and ignored spawn payloads.
+/// Priority `TASK_PRIORITY_CONTROL`, no owned body, unused metadata and ignored spawn payloads.
 /// Spawning reads the recipe synchronously; actor/player resources and callback
 /// code must remain live through the spawned task.
 /// No C, assembly or import consumer of this retained recipe is established.
 static TaskDesc _gDryfieldGeneralStoreDropInActorsTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = DRYFIELD_GENERAL_STORE_ENCOUNTER_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
     .callback = _dryfieldGeneralStoreDropInActorsTask,
     .data     = { .value = 0 },
 };
@@ -1931,11 +1923,11 @@ static const TaskFuncTable3 _gDryfieldGeneralStoreRoomTaskStates = {
 
 /// Rejects inventory requests to use a key item in the General Store.
 ///
-/// Always returns `DRYFIELD_GENERAL_STORE_KEY_ITEM_USE_REJECTED` (0).
+/// Always returns `ROOM_KEY_ITEM_USE_REFUSED` (0).
 /// All four callback arguments are ignored; no item is consumed.
 static s32 _dryfieldGeneralStoreRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    return DRYFIELD_GENERAL_STORE_KEY_ITEM_USE_REJECTED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Advances the store's cutscene from borrowed direction actions.

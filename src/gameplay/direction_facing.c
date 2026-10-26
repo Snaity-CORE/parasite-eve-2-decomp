@@ -18,11 +18,11 @@
 #include "main/session.h"
 #include "main/task.h"
 
-#include "rooms/acropolis_bridge.h"
+#include "stages/akropolis/rooms/bridge.h"
 
-#include "rooms/acropolis_fountain.h"
+#include "stages/akropolis/rooms/fountain.h"
 
-#include "rooms/acropolis_helicopter_landing_pad.h"
+#include "stages/akropolis/rooms/helicopter_landing_pad.h"
 
 #include "rooms/shelter_b4_reservoir.h"
 
@@ -81,7 +81,7 @@ static u8 _gDirectionWaterHoleStairDescentSurfaces[8] = {
 /// row must cover the trigger's step count plus the landing. Borrowed room
 /// rows must remain loaded through the climb; the water-hole rows live here.
 static _DirectionStairSurfaces _gDirectionStairSurfaceFlights[5] = {
-    { gAcropolisBridgeStairSurfaceRows[0], gAcropolisBridgeStairSurfaceRows[1] },
+    { gAkropolisBridgeStairSurfaceRows[0], gAkropolisBridgeStairSurfaceRows[1] },
     { _gDirectionWaterHoleStairAscentSurfaces, _gDirectionWaterHoleStairDescentSurfaces },
     { gShelterB4WaterSupplyStairSurfaceRows[0], gShelterB4WaterSupplyStairSurfaceRows[1] },
     { gShelterB4WaterSupplyStairSurfaceRows[2], gShelterB4WaterSupplyStairSurfaceRows[3] },
@@ -208,7 +208,7 @@ void directionDispatchCallbackAction(void)
         DIRECTION_CALLBACK_INDEX_SHIFT = 8,
         DIRECTION_CALLBACK_INDEX_MASK  = 0x7F,
     };
-    void (*callbacks[])(s32 parameter0, s32 parameter1) = { acropolisFountainStartClimb, acropolisHelicopterLandingPadStartExit };
+    void (*callbacks[])(s32 parameter0, s32 parameter1) = { akropolisFountainStartClimb, akropolisHelicopterLandingPadStartExit };
 
     if (gGameSession->eventState != 0) {
         _directionClearRequest();

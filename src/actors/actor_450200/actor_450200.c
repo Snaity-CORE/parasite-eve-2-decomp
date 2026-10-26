@@ -1,5 +1,5 @@
 #include "actors/actor_450200.h"
-#include "actors/task_tables.h"
+#include "actors/actor_450200.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -61,10 +61,7 @@ enum {
 
 /// Execution priorities of the scene's bodyless tasks.
 enum {
-    ACTOR_450200_SCENE_STOP_PRIORITY = 192,
-    ACTOR_450200_PUFF_PRIORITY       = 32,
-    ACTOR_450200_HEAD_AIM_PRIORITY   = 97,
-    ACTOR_450200_BACKDROP_PRIORITY   = 32,
+    ACTOR_450200_HEAD_AIM_PRIORITY = 97,
 };
 
 /// Playable prefixes of the fixed-capacity animation-bank transfers.
@@ -179,8 +176,8 @@ static void _actor450200HeadAimTask(Task* task);
 #include "assets/rooms/neo_ark/observatory/kyle_clips_1.inc"
 
 TaskDesc gActor450200SceneTaskDescs[3] = {
-    { { { TASK_BODY_NONE, ACTOR_450200_SCENE_STOP_PRIORITY } }, taskKill, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_450200_PUFF_PRIORITY } }, _actor450200CompanionPuffTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _actor450200CompanionPuffTask, { .value = 0 } },
     { { { TASK_BODY_NONE, ACTOR_450200_HEAD_AIM_PRIORITY } }, _actor450200HeadAimTask, { .value = 0 } },
 };
 
@@ -823,7 +820,7 @@ EvsCommand gActor450200SoloSceneSkipScript[12] = {
 ///
 /// Spawned directly at index zero. The scene must avoid simultaneous instances,
 /// which would overwrite the same four palette buffers; view 8 terminates it.
-static TaskDesc _gActor450200BackdropCrossFadeTaskDesc = { { { TASK_BODY_NONE, ACTOR_450200_BACKDROP_PRIORITY } }, _actor450200BackdropCrossFadeTask, { .value = 0 } };
+static TaskDesc _gActor450200BackdropCrossFadeTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _actor450200BackdropCrossFadeTask, { .value = 0 } };
 
 /// Player clips installed at bank ids 47-50 for the observatory room-variant scene.
 ///
@@ -1227,7 +1224,6 @@ static void _actor450200DrawBackdropLayer(s32 screenX, s32 textureX, s32 palette
     enum {
         ACTOR_450200_BACKDROP_SPRITES       = 2,
         ACTOR_450200_BACKDROP_SPRITE_WIDTH  = 256,
-        ACTOR_450200_BACKDROP_HEIGHT        = 240,
         ACTOR_450200_BACKDROP_SCREEN_HALF_X = 160,
         ACTOR_450200_BACKDROP_SCREEN_HALF_Y = 120,
         ACTOR_450200_BACKDROP_PAGE_WORDS    = 128,
@@ -1249,7 +1245,7 @@ static void _actor450200DrawBackdropLayer(s32 screenX, s32 textureX, s32 palette
         sprite->w    = ACTOR_450200_BACKDROP_SPRITE_WIDTH;
         sprite->u0   = 0;
         sprite->v0   = 0;
-        sprite->h    = ACTOR_450200_BACKDROP_HEIGHT;
+        sprite->h    = DISPLAY_SCREEN_HEIGHT;
         sprite->r0   = brightness;
         sprite->g0   = brightness;
         sprite->b0   = brightness;

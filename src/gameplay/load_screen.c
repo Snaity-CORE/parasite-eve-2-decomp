@@ -32,12 +32,13 @@
 
 #include "main/areas.h"
 #include "main/display.h"
+#include "main/event_flags.h"
 #include "main/fs.h"
+#include "main/game_debug.h"
 #include "main/gameflag.h"
 #include "main/loadui.h"
 #include "main/mc.h"
 #include "main/mem.h"
-#include "main/game_debug.h"
 #include "main/pad.h"
 #include "main/session.h"
 #include "main/sound.h"
@@ -359,8 +360,6 @@ static inline void _loadingDrawFadeOverlay(TILE* fadeTile, DR_TPAGE* blendComman
     enum {
         LOADING_FADE_TILE_WORDS           = sizeof(TILE) / sizeof(u32) - 1,
         LOADING_FADE_TILE_SEMITRANSPARENT = 0x62,
-        LOADING_FADE_WIDTH_PIXELS         = 320,
-        LOADING_FADE_HEIGHT_PIXELS        = 240,
         LOADING_FADE_FOREGROUND_TAG       = -16,
         LOADING_FADE_TPAGE_WORDS          = sizeof(DR_TPAGE) / sizeof(u32) - 1,
         LOADING_FADE_TPAGE_OPCODE         = 0xE1000000,
@@ -373,11 +372,11 @@ static inline void _loadingDrawFadeOverlay(TILE* fadeTile, DR_TPAGE* blendComman
     fadeTile->r0 = darkness;
     fadeTile->g0 = darkness;
     fadeTile->b0 = darkness;
-    fadeTile->x0 = -LOADING_FADE_WIDTH_PIXELS / 2;
+    fadeTile->x0 = -DISPLAY_SCREEN_WIDTH / 2;
     screenShakeY = displayState->vramYOffset;
-    fadeTile->w  = LOADING_FADE_WIDTH_PIXELS;
-    fadeTile->h  = LOADING_FADE_HEIGHT_PIXELS;
-    fadeTile->y0 = -LOADING_FADE_HEIGHT_PIXELS / 2 - screenShakeY;
+    fadeTile->w  = DISPLAY_SCREEN_WIDTH;
+    fadeTile->h  = DISPLAY_SCREEN_HEIGHT;
+    fadeTile->y0 = -DISPLAY_SCREEN_HEIGHT / 2 - screenShakeY;
     addPrim(gGpuCurrentOt + LOADING_FADE_FOREGROUND_TAG, fadeTile);
     // OT insertion reverses these links, so the blend mode executes first.
     setlen(blendCommand, LOADING_FADE_TPAGE_WORDS);
@@ -505,7 +504,7 @@ void loadingInitializeAreaMemoryAndAudioTask(Task* task)
         // Retain scheduled companion sounds before resetting the area's sound context.
         companionConfigureSoundBankRetention();
         sndScriptResetForArea(gGameSession->location.stage, gGameSession->location.area);
-        if (gGameSession->location.stage == GAME_STAGE_DRYFIELD_NIGHT && gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) >= LOADING_NIGHT_MUSIC_FIRST_CHAPTER) {
+        if (gGameSession->location.stage == GAME_STAGE_DRYFIELD_NIGHT && gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) >= LOADING_NIGHT_MUSIC_FIRST_CHAPTER) {
             gStageCountdownMusicEntry = LOADING_SCENE_MUSIC_NIGHT;
         } else {
             gStageCountdownMusicEntry = LOADING_SCENE_MUSIC_DEFAULT;

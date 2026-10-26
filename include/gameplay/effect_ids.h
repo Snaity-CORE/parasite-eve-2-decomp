@@ -123,19 +123,19 @@ enum {
     EFFECT_COMBUSTION_FLAME = EFFECT_ID(EFFECT_TASK_BANK, 0x01C),
     /// Pulsing red gradient-quad beacon glow (red_beacon_task) placed at fixed points
     /// in view 2 of the Akropolis west elevator hall by its room task.
-    EFFECT_ACROPOLIS_WEST_ELEVATOR_HALL_RED_BEACON = EFFECT_ID(EFFECT_TASK_BANK, 0x01F),
+    EFFECT_AKROPOLIS_WEST_ELEVATOR_HALL_RED_BEACON = EFFECT_ID(EFFECT_TASK_BANK, 0x01F),
     /// Pulsing red warning light: one frame of a pair of red gradient quads whose level
-    /// pulses with animFrame (`acropolisEastElevatorHallRedBeaconTask`); respawned at fixed points by the
+    /// pulses with animFrame (`akropolisEastElevatorHallRedBeaconTask`); respawned at fixed points by the
     /// Acropolis east elevator hall in view 2.
-    EFFECT_ACROPOLIS_EAST_ELEVATOR_HALL_RED_BEACON = EFFECT_ID(EFFECT_TASK_BANK, 0x022),
+    EFFECT_AKROPOLIS_EAST_ELEVATOR_HALL_RED_BEACON = EFFECT_ID(EFFECT_TASK_BANK, 0x022),
     /// One-frame soft light billboard (semi-transparent POLY_FT4 shrinking with
     /// distance) in the Akropolis west elevator hall, respawned while camera view 5 is
     /// active.
-    EFFECT_ACROPOLIS_WEST_ELEVATOR_HALL_LIGHT = EFFECT_ID(EFFECT_TASK_BANK, 0x025),
+    EFFECT_AKROPOLIS_WEST_ELEVATOR_HALL_LIGHT = EFFECT_ID(EFFECT_TASK_BANK, 0x025),
     /// Flickering lens-flare POLY_FT4 (tpage 0x2B, CLUT alternating per frame) at the
     /// projected model position; respawned per camera view by the observatory's
     /// ambient-effect task.
-    EFFECT_ACROPOLIS_OBSERVATORY_LENS_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x028),
+    EFFECT_AKROPOLIS_OBSERVATORY_LENS_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x028),
     /// Muzzle flash controller for P229/M93R/M950/MP5A5 and NPC guns (spawnArg 0x21):
     /// parks on the weapon muzzle offset, lights a white transient point light, spawns
     /// flare sprite 0x60034 and shell-casing model 0x60036/0x60066.
@@ -157,7 +157,7 @@ enum {
     /// Ramps the lift bay CLUT from its unlit to its lit palette (gpuBlendRgb555ClutRow)
     /// and keeps it lit only in camera view 5; spawned by a west-elevator-hall
     /// message handler.
-    EFFECT_ACROPOLIS_WEST_ELEVATOR_BAY_LIGHTS = EFFECT_ID(EFFECT_TASK_BANK, 0x033),
+    EFFECT_AKROPOLIS_WEST_ELEVATOR_HALL_BAY_LIGHTING = EFFECT_ID(EFFECT_TASK_BANK, 0x033),
     /// Two-frame rotated textured flare sprite (tpage 0x2A) at a muzzle; spawned by the
     /// muzzle flash controllers 0x2B/0x6A/0x6B/0xA1 and by Actor02100.
     EFFECT_MUZZLE_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x034),
@@ -201,16 +201,16 @@ enum {
     /// Small rising puff sprite (tpage 9 row 0xB8, selectable blend) shed behind moving
     /// projectiles: the specimen projectile 0x60081 and attach task 0x37.
     EFFECT_TRAIL_PUFF = EFFECT_ID(EFFECT_TASK_BANK, 0x042),
-    /// Flame-jet emitter attached to a part of actor_510900: holds an orange transient
+    /// Flame-jet emitter attached to a part of helicopter_landing_pad_no_9: holds an orange transient
     /// point light and, by an intensity mode the actor sets, keeps throwing
     /// 0x60045/0x6004C/0x60052/0x60059 sprite particles backward along -x.
-    EFFECT_ACTOR_510900_FLAME_JET = EFFECT_ID(EFFECT_TASK_BANK, 0x043),
-    /// One-shot flash at No.9 golem (Akropolis) model part 8: an orange transient point
+    EFFECT_HELICOPTER_LANDING_PAD_NO_9_FLAME_JET = EFFECT_ID(EFFECT_TASK_BANK, 0x043),
+    /// One-shot flash at No.9 golem (Akropolis) right hand: an orange transient point
     /// light plus effect 0x6003B, six 0x60065 sprites and six pixel sparks; spawned
     /// periodically in its sub-state 3 attack.
     EFFECT_NO9_MUZZLE_FLASH = EFFECT_ID(EFFECT_TASK_BANK, 0x044),
-    /// Animated six-frame additive sprite (tpage 0x2B) that rises while fading and
-    /// casts a ground glow (effectDrawGroundGlow); spawned in pairs by actor_510900's
+    /// Six-frame additive sprite of the landing pad's `sparks` page (`flame_*`, `sparkle` palette) that rises while fading and
+    /// casts a ground glow (effectDrawGroundGlow); spawned in pairs by helicopter_landing_pad_no_9's
     /// fire controller (0x60043), which also drives an orange point light.
     EFFECT_NO9_GOLEM_FLAME = EFFECT_ID(EFFECT_TASK_BANK, 0x045),
     /// Flat textured quad lying in the coordinate's horizontal plane (tpage 0x29) that
@@ -220,30 +220,29 @@ enum {
     /// The Akropolis square telephone's light: pulsing red-or-cyan gouraud glow quads
     /// (and optional line) at the phone in the views that show it, spawned by the room task.
     EFFECT_AKROPOLIS_SQUARE_TELEPHONE_LIGHT = EFFECT_ID(EFFECT_TASK_BANK, 0x047),
-    /// One security-camera monitor feed: a single-frame 128x128 screen-space textured
-    /// quad picked by spawnArg (4 feeds); the security room respawns all four each
-    /// frame after re-blending their CLUTs.
-    EFFECT_ACROPOLIS_SECURITY_MONITOR_FEED = EFFECT_ID(EFFECT_TASK_BANK, 0x049),
+    /// One lock lamp of the Akropolis security room's power supply: a single-frame 128x128
+    /// screen-space textured quad picked by spawnArg (4 lamps); the room respawns all four
+    /// each frame in the power supply's view after re-blending their CLUTs.
+    EFFECT_AKROPOLIS_SECURITY_ROOM_LOCK_LAMP = EFFECT_ID(EFFECT_TASK_BANK, 0x049),
     /// One-frame flickering star glow (animated core quad and rotating flare) at
     /// the Akropolis promenade lamps; respawned each frame by the room spawner for
     /// views that see it.
-    EFFECT_ACROPOLIS_PROMENADE_GLOW_STAR = EFFECT_ID(EFFECT_TASK_BANK, 0x04B),
-    /// Unidentified. Eight-frame additive sprite (tpage 0x2B, v 0x70) whose CLUT steps
-    /// with age and which rises by a random amount; spawned alongside 0x60045 by
-    /// actor_510900's fire controller (0x60043).
-    EFFECT_04C = EFFECT_ID(EFFECT_TASK_BANK, 0x04C),
+    EFFECT_AKROPOLIS_PROMENADE_GLOW_STAR = EFFECT_ID(EFFECT_TASK_BANK, 0x04B),
+    /// A flame tongue: eight frames of the landing pad's `sparks` page (`tongue_*`), additive, each on its own palette,
+    /// rising by a random amount; spawned alongside 0x60045 by helicopter_landing_pad_no_9's fire controller (0x60043).
+    EFFECT_NO9_FLAME_TONGUE = EFFECT_ID(EFFECT_TASK_BANK, 0x04C),
     /// Pulsing red or cyan flare (diamond with optional crossed streaks, or radial
     /// glow) at view-dependent offsets; spawned every frame by the Acropolis fire
     /// escape effect emitter for views 3/6/8/9.
-    EFFECT_ACROPOLIS_FIRE_ESCAPE_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x04F),
+    EFFECT_AKROPOLIS_FIRE_ESCAPE_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x04F),
     /// Debris-burst controller for the night motel balcony: by kind sprays 0x6003D
     /// chunks and 0x60095 puffs once; spawned by actor_403100 where it strikes a
     /// balcony region (first strike marks the region broken).
     EFFECT_DRYFIELD_NIGHT_MOTEL_BALC_BREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x050),
     /// Falling leaf (`_leafFallTask`) of the Acropolis forked road; three are knocked
     /// loose by the Maggot Caterpillar entrance.
-    EFFECT_ACROPOLIS_FORKED_ROAD_FALLING_LEAF = EFFECT_ID(EFFECT_TASK_BANK, 0x051),
-    /// A 12-frame animated 32x48 billboard with cycling CLUT that optionally falls,
+    EFFECT_AKROPOLIS_FORKED_ROAD_FALLING_LEAF = EFFECT_ID(EFFECT_TASK_BANK, 0x051),
+    /// A 12-frame 32x48 billboard of the landing pad's `sparks` page (`burning_*`, each frame on its own fire palette) that optionally falls,
     /// spawned in bursts by No.9 golem (Akropolis) fire controller 0x60043 under an
     /// orange point light.
     EFFECT_NO9_FLAME_SPRITE = EFFECT_ID(EFFECT_TASK_BANK, 0x052),
@@ -262,25 +261,25 @@ enum {
     /// Screen-space drip: a DR_MOVE that smears a one-pixel strip of the frame buffer
     /// down a row at a time while the camera stays on its view; the promenade spawns
     /// 0x28 on a view change and two per frame after.
-    EFFECT_ACROPOLIS_PROMENADE_SCREEN_DRIP = EFFECT_ID(EFFECT_TASK_BANK, 0x056),
+    EFFECT_AKROPOLIS_PROMENADE_SCREEN_DRIP = EFFECT_ID(EFFECT_TASK_BANK, 0x056),
     /// One-frame flickering glow quad lying flat on the ground under the promenade
     /// lamp; respawned each frame by the room spawner.
-    EFFECT_ACROPOLIS_PROMENADE_GROUND_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x057),
+    EFFECT_AKROPOLIS_PROMENADE_GROUND_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x057),
     /// Expanding, fading splash quad (_waterRippleTask, _waterDrawSplash); stored in
     /// gRoomEffectWaterRippleId, which several actors (actor_800100, 401300, 400600, 01100) spawn as
     /// water ripples.
     EFFECT_NEO_ARK_WOODLAND_PATH_WATER_RIPPLE = EFFECT_ID(EFFECT_TASK_BANK, 0x058),
-    /// Additive 8-frame sprite (tpage 0x4B, clut 0x4382) that rises a random amount per
+    /// Subtractive 8-frame smudge of the landing pad's `sparks` page (`smudge_*`, `smudge` palette) that rises a random amount per
     /// tick; thrown backwards in bursts by No.9's gunfire controller (0x60043, orange
     /// transient light).
     EFFECT_NO9_GUNFIRE_PARTICLE = EFFECT_ID(EFFECT_TASK_BANK, 0x059),
     /// Akropolis helipad ember/spark sprite (bright or dim variant, flickering, may
-    /// fire 0x600E0); spawned around the helipad and by actor_510900.
+    /// fire 0x600E0); spawned around the helipad and by helicopter_landing_pad_no_9.
     EFFECT_ACROPOLIS_HELIPAD_EMBER = EFFECT_ID(EFFECT_TASK_BANK, 0x05A),
-    /// Sparking helipad light: random spark lines and a flickering bluish light on slot
+    /// Sparking transformer cable: random spark lines and a flickering bluish light on slot
     /// 4, and every few frames a spark sound, a 0x6003B flash, six 0x600A4 tiles and a
-    /// second light; spawned by actor_510900 when it is grabbed/struck.
-    EFFECT_HELIPAD_LIGHT_SPARKS = EFFECT_ID(EFFECT_TASK_BANK, 0x05B),
+    /// second light; spawned by helicopter_landing_pad_no_9 when it is grabbed/struck.
+    EFFECT_HELIPAD_TRANSFORMER_SPARKS = EFFECT_ID(EFFECT_TASK_BANK, 0x05B),
     /// Growing, spinning animated billboard from the shared 12-frame effect atlas,
     /// which can spawn smaller copies of itself; spawned when generators, golem parts
     /// and other enemy parts blow up.
@@ -296,18 +295,18 @@ enum {
     /// Akropolis cafeteria event billboard: a ten-cell 48px animated sprite drifting
     /// along Z then Y while the room's effect gate holds in view mode 9; sprayed by
     /// 0x6009D.
-    EFFECT_ACROPOLIS_CAFETERIA_PUFF = EFFECT_ID(EFFECT_TASK_BANK, 0x061),
+    EFFECT_AKROPOLIS_CAFETERIA_PUFF = EFFECT_ID(EFFECT_TASK_BANK, 0x061),
     /// One-frame lamp glow sprite (GLOW_LAMP_TASK: one of three flickering
     /// lamp cells); the promenade respawns it each frame at the lamps its view mask
     /// allows.
-    EFFECT_ACROPOLIS_PROMENADE_LAMP_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x062),
-    /// Unidentified. A small room model (gAkropolisCafeteriaAcropolisCafeteriaModel077D8) that wanders
+    EFFECT_AKROPOLIS_PROMENADE_LAMP_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x062),
+    /// Unidentified. A small room model (gAkropolisCafeteriaWanderingCreatureModel) that wanders
     /// with random turns and then runs off, playing a cafeteria sound in view 7;
     /// several are spawned by the Akropolis cafeteria event task.
     EFFECT_064 = EFFECT_ID(EFFECT_TASK_BANK, 0x064),
     /// Debris trail: the coordinate drifts by a random step and the segment between
     /// last and current position is drawn as a fading LINE_F2; six are spawned with an
-    /// 0x6003B spark and 0x600A4 tiles by actor_510900's burst effect (0x60044).
+    /// 0x6003B spark and 0x600A4 tiles by helicopter_landing_pad_no_9's burst effect (0x60044).
     EFFECT_NO9_GOLEM_DEBRIS_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x065),
     /// Ejected cartridge casing using `gEffectP229CasingModel`, thrown from the
     /// ejection offset by the P229 and NPC-pistol firing controller.
@@ -324,7 +323,7 @@ enum {
     /// Gun muzzle flash without a flash model: lights the transient point light white
     /// for ~5 frames at its weapon-profile muzzle offset, spawns a 0x60034 flash and three
     /// 0x60035 puffs and raises burstRequest; sibling of the weapons' 0x6006B, spawned
-    /// by NPC actors (actor_310600, actor_511000) when they fire.
+    /// by NPC actors (actor_310600, helicopter_departure) when they fire.
     EFFECT_ACTOR_MUZZLE_FLASH = EFFECT_ID(EFFECT_TASK_BANK, 0x06A),
     /// Muzzle flash controller for the M4A1 family, M249 and companion rifle fire:
     /// point light at the muzzle, flare 0x60034, sparks 0x60072 and casing model
@@ -376,13 +375,13 @@ enum {
     EFFECT_IMPACT_FLASH = EFFECT_ID(EFFECT_TASK_BANK, 0x076),
     /// Akropolis sanctuary mosaic controller: spawns one 0x60079 falling tile per
     /// mosaic entry (plus a second pass over 16 tiles) and releases.
-    EFFECT_ACROPOLIS_SANCTUARY_MOSAIC = EFFECT_ID(EFFECT_TASK_BANK, 0x078),
+    EFFECT_AKROPOLIS_SANCTUARY_MOSAIC = EFFECT_ID(EFFECT_TASK_BANK, 0x078),
     /// Falling mosaic tile: a whole textured tile of the sanctuary mosaic drifting and
     /// tumbling, shedding 0x6007A shards and shattering on the wall line.
-    EFFECT_ACROPOLIS_SANCTUARY_MOSAIC_TILE = EFFECT_ID(EFFECT_TASK_BANK, 0x079),
+    EFFECT_AKROPOLIS_SANCTUARY_MOSAIC_TILE = EFFECT_ID(EFFECT_TASK_BANK, 0x079),
     /// A falling, spinning textured triangle shard of the Akropolis sanctuary mosaic
     /// that bounces or shatters into further shards.
-    EFFECT_ACROPOLIS_SANCTUARY_MOSAIC_SHARD = EFFECT_ID(EFFECT_TASK_BANK, 0x07A),
+    EFFECT_AKROPOLIS_SANCTUARY_MOSAIC_SHARD = EFFECT_ID(EFFECT_TASK_BANK, 0x07A),
     /// Glowing spark particle that falls under gravity, bounces off the traced ground
     /// (halving its speed), draws a ground glow under itself and fades over 31 frames;
     /// used by spark bursts (_roomVisualEffectsSparkBurstTask, effectControlTask71, gunblade).
@@ -407,24 +406,24 @@ enum {
     /// Flickering camera-facing sprite (tpage 0x2B) at one of 14 anchors, visible per a
     /// view mask; the patio fountain task spawns 14 of them once (three main jets, four
     /// and seven smaller) plus mist 0x6008F.
-    EFFECT_ACROPOLIS_PATIO_FOUNTAIN_JET = EFFECT_ID(EFFECT_TASK_BANK, 0x087),
+    EFFECT_AKROPOLIS_PATIO_LIGHT_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x087),
     /// Flickering water-spray sprite of the Acropolis fountain, drawn only in the eight
     /// views that see it.
-    EFFECT_ACROPOLIS_FOUNTAIN_SPRAY = EFFECT_ID(EFFECT_TASK_BANK, 0x088),
+    EFFECT_AKROPOLIS_FOUNTAIN_SPRAY = EFFECT_ID(EFFECT_TASK_BANK, 0x088),
     /// Akropolis forked-road wall lamp: a flickering screen-aligned sprite per placed
     /// lamp, skipped on days whose bit is clear; spawned by the room task.
-    EFFECT_ACROPOLIS_FORKED_ROAD_WALL_LAMP = EFFECT_ID(EFFECT_TASK_BANK, 0x089),
+    EFFECT_AKROPOLIS_FORKED_ROAD_WALL_LAMP = EFFECT_ID(EFFECT_TASK_BANK, 0x089),
     /// Roof-garden glow sprite: a flickering, distance-scaled semi-transparent
     /// billboard in one of three cells, drawn only in the views its mask allows; ten
     /// are placed at fixed points by the roof-garden task.
-    EFFECT_ACROPOLIS_ROOF_GARDEN_LIGHT_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x08A),
+    EFFECT_AKROPOLIS_ROOF_GARDEN_LIGHT_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x08A),
     /// The Akropolis sanctuary's flickering flame sprite, visible only from its listed
     /// camera views; twelve are spawned by the sanctuary room task.
-    EFFECT_ACROPOLIS_SANCTUARY_FLAME = EFFECT_ID(EFFECT_TASK_BANK, 0x08B),
+    EFFECT_AKROPOLIS_SANCTUARY_FLAME = EFFECT_ID(EFFECT_TASK_BANK, 0x08B),
     /// Flickering three-layer glow of POLY_G4 wedges, shown on views 2/3/7, that plays
-    /// SOUND_ACROPOLIS_FIRE_ESCAPE_LIGHT_FLICKER when it brightens; spawned once by the
+    /// SOUND_AKROPOLIS_FIRE_ESCAPE_LIGHT_FLICKER when it brightens; spawned once by the
     /// fire escape's emitter task.
-    EFFECT_ACROPOLIS_FIRE_ESCAPE_FLICKER_LIGHT = EFFECT_ID(EFFECT_TASK_BANK, 0x08C),
+    EFFECT_AKROPOLIS_FIRE_ESCAPE_FLICKER_LIGHT = EFFECT_ID(EFFECT_TASK_BANK, 0x08C),
     /// Additive 8-frame animated sprite (clut 0x430D) that grows then fades while
     /// rising; spawned with 0x60080 and smoke on special-ammo hits (weaponSlotItem
     /// 0xE), by effectControlTask7F and by the night gas-station explosion.
@@ -434,11 +433,11 @@ enum {
     EFFECT_HIT_SPARK_BURST = EFFECT_ID(EFFECT_TASK_BANK, 0x08E),
     /// Fountain mist mote: a shimmering grey 1x1 tile that random-walks or gathers back
     /// toward its jet anchor; spawned per jet by the patio task.
-    EFFECT_ACROPOLIS_PATIO_FOUNTAIN_MIST = EFFECT_ID(EFFECT_TASK_BANK, 0x08F),
+    EFFECT_AKROPOLIS_PATIO_LIGHT_MOTE = EFFECT_ID(EFFECT_TASK_BANK, 0x08F),
     /// Pulsating Gouraud flare with optional rays on the Akropolis roof garden, spawned
-    /// by the room task (acropolisRoofGardenAmbientEffectsTask) for particular camera
+    /// by the room task (akropolisRoofGardenAmbientEffectsTask) for particular camera
     /// views.
-    EFFECT_ACROPOLIS_ROOF_GARDEN_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x090),
+    EFFECT_AKROPOLIS_ROOF_GARDEN_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x090),
     /// Thrown box model `gEffectThrownModel91`; its physical identity is unproven.
     /// Grenade-fire and post-reload controllers emit it at their weapon offsets.
     EFFECT_091 = EFFECT_ID(EFFECT_TASK_BANK, 0x091),
@@ -462,7 +461,7 @@ enum {
     /// Persistent additive glow disc of eight POLY_G4 wedges at a plaza anchor: warm
     /// random flicker for slots below 0x10, a slow red pulse for 0x10+; the plaza
     /// ambient spawner places seven (slots 0xC-0x12).
-    EFFECT_ACROPOLIS_PLAZA_LIGHT_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x096),
+    EFFECT_AKROPOLIS_PLAZA_LIGHT_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x096),
     /// dryfield_night_back_street's copy of the shared twin trail
     /// (room_visual_effects_trail_task): two rings of eight frames drawn as a fading
     /// gouraud beam; the room stores it in gRoomEffectTwinTrailId (twin-trail slot, spawned by the
@@ -470,11 +469,11 @@ enum {
     EFFECT_DRYFIELD_NIGHT_BACK_STREET_TWIN_TRAIL = EFFECT_ID(EFFECT_TASK_BANK, 0x097),
     /// Akropolis plaza rotating flickering light (blue for slots 1-4, red for 5-6) with
     /// a transient point light and glow cone; six placed by the plaza ambient spawner.
-    EFFECT_ACROPOLIS_PLAZA_SIREN_LIGHT = EFFECT_ID(EFFECT_TASK_BANK, 0x098),
+    EFFECT_AKROPOLIS_PLAZA_SIREN_LIGHT = EFFECT_ID(EFFECT_TASK_BANK, 0x098),
     /// Plaza light flare: an eight-spoke POLY_G4 star around the projected point,
     /// pulsing with animFrame, blue for spawn index below 9 and red from 9 up; spawned
     /// at fixed plaza points with indices 7..10.
-    EFFECT_ACROPOLIS_PLAZA_LIGHT_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x099),
+    EFFECT_AKROPOLIS_PLAZA_LIGHT_FLARE = EFFECT_ID(EFFECT_TASK_BANK, 0x099),
     /// Emitter that for a set time spawns 0x60055 particles at random offsets within a
     /// cube around a hit point; spawned by the weapon hit-effect dispatcher
     /// effectSpawnHit (kind 4).
@@ -490,7 +489,7 @@ enum {
     /// Akropolis cafeteria emitter: on entering view mode 9 spawns 40 0x60061
     /// billboards, then two per tick, until the room's effect gate clears; spawned by
     /// the cafeteria event message.
-    EFFECT_ACROPOLIS_CAFETERIA_PUFF_EMITTER = EFFECT_ID(EFFECT_TASK_BANK, 0x09D),
+    EFFECT_AKROPOLIS_CAFETERIA_PUFF_EMITTER = EFFECT_ID(EFFECT_TASK_BANK, 0x09D),
     /// Long-lived additive red ground quad laid flat under the coordinate at a random
     /// yaw, slowly dimming over 1024 ticks; spawned at enemies' roots on death/hits
     /// (actor_04000, actor_01200, Sucklerceph, Skull Stalker).
@@ -500,9 +499,9 @@ enum {
     /// part 6).
     EFFECT_DRYFIELD_TOILET_JET_PUFF = EFFECT_ID(EFFECT_TASK_BANK, 0x09F),
     /// Single-frame flash of two gouraud quads and two lines at a projected point, red
-    /// and/or green by spawnArg1 bits; spawned for each lit monitor feed by the
-    /// security room's monitor task.
-    EFFECT_ACROPOLIS_SECURITY_MONITOR_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0A0),
+    /// and/or green by spawnArg1 bits; spawned for each lit lock lamp, seen from the
+    /// Akropolis security room's other views, by its lock-lamp task.
+    EFFECT_AKROPOLIS_SECURITY_ROOM_LOCK_LAMP_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0A0),
     /// Muzzle flash controller for shotguns (AS12, PA3, gunblade shot) and
     /// actor_335800: reddish point light, flare 0x60034, sparks, smoke and pellet
     /// effects 0x600A3/0x600A4.
@@ -548,45 +547,45 @@ enum {
     EFFECT_LIFE_DRAIN_MOTE = EFFECT_ID(EFFECT_TASK_BANK, 0x0AF),
     /// One-frame twinkling star glow with an animated core and rotating random-grey
     /// flare, respawned at the bridge lights.
-    EFFECT_ACROPOLIS_BRIDGE_STAR_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0B1),
+    EFFECT_AKROPOLIS_BRIDGE_STAR_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0B1),
     /// One-frame random-grey quad built like the promenade ground glow (unit quad
     /// scaled 0x300 by workm, corners collapsed onto the origin), spawned beside each
     /// bridge star glow 0x600B1.
-    EFFECT_ACROPOLIS_BRIDGE_GROUND_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0B2),
+    EFFECT_AKROPOLIS_BRIDGE_GROUND_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0B2),
     /// Single-frame camera-facing glow sprite (shared acropolis_glows_lamp, three
     /// cell/brightness variants by spawnArg1); the bridge driver respawns it each frame
     /// at each placed emitter the current view can see.
-    EFFECT_ACROPOLIS_BRIDGE_LAMP_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0B3),
+    EFFECT_AKROPOLIS_BRIDGE_LAMP_GLOW = EFFECT_ID(EFFECT_TASK_BANK, 0x0B3),
     /// One-pixel DR_MOVE smear streak falling down the screen buffer; spawned 30 at a
     /// time on view change and continually outside battle by the Acropolis bridge room
     /// task.
-    EFFECT_ACROPOLIS_BRIDGE_FALLING_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B4),
+    EFFECT_AKROPOLIS_BRIDGE_FALLING_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B4),
     /// Akropolis bridge falling dust streak (mid variant): a one-pixel DR_MOVE screen
     /// smear falling down the screen; one of the bridge's per-view looping ambience
     /// effects.
-    EFFECT_ACROPOLIS_BRIDGE_MID_DUST_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B5),
+    EFFECT_AKROPOLIS_BRIDGE_MID_DUST_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B5),
     /// Falling dust streak: a one-pixel DR_MOVE frame-buffer smear over the lower part
     /// of the drop while the view holds; the bridge spawns 0x1E on a view change and
     /// more each frame.
-    EFFECT_ACROPOLIS_BRIDGE_LOW_DUST_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B6),
+    EFFECT_AKROPOLIS_BRIDGE_LOW_DUST_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B6),
     /// Tallest variant of the Akropolis bridge falling dust streak (DR_MOVE smear down
     /// the whole screen), one of the per-view ambience effects 0x600B4..0x600B8.
-    EFFECT_ACROPOLIS_BRIDGE_TALL_DUST_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B7),
+    EFFECT_AKROPOLIS_BRIDGE_TALL_DUST_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B7),
     /// Falling streak drawn as a DR_MOVE that smears a one-pixel strip of the frame
     /// buffer down each frame at a random column/row; one of the bridge's five per-view
     /// looping ambience effects (0x600B4..0x600B8), burst 30 on entering the view.
-    EFFECT_ACROPOLIS_BRIDGE_PARTICLE_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B8),
+    EFFECT_AKROPOLIS_BRIDGE_PARTICLE_STREAK = EFFECT_ID(EFFECT_TASK_BANK, 0x0B8),
     /// acropolis_bridge's expanding, fading water ripple uses the same texture as
     /// `_waterDrawSplash`; the room stores it in gRoomEffectWaterRippleId (water-
     /// ripple slot, spawned at the water surface by wading actors).
-    EFFECT_ACROPOLIS_BRIDGE_WATER_RIPPLE = EFFECT_ID(EFFECT_TASK_BANK, 0x0B9),
-    /// Akropolis bridge tumbling debris piece (acropolisBridgeEffectSpriteDebrisTask, gravity, eight
+    EFFECT_AKROPOLIS_BRIDGE_WATER_RIPPLE = EFFECT_ID(EFFECT_TASK_BANK, 0x0B9),
+    /// Akropolis bridge tumbling debris piece (akropolisBridgeEffectSpriteDebrisTask, gravity, eight
     /// cells); stored in gRoomEffectWaterSprayId and trailed off the two moving joints by the bridge
     /// task.
-    EFFECT_ACROPOLIS_BRIDGE_WATER_SPRAY = EFFECT_ID(EFFECT_TASK_BANK, 0x0BA),
+    EFFECT_AKROPOLIS_BRIDGE_WATER_SPRAY = EFFECT_ID(EFFECT_TASK_BANK, 0x0BA),
     /// Falling dust mote: a 1x1 tile drifting and falling for 0x1F ticks; spawned in
     /// bursts of 0x20/8 at random points by the bridge.
-    EFFECT_ACROPOLIS_BRIDGE_DUST_MOTE = EFFECT_ID(EFFECT_TASK_BANK, 0x0BC),
+    EFFECT_AKROPOLIS_BRIDGE_DUST_MOTE = EFFECT_ID(EFFECT_TASK_BANK, 0x0BC),
     /// An expanding, fading coloured band (effectDrawInnerGlowBand) at a Z angle from the spawn
     /// argument, with colour from _gEffectExpandingBandColors; spawned three at a time 120 degrees apart
     /// by effectAntibodyAuraTask and the gunblade.
@@ -827,7 +826,7 @@ enum {
     EFFECT_NEO_ARK_BRIDGE_WATER_SPRAY = EFFECT_ID(EFFECT_TASK_BANK, 0x17B),
     /// A falling leaf (`_leafDraw`) at a random height offset; five are spawned
     /// by the Maggot Caterpillar entrance.
-    EFFECT_ACROPOLIS_ROOF_GARDEN_LEAF = EFFECT_ID(EFFECT_TASK_BANK, 0x17C),
+    EFFECT_AKROPOLIS_ROOF_GARDEN_LEAF = EFFECT_ID(EFFECT_TASK_BANK, 0x17C),
     /// Ten-frame additive sprite (spriteQuadDraw, 48-texel cells) drifting along a
     /// direction taken from the spawn angle; spawned at random entries of the
     /// sterilization room's position table in that room's state-1 views.
@@ -853,10 +852,10 @@ enum {
     /// Expanding animated atlas sprite with child copies (fireball); spawned by No.9's
     /// explosion controller 0x60185 before it emits smoke, when No.9's projectile hits.
     EFFECT_NO9_EXPLOSION_FIREBALL = EFFECT_ID(EFFECT_TASK_BANK, 0x184),
-    /// Impact controller of actor_510900's thrown spinning object: spawns 0x60184 then
+    /// Impact controller of helicopter_landing_pad_no_9's thrown spinning object: spawns 0x60184 then
     /// smoke (0x60070) every tick for about 60 ticks; spawned with 0x6005C and smoke
     /// when the object lands or hits.
-    EFFECT_ACTOR_510900_IMPACT_BURST = EFFECT_ID(EFFECT_TASK_BANK, 0x185),
+    EFFECT_HELICOPTER_LANDING_PAD_NO_9_IMPACT_BURST = EFFECT_ID(EFFECT_TASK_BANK, 0x185),
     /// Gunblade blade trail: tip and hilt frames recorded in an 8-slot ring and drawn
     /// as a ribbon; spawned on the gunblade slash.
     EFFECT_GUNBLADE_TRAIL = EFFECT_ID(EFFECT_TASK_BANK, 0x186),
@@ -2137,35 +2136,35 @@ enum {
     /// shrinking ring with a fade quad at its peak, then fades out through a star; the
     /// room stores it in slot gRoomEffectFlashId, which the Pawn/Rook golem library spawns at
     /// body part 4 for its scream (golemPawnRookSilenceScream).
-    EFFECT_ACROPOLIS_CAFETERIA_FLASH = EFFECT_ID(EFFECT_TASK_BANK, 0x28D),
+    EFFECT_AKROPOLIS_CAFETERIA_FLASH = EFFECT_ID(EFFECT_TASK_BANK, 0x28D),
     /// Twin trail (room_visual_effects_trail_task): two points offset from the anchor
     /// recorded in rings of eight and drawn as a fading beam; stored in gRoomEffectTwinTrailId,
     /// which the beam-sword golems (actor_02000/02300) spawn at model part 7.
-    EFFECT_ACROPOLIS_CAFETERIA_TWIN_TRAIL = EFFECT_ID(EFFECT_TASK_BANK, 0x28E),
+    EFFECT_AKROPOLIS_CAFETERIA_TWIN_TRAIL = EFFECT_ID(EFFECT_TASK_BANK, 0x28E),
     /// Impact flash followed by smoke puffs or orange rings and bouncing sparks.
     ///
     /// `_roomVisualEffectsSparkBurstTask`, selected through `gRoomEffectSparkBurstId`.
     /// A nonzero argument selects jittered smoke; zero selects two bouncing
     /// sparks and fixed/expanding rings. Ages 1..7 act; age 8 releases the work.
     /// Spawned effects are independent. Room control can pause or cancel it.
-    EFFECT_ACROPOLIS_CAFETERIA_SPARK_BURST = EFFECT_ID(EFFECT_TASK_BANK, 0x28F),
+    EFFECT_AKROPOLIS_CAFETERIA_SPARK_BURST = EFFECT_ID(EFFECT_TASK_BANK, 0x28F),
     /// acropolis_forked_road's copy of _roomVisualEffectsFlashTask (fans and a shrinking ring
     /// ramping to a coloured screen fade), stored in gRoomEffectFlashId, which the Pawn/Rook
     /// GOLEM's silence-scream state spawns on its part 4.
-    EFFECT_ACROPOLIS_FORKED_ROAD_FLASH = EFFECT_ID(EFFECT_TASK_BANK, 0x290),
+    EFFECT_AKROPOLIS_FORKED_ROAD_FLASH = EFFECT_ID(EFFECT_TASK_BANK, 0x290),
     /// The acropolis_forked_road instance of the room-effect library's
     /// room_visual_effects_trail_task.inc.c: a twin-trail beam: two rings of eight
     /// frames recording two points offset from the anchor, drawn as a beam between
     /// them; the room stores it in slot gRoomEffectTwinTrailId. The Pawn/Rook
     /// Beam Sword tick (`_golemPawnRookSwordTick`) spawns it at body part 7.
-    EFFECT_ACROPOLIS_FORKED_ROAD_TWIN_TRAIL = EFFECT_ID(EFFECT_TASK_BANK, 0x291),
+    EFFECT_AKROPOLIS_FORKED_ROAD_TWIN_TRAIL = EFFECT_ID(EFFECT_TASK_BANK, 0x291),
     /// Impact flash followed by smoke puffs or orange rings and bouncing sparks.
     ///
     /// `_roomVisualEffectsSparkBurstTask`, selected through `gRoomEffectSparkBurstId`.
     /// A nonzero argument selects jittered smoke; zero selects two bouncing
     /// sparks and fixed/expanding rings. Ages 1..7 act; age 8 releases the work.
     /// Spawned effects are independent. Room control can pause or cancel it.
-    EFFECT_ACROPOLIS_FORKED_ROAD_SPARK_BURST = EFFECT_ID(EFFECT_TASK_BANK, 0x292),
+    EFFECT_AKROPOLIS_FORKED_ROAD_SPARK_BURST = EFFECT_ID(EFFECT_TASK_BANK, 0x292),
     /// Flash (_roomVisualEffectsFlashTask): fans and an inward ring ramping up, a fade quad at the
     /// peak, then a star fade-out; stored in gRoomEffectFlashId, which golems
     /// (actor_02300/05700) spawn at part 4 in their scream sequence.

@@ -37,10 +37,8 @@ static s32  _neoArkR31IgnoreRoomCommand(Task* task, s32 messageId, s32 commandId
 static s32  _neoArkR31IgnoreRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedArg);
 static void _neoArkR31FramebufferShiftTask(Task* task);
 
-enum { NEO_ARK_R31_FRAMEBUFFER_SHIFT_TASK_PRIORITY = 192 };
-
 TaskDesc gNeoArkR31FramebufferShiftTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = NEO_ARK_R31_FRAMEBUFFER_SHIFT_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
     .callback = _neoArkR31FramebufferShiftTask,
     .data     = { .value = 0 },
 };
@@ -260,8 +258,6 @@ static void _neoArkR31FramebufferShiftTask(Task* task)
         INITIALIZE           = 0,
         INITIAL_SHIFT_PIXELS = 3,
         DRAW_DEPTH           = 6,
-        SCREEN_WIDTH         = 320,
-        SCREEN_HEIGHT        = 240,
         TILE_WIDTH           = 160,
         SCREEN_CENTER_X      = 160,
         SCREEN_CENTER_Y      = 120,
@@ -293,9 +289,9 @@ static void _neoArkR31FramebufferShiftTask(Task* task)
         return;
     }
     // Sample two 16-bit texture strips, clipping their ends to the byte-sized UV range.
-    for (sourceX = 0; sourceX < SCREEN_WIDTH; sourceX += TILE_WIDTH) {
+    for (sourceX = 0; sourceX < DISPLAY_SCREEN_WIDTH; sourceX += TILE_WIDTH) {
         screenX = sourceX - SCREEN_CENTER_X;
-        for (sourceY = 0; sourceY < SCREEN_HEIGHT; sourceY += SCREEN_HEIGHT) {
+        for (sourceY = 0; sourceY < DISPLAY_SCREEN_HEIGHT; sourceY += DISPLAY_SCREEN_HEIGHT) {
             screenY        = sourceY - SCREEN_CENTER_Y;
             poly           = gGpuPrimCursor;
             gGpuPrimCursor = poly + 1;
@@ -304,7 +300,7 @@ static void _neoArkR31FramebufferShiftTask(Task* task)
             poly->v0 = poly->v1 = (sourceY + (sourceBuffer << FRAMEBUFFER_V_SHIFT)) + gDisplayState.vramYOffset;
             if (poly->v0 < FULL_TILE_V_LIMIT) {
                 poly->y2 = poly->y3 = sourceY + SCREEN_CENTER_Y;
-                poly->v2 = poly->v3 = poly->v0 + SCREEN_HEIGHT;
+                poly->v2 = poly->v3 = poly->v0 + DISPLAY_SCREEN_HEIGHT;
             } else {
                 s32 remainingRows = TEXTURE_UV_MAX - poly->v0;
                 poly->y2 = poly->y3 = screenY + remainingRows;

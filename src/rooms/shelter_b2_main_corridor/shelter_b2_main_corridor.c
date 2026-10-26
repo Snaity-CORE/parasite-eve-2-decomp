@@ -10,7 +10,10 @@
 #include "gte.h"
 
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_05700.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/animation.h"
@@ -44,6 +47,7 @@
 #include "main/coord.h"
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/fs.h"
 #include "main/gameflag.h"
 #include "main/gamemain.h"
@@ -139,8 +143,6 @@ static void _shelterB2MainCorridorStagedDepartureTask(Task* task);
 static void _shelterB2MainCorridorRecordCapCompletionTask(Task* task);
 static void _shelterB2MainCorridorWaterTask(Task* task);
 
-enum { SHELTER_B2_MAIN_CORRIDOR_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Fixed beam/flare perspective scales and packed beam RGB factors for this room.
 enum {
     SHELTER_B2_MAIN_CORRIDOR_BEAM_RADIUS_SCALE    = 0x200,
@@ -151,19 +153,13 @@ enum {
     SHELTER_B2_MAIN_CORRIDOR_FLARE_RADIUS_SCALE   = 0x300,
 };
 
-/// Execution priorities of the corridor's bodyless event and water tasks.
-enum {
-    SHELTER_B2_MAIN_CORRIDOR_EVENT_TASK_PRIORITY = 32,
-    SHELTER_B2_MAIN_CORRIDOR_WATER_TASK_PRIORITY = 96,
-};
-
 /// Departure-task recipe following four zero bytes of unproven role.
 ///
 /// Only `desc` is passed to spawning, at index zero after the resolved
 /// destination has been published. The task takes no spawn payloads and
 /// borrows the published departure through session reload.
 static _ShelterB2MainCorridorDepartureTaskDescStorage _gShelterB2MainCorridorDepartureTaskDescriptorStorage = {
-    { 0 }, { { { TASK_BODY_NONE, SHELTER_B2_MAIN_CORRIDOR_EVENT_TASK_PRIORITY } }, roomEventDepartureTask, { .value = 0 } }
+    { 0 }, { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventDepartureTask, { .value = 0 } }
 };
 
 static AnimationPackedPose _gShelterB2MainCorridorAnimation05620Bank1[2] = {
@@ -192,7 +188,7 @@ static AnimationSet _gShelterB2MainCorridorAnimation05620 = {
 ///
 /// Spawn at index zero with no payloads after copying the room's event and
 /// destination snapshots; both snapshots must remain stable until reload.
-static TaskDesc _gShelterB2MainCorridorStagedEventTaskDescriptor = { { { TASK_BODY_NONE, SHELTER_B2_MAIN_CORRIDOR_EVENT_TASK_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gShelterB2MainCorridorStagedEventTaskDescriptor = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Message protocol of the corridor's registered room task, followed by END.
 ///
@@ -203,7 +199,7 @@ static TaskDesc _gShelterB2MainCorridorStagedEventTaskDescriptor = { { { TASK_BO
 /// its callbacks while the corridor overlay is loaded.
 static TaskMessageEntry _gShelterB2MainCorridorRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB2MainCorridorResolveRoomEvent },
-    { SHELTER_B2_MAIN_CORRIDOR_MESSAGE_USE_KEY_ITEM, _shelterB2MainCorridorRejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB2MainCorridorRejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB2MainCorridorHandleRoomAction },
     { ROOM_MESSAGE_COMMAND, _shelterB2MainCorridorIgnoreCommandMessage },
     { ROOM_MESSAGE_SOUND, _shelterB2MainCorridorHandleSoundMessage },
@@ -216,8 +212,8 @@ static TaskMessageEntry _gShelterB2MainCorridorRoomMessages[6] = {
 /// slot 1 takes a game-flag nibble index and records the current CAP outcome.
 /// Both ignore spawnArg2. Keep this overlay loaded until their tasks finish.
 static TaskDesc _gShelterB2MainCorridorActionTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, SHELTER_B2_MAIN_CORRIDOR_EVENT_TASK_PRIORITY } }, _shelterB2MainCorridorStagedDepartureTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B2_MAIN_CORRIDOR_EVENT_TASK_PRIORITY } }, _shelterB2MainCorridorRecordCapCompletionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB2MainCorridorStagedDepartureTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB2MainCorridorRecordCapCompletionTask, { .value = 0 } },
 };
 
 /// One room-owned player clip copied into the equipped weapon bank's first extension slot.
@@ -281,7 +277,7 @@ static EvsCommand _gShelterB2MainCorridorAccessSceneScript[13] = {
 ///
 /// Spawn at index zero with unused payloads. The task borrows room water data
 /// and a reserved actor-load packet arena for the corridor's lifetime.
-static TaskDesc _gShelterB2MainCorridorWaterTaskDescriptor = { { { TASK_BODY_NONE, SHELTER_B2_MAIN_CORRIDOR_WATER_TASK_PRIORITY } }, _shelterB2MainCorridorWaterTask, { .value = 0 } };
+static TaskDesc _gShelterB2MainCorridorWaterTaskDescriptor = { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, _shelterB2MainCorridorWaterTask, { .value = 0 } };
 
 /// Four water rectangles rendered as Z-running wave strips, followed by the list end.
 static RoomWaterSurface _gShelterB2MainCorridorWaterWaveSurfaces[] = {
@@ -2101,7 +2097,7 @@ static void _shelterB2MainCorridorStagedDepartureTask(Task* task)
                 }
                 if (gameFlagGetNibble(GAME_FLAG_SHELTER_B2_MAIN_CORRIDOR_0DA) == 0) {
                     gameFlagSetNibble(GAME_FLAG_SHELTER_B2_MAIN_CORRIDOR_0DA, SHELTER_B2_MAIN_CORRIDOR_FLAG_SET);
-                    gameFlagSetNibble(GAME_FLAG_STORY_CHAPTER, SHELTER_B2_MAIN_CORRIDOR_NEO_ARK_CHAPTER);
+                    gameFlagSetNibble(EVENT_FLAG_STORY_CHAPTER, SHELTER_B2_MAIN_CORRIDOR_NEO_ARK_CHAPTER);
                 }
             }
             if (_gShelterB2MainCorridorStagedDeparture.area == GAME_AREA_NEO_ARK_EVE_ACCESS_TUNNEL) {
@@ -2486,8 +2482,8 @@ void WATER_SPRAY_CACHED_COORD_TASK(Task* task)
         case WATER_DRIFT_STATE_NEW:
             // Decode independent spawn fields; retain the random angle for every cell.
             particleWork->scale = task->spawnArg1.halves.low & WATER_DRIFT_SPAWN_SIZE_MASK;
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            particleWork->angle = (gRandomLcgState >> 16) & ACTOR_TRANSFORM_ANGLE_MASK;
+            RANDOM_LCG_ADVANCE();
+            particleWork->angle = RANDOM_LCG_DRAW() & ACTOR_TRANSFORM_ANGLE_MASK;
             if (task->spawnArg1.value & WATER_DRIFT_SPAWN_PERIOD_MASK) {
                 framesPerCell = (task->spawnArg1.value >> WATER_DRIFT_SPAWN_PERIOD_SHIFT) & WATER_DRIFT_PERIOD_MASK;
             } else {
@@ -2509,28 +2505,28 @@ void WATER_SPRAY_CACHED_COORD_TASK(Task* task)
                         particleWork->step = 0;
                         break;
                     case WATER_DRIFT_VELOCITY_UPWARD_BURST:
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vx = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vy = WATER_DRIFT_UPWARD_Y_BIAS - ((gRandomLcgState >> 16) & 0x7F);
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vz = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vy = WATER_DRIFT_UPWARD_Y_BIAS - (RANDOM_LCG_DRAW() & 0x7F);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
                         break;
                     case WATER_DRIFT_VELOCITY_ALL_AXES:
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vx = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vy = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vz = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vy = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
                         break;
                     case WATER_DRIFT_VELOCITY_NARROW_JET:
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vx = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vy = -((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        particleWork->move.vz = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vy = -(RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        particleWork->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
                         break;
                     case WATER_DRIFT_VELOCITY_POS_DIRECTION:
                         // The copied spawn offset supplies a direction in the coordinate's parent space.

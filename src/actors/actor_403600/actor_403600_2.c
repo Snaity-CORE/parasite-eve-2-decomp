@@ -274,8 +274,7 @@ enum {
     ACTOR_403600_PLAYER_ANIM_FORWARD         = 4
 };
 
-enum { ACTOR_403600_ENEMY_TASK_PRIORITY = 96,
-       ACTOR_403600_SCENE_FIGURE_TASK   = 2 };
+enum { ACTOR_403600_SCENE_FIGURE_TASK = 2 };
 
 /// Commands accepted by both the boss and scene figure, followed by the terminator.
 ///
@@ -286,9 +285,9 @@ static TaskMessageEntry _gActor403600SceneCommandMessages[2] = {
 };
 
 TaskDesc gActor403600TaskTable[3] = {
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_403600_ENEMY_TASK_PRIORITY } }, _actor403600BossTask, { .model = &gActor403600EveBody } },
-    { { { TASK_BODY_TMD, ACTOR_403600_ENEMY_TASK_PRIORITY } }, _actor403600DoubleTask, { .model = &gActor403600Model199B8 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_403600_ENEMY_TASK_PRIORITY } }, _actor403600SceneFigureTask, { .model = &gActor303600Model02DD0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_ACTOR } }, _actor403600BossTask, { .model = &gActor403600EveBody } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor403600DoubleTask, { .model = &gActor403600Model199B8 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_ACTOR } }, _actor403600SceneFigureTask, { .model = &gActor303600Model02DD0 } },
 };
 
 /// Borrowed clips installed on the player for boss knockback and scene poses.
@@ -945,14 +944,14 @@ static void _actor403600ProcessStatusReactions(Task* task)
             if (work->action != ACTOR_403600_ACTION_RUSH) {
                 tickDamage = damageTickEnemyDamageOverTime(enemy);
                 if (tickDamage != 0) {
-                    flinchSignRandomState = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                    flinchSignRandomState = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState       = flinchSignRandomState;
                     if ((flinchSignRandomState >> 0x10) & 1) {
-                        positiveFlinchRandomState = (flinchSignRandomState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                        positiveFlinchRandomState = RANDOM_LCG_NEXT(flinchSignRandomState);
                         gRandomLcgState           = positiveFlinchRandomState;
                         work->flinchRot.vx        = ((positiveFlinchRandomState >> 0xB) & 0x60) + 0x80;
                     } else {
-                        negativeFlinchRandomState = (flinchSignRandomState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                        negativeFlinchRandomState = RANDOM_LCG_NEXT(flinchSignRandomState);
                         gRandomLcgState           = negativeFlinchRandomState;
                         work->flinchRot.vx        = -(((negativeFlinchRandomState >> 0xB) & 0x60) + 0x80);
                     }
@@ -1441,7 +1440,7 @@ static void _actor403600UpdateFightAction(Task* task)
     {                                                                                                                    \
         enum { ACTOR_403600_PROJECTILE_ROLL_SHIFT = 16,                                                                  \
                ACTOR_403600_PROJECTILE_ROLL_MASK  = 0xF };                                                                \
-        (randomStateOut) = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                               \
+        (randomStateOut) = RANDOM_LCG_NEXT(gRandomLcgState);                                                             \
         gRandomLcgState  = (randomStateOut);                                                                             \
         (rollOut)        = ((randomStateOut) >> ACTOR_403600_PROJECTILE_ROLL_SHIFT) & ACTOR_403600_PROJECTILE_ROLL_MASK; \
     }
@@ -2717,8 +2716,8 @@ static void _actor403600ChooseFlightTarget(Task* task, s32 useRushReferences)
 /// its upper halfword. This consumes the same sequence as other overlays.
 static inline u32 _actor403600Rand(void)
 {
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    return gRandomLcgState >> 16;
+    RANDOM_LCG_ADVANCE();
+    return RANDOM_LCG_DRAW();
 }
 
 /// Starts the boss's weakened transition after a qualifying hit.
@@ -4540,7 +4539,7 @@ static s32 _actor403600ApplySceneCommand(Task* task, s32 unusedMessageId, const 
         case ACTOR_403600_COMMAND_SPAWN_SCENE_FIGURE:
             // The figure and shaft controller take over presentation from both actors.
             _gActor403600SceneShaftTask = taskSpawnFromTable(gActor303600ShaftTaskDescriptors, ACTOR_303600_SHAFT_ROOT_DESCRIPTOR, 0, 0);
-            taskMessageDispatch(gPlayerActorTasks[PLAYER_ACTOR_TASK_PLAYER], GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, 0, 0);
+            taskMessageDispatch(gPlayerActorTasks[PLAYER_ACTOR_TASK_PLAYER], GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE, 0);
             task->extra.tmd->flags |= TMD_OBJECT_SKIP_ACTIVE_DRAW;
             task->extra.tmd->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             work->childEnemy        = enemySpawnFromTable(gActor403600TaskTable, ACTOR_403600_SCENE_FIGURE_TASK, 0, 0);
@@ -4761,7 +4760,7 @@ static void _actor403600UpdateSceneFigure(Enemy* enemy, Task* task)
             }
         }
         if (work->phaseFrame == ACTOR_403600_SCENE_SHOW_PLAYER_FRAME) {
-            taskMessageDispatch(gPlayerActorTasks[PLAYER_ACTOR_TASK_PLAYER], GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, 1, 0);
+            taskMessageDispatch(gPlayerActorTasks[PLAYER_ACTOR_TASK_PLAYER], GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO, 0);
         }
         if (work->phaseFrame >= ACTOR_403600_SCENE_SHOW_PLAYER_FRAME && work->phaseFrame < ACTOR_403600_SCENE_EFFECT_END_FRAME && (work->phaseFrame & 3) == 3) {
             effectSpawn(EFFECT_SHELTER_B2_POD_BOTTOM_RISING_SPRITE, &work->worldCoord, (ACTOR_403600_SCENE_REVERSE_SPRITE_Y | ACTOR_403600_SCENE_RISING_SPRITE_SIZE), NULL);

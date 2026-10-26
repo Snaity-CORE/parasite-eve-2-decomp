@@ -9,7 +9,11 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_05600.h"
+#include "actors/actor_05700.h"
+#include "actors/actor_401800.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -95,8 +99,6 @@ static WorldCollisionTrigger      _gDryfieldMotelBalconyWarpTriggers[4];
 static WorldCoordRoomAmbientEntry _gDryfieldMotelBalconyViewAmbientLevels[23];
 static WorldCoordRoomLights       _gDryfieldMotelBalconyRoomLights[1];
 
-enum { DRYFIELD_MOTEL_BALCONY_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static s32 _dryfieldMotelBalconyUseKeyItemMsg(Task* task, s32 messageId, s32 itemId, s32 secondArg);
 static s32 _dryfieldMotelBalconyCommandMsg(Task* task, s32 messageId, s32 commandId, s32 secondArg);
 static s32 _dryfieldMotelBalconyRoomActionMsg(Task* task, s32 messageId, s32 firstArg, s32 secondArg);
@@ -107,7 +109,7 @@ static s32 _dryfieldMotelBalconyRoomActionMsg(Task* task, s32 messageId, s32 fir
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Five room-message handlers followed by the unsupported-message terminator.
 ///
@@ -116,7 +118,7 @@ static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIO
 /// through teardown; payload types follow each handler's synchronous message ABI.
 static TaskMessageEntry _gDryfieldMotelBalconyRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _roomVariantMotelBalconyDoorsMsg },
-    { DRYFIELD_MOTEL_BALCONY_MESSAGE_USE_KEY_ITEM, _dryfieldMotelBalconyUseKeyItemMsg },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldMotelBalconyUseKeyItemMsg },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldMotelBalconyRoomActionMsg },
     { ROOM_MESSAGE_COMMAND, _dryfieldMotelBalconyCommandMsg },
     { ROOM_MESSAGE_SOUND, _motelBalconyCueSoundMsg },

@@ -87,12 +87,12 @@ void combatLightEffectTask(Task* task)
     switch (task->state) {
         case COMBAT_LIGHT_STATE_START:
             // Preserve the interleaved light writes and random draws.
-            pointLight->head.transform.coord.coord.t[0]        = beamCoord->coord.t[0];
-            gRandomLcgState                                    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            initialRadiusScale                                 = ((gRandomLcgState >> 16) & COMBAT_LIGHT_RADIUS_JITTER_MASK) + COMBAT_LIGHT_INITIAL_RADIUS_SCALE;
-            pointLight->head.transform.coord.coord.t[1]        = beamCoord->coord.t[1];
-            gRandomLcgState                                    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            billboardRotation                                  = (gRandomLcgState >> 16) & (COMBAT_LIGHT_ANGLE_TURN - 1);
+            pointLight->head.transform.coord.coord.t[0] = beamCoord->coord.t[0];
+            RANDOM_LCG_ADVANCE();
+            initialRadiusScale                          = (RANDOM_LCG_DRAW() & COMBAT_LIGHT_RADIUS_JITTER_MASK) + COMBAT_LIGHT_INITIAL_RADIUS_SCALE;
+            pointLight->head.transform.coord.coord.t[1] = beamCoord->coord.t[1];
+            RANDOM_LCG_ADVANCE();
+            billboardRotation                                  = RANDOM_LCG_DRAW() & (COMBAT_LIGHT_ANGLE_TURN - 1);
             originZ                                            = beamCoord->coord.t[2];
             lightSlot->light.head.transform.coord.composeStamp = GRAPHICS_COORD_DIRTY;
             pointLight->head.color.r                           = ONE;
@@ -107,8 +107,8 @@ void combatLightEffectTask(Task* task)
             effectWork->angle                                  = billboardRotation;
             task->state                                        = COMBAT_LIGHT_STATE_FADE;
             for (coneIndex = 0; coneIndex < ARRAY_SIZE(_gCombatLightConeAzimuths); coneIndex++) {
-                gRandomLcgState                      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                _gCombatLightConeAzimuths[coneIndex] = ((coneIndex & COMBAT_LIGHT_QUADRANT_MASK) << COMBAT_LIGHT_QUARTER_TURN_SHIFT) + ((gRandomLcgState >> 16) & (COMBAT_LIGHT_QUARTER_TURN - 1));
+                RANDOM_LCG_ADVANCE();
+                _gCombatLightConeAzimuths[coneIndex] = ((coneIndex & COMBAT_LIGHT_QUADRANT_MASK) << COMBAT_LIGHT_QUARTER_TURN_SHIFT) + (RANDOM_LCG_DRAW() & (COMBAT_LIGHT_QUARTER_TURN - 1));
             }
             gAttachmentState.flags |= ATTACHMENT_FLAG_APPLY_STATS;
             audioPan                = (s8)worldCoordGetOriginAudioPan(beamCoord);
@@ -201,7 +201,7 @@ static void _combatLightDrawOriginBillboard(GfxCoord* beamCoord, s16 radiusScale
         billboard->x2        = block->screenX - (u16)block->cornerOffsetX;
         billboard->y1        = block->screenY - (u16)block->cornerOffsetY;
         billboard->y2        = block->screenY + (u16)block->cornerOffsetY;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                 billboard);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectBillboardScratch);
@@ -312,7 +312,7 @@ static void _combatLightDrawConeQuad(GfxCoord* beamCoord, s16 azimuth, s16 brigh
             setRGB1(coneQuad, 0, 0, 0);
             setRGB2(coneQuad, brightness >> 1, brightness >> 1, brightness);
             setRGB3(coneQuad, 0, 0, 0);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratchHead[-1].otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratchHead[-1].otz),
                     coneQuad);
             gpuSetPrimitiveBlendMode(coneQuad, GPU_BLEND_ADD, scratchHead[-1].otz);
         }

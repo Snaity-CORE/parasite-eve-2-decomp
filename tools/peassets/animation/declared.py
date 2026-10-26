@@ -4,12 +4,16 @@ A clip (type `clip`) is placed, with its address, by the package that carries it
 decoded (codec.py), checked to re-encode to the same bytes, and written to its group's directory as
 `<local name>.usda` (usd.py), with the joint paths and rest pose of its `rig`, which has a joint for each of its
 tracks. The way back reads that file and encodes it at its placement's address; the rig plays no part in the bytes.
+A clip a package stores a second time (`copy_of`, the clip it repeats: Aya's stand twice in the MIST parking lot) is
+an object of its own - its own placement and name, bound by its own slots - with the other's content: it has no file
+of its own, and decoding checks its bytes decode to the original's.
 
 A bank (type `animation_bank`) binds clips to the slots of its schema (`animation_schema`). It may extend another
 bank (`base`), which gives every slot it does not bind, and so on up to the bank stating the schema; a slot none of
 them binds is empty. A bank with a placement is a table in
 its package: its words are the addresses of its clips' `AnimationSet` records there, and zero past the schema's slots
-to the end of its placement. A bank without one is a layer others extend - Aya's own clips, a carry style's
+to the end of its placement. A bank may also bind clips another package places when that package is resident with its
+own (`borrows`, those packages' names): the police officers' banks bind the plaza's clips. A bank without one is a layer others extend - Aya's own clips, a carry style's
 locomotion, a weapon family's combat clips - and exists only in the assets.
 """
 from __future__ import annotations
@@ -32,7 +36,7 @@ def placements(name: str, assets: dict, embedded: dict) -> list[dict]:
     is the first (asset_groups.merge); a shared clip has one in each package placing it."""
     out = [embedded[name]] if name in embedded else []
     for key, rec in assets.items():
-        if rec.get("type") not in ("pe2pkg", "room", "stage"):
+        if rec.get("type") not in asset_schema.PACKAGE_TYPES:
             continue
         source = f"{rec.get('package_name', key)}.pe2pkg"
         for place in rec.get("embedded", ()):
@@ -64,6 +68,8 @@ def rig_joints(rig: str, assets: dict, assets_root: Path) -> list[dict]:
 
 
 def source_path(name: str, assets: dict, assets_root: Path) -> Path:
+    """A clip's USD file: its own, or the original's for a stored copy."""
+    name = assets[name].get("copy_of", name)
     return assets_root / asset_schema.asset_dir(name, assets[name]) / f"{asset_schema.file_name(name)}.usda"
 
 
@@ -73,6 +79,11 @@ def decode(name: str, assets: dict, embedded: dict, assets_root: Path) -> Path:
     clip = codec.decode(blob, address)
     if codec.encode(clip, address) != blob:
         raise SystemExit(f"{name}: does not re-encode to its bytes")
+    if "copy_of" in assets[name]:                       # a second stored copy: the original's file holds it
+        original = assets[name]["copy_of"]
+        if codec.decode(*placed_bytes(original, assets_root, embedded)) != clip:
+            raise SystemExit(f"{name}: is not a copy of {original}")
+        return source_path(name, assets, assets_root)
     from model import declared as models
     rig = assets[name]["rig"]
     joints = rig_joints(rig, assets, assets_root)
@@ -144,11 +155,12 @@ def bank_bytes(name: str, assets: dict, embedded: dict) -> bytes:
     """A bank's words: each slot's clip's AnimationSet address in the bank's package, zero past the slots, to the
     end of its placement."""
     source = embedded[name]["source"]
+    sources = [source, *(f"{package}.pe2pkg" for package in assets[name].get("borrows", ()))]
     words = []
     for clip in bank_slots(name, assets):
-        place = placed_in(clip, source, assets, embedded) if clip is not None else None
+        place = next((p for s in sources if (p := placed_in(clip, s, assets, embedded))), None) if clip is not None else None
         if clip is not None and place is None:
-            raise SystemExit(f"{name}: binds {clip}, which its package {source} does not place")
+            raise SystemExit(f"{name}: binds {clip}, which neither its package {source} nor a package it borrows places")
         words.append(set_address(clip, embedded, place) if clip else 0)
     if len(words) > bank_words(name, embedded):
         raise SystemExit(f"{name}: {len(words)} slots in a placement of {bank_words(name, embedded)} words")

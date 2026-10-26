@@ -10,7 +10,11 @@
 #include "common.h"
 
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_07000.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/actor_render.h"
@@ -116,15 +120,13 @@ static void _shelterB4UpperSewerOpenWaterHoleTask(Task* task);
 static void _shelterB4UpperSewerExitTransitTask(Task* task);
 static void _shelterB4UpperSewerRestoreSavedView(void);
 
-enum { SHELTER_B4_UPPER_SEWER_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Synchronous room messages for transitions, key items, actions, commands and sound.
 ///
 /// Installed on the room task; the final entry is `TASK_MESSAGE_TABLE_END`.
 /// Transition records and action requests are borrowed only for dispatch.
 static TaskMessageEntry _gShelterB4UpperSewerRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB4UpperSewerResolveRoomTransition },
-    { SHELTER_B4_UPPER_SEWER_MESSAGE_USE_KEY_ITEM, _shelterB4UpperSewerRejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB4UpperSewerRejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB4UpperSewerIgnoreRoomActionMessage },
     { ROOM_MESSAGE_COMMAND, _shelterB4UpperSewerHandleWaterHoleCommand },
     { ROOM_MESSAGE_SOUND, _shelterB4UpperSewerHandleSoundCue },
@@ -136,8 +138,8 @@ static TaskMessageEntry _gShelterB4UpperSewerRoomMessages[6] = {
 /// Indexed directly without a terminator. Exit transit takes its confirmation
 /// CAP command in spawn argument 1; the opening scene ignores both arguments.
 static TaskDesc _gShelterB4UpperSewerInteractionTasks[2] = {
-    { { { TASK_BODY_NONE, 32 } }, _shelterB4UpperSewerOpenWaterHoleTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 32 } }, _shelterB4UpperSewerExitTransitTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4UpperSewerOpenWaterHoleTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4UpperSewerExitTransitTask, { .value = 0 } },
 };
 
 enum {
@@ -170,7 +172,7 @@ s16 gShelterB4UpperSewerWaterY = -1600;
 
 /// Single bodyless priority-96 water task recipe, indexed at zero without a terminator.
 static TaskDesc _gShelterB4UpperSewerWaterTasks[1] = {
-    { { { TASK_BODY_NONE, 96 } }, _shelterB4UpperSewerWaterTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, _shelterB4UpperSewerWaterTask, { .value = 0 } },
 };
 
 enum {
@@ -1303,9 +1305,7 @@ static void _shelterB4UpperSewerExitTransitTask(Task* task)
 /// All arguments are ignored. The zero result selects the item menu's refusal notice.
 static s32 _shelterB4UpperSewerRejectKeyItemMessage(Task* task, s32 messageId, s32 keyItemId, s32 unusedArg)
 {
-    enum { SHELTER_B4_UPPER_SEWER_KEY_ITEM_REFUSED = 0 };
-
-    return SHELTER_B4_UPPER_SEWER_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Saves a resolved exit selector and starts the room's confirmation/transit task.
@@ -1530,25 +1530,25 @@ static void _shelterB4UpperSewerDrawWaterSurfaces(Task* task, const _ShelterB4Up
     /// projected depth + 96. Head insertion makes the mode execute before the
     /// quad. Packed XY words contain signed pixel halfwords; no vector overlay
     /// is implied by those word stores. Packets stay live through GPU consumption.
-#define SHELTER_B4_UPPER_SEWER_EMIT_WATER_QUAD()                                                                                                                                                   \
-    waterQuad                              = (POLY_F4*)_gShelterB4UpperSewerWaterPacketCursor;                                                                                                     \
-    _gShelterB4UpperSewerWaterPacketCursor = (u8*)(waterQuad + 1);                                                                                                                                 \
-    setlen(waterQuad, sizeof(*waterQuad) / sizeof(u32) - 1);                                                                                                                                       \
-    setcode(waterQuad, SHELTER_B4_UPPER_SEWER_WATER_QUAD_CODE);                                                                                                                                    \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 0) = screenXY0;                                                                                                                                               \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 1) = screenXY1;                                                                                                                                               \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 2) = screenXY2;                                                                                                                                               \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 3) = screenXY3;                                                                                                                                               \
-    waterQuad->r0                       = 0;                                                                                                                                                       \
-    waterQuad->g0                       = blueIntensity >> 2;                                                                                                                                      \
-    waterQuad->b0                       = blueIntensity;                                                                                                                                           \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)(orderingDepth + SHELTER_B4_UPPER_SEWER_WATER_DEPTH_BIAS) << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), \
-            waterQuad);                                                                                                                                                                            \
-    drawMode                               = (DR_MODE*)_gShelterB4UpperSewerWaterPacketCursor;                                                                                                     \
-    _gShelterB4UpperSewerWaterPacketCursor = (u8*)(drawMode + 1);                                                                                                                                  \
-    setlen(drawMode, SHELTER_B4_UPPER_SEWER_WATER_DRAW_MODE_WORDS);                                                                                                                                \
-    drawMode->code[0] = SHELTER_B4_UPPER_SEWER_WATER_DRAW_MODE;                                                                                                                                    \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)(orderingDepth + SHELTER_B4_UPPER_SEWER_WATER_DEPTH_BIAS) << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), \
+#define SHELTER_B4_UPPER_SEWER_EMIT_WATER_QUAD()                                                        \
+    waterQuad                              = (POLY_F4*)_gShelterB4UpperSewerWaterPacketCursor;          \
+    _gShelterB4UpperSewerWaterPacketCursor = (u8*)(waterQuad + 1);                                      \
+    setlen(waterQuad, sizeof(*waterQuad) / sizeof(u32) - 1);                                            \
+    setcode(waterQuad, SHELTER_B4_UPPER_SEWER_WATER_QUAD_CODE);                                         \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 0) = screenXY0;                                                    \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 1) = screenXY1;                                                    \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 2) = screenXY2;                                                    \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 3) = screenXY3;                                                    \
+    waterQuad->r0                       = 0;                                                            \
+    waterQuad->g0                       = blueIntensity >> 2;                                           \
+    waterQuad->b0                       = blueIntensity;                                                \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth + SHELTER_B4_UPPER_SEWER_WATER_DEPTH_BIAS), \
+            waterQuad);                                                                                 \
+    drawMode                               = (DR_MODE*)_gShelterB4UpperSewerWaterPacketCursor;          \
+    _gShelterB4UpperSewerWaterPacketCursor = (u8*)(drawMode + 1);                                       \
+    setlen(drawMode, SHELTER_B4_UPPER_SEWER_WATER_DRAW_MODE_WORDS);                                     \
+    drawMode->code[0] = SHELTER_B4_UPPER_SEWER_WATER_DRAW_MODE;                                         \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth + SHELTER_B4_UPPER_SEWER_WATER_DEPTH_BIAS), \
             drawMode);
 
     SVECTOR           corner0, corner1, corner2, corner3;

@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_400500.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -522,18 +522,15 @@ static void      _actor400500RightArmTask(Task* task);
 
 #include "assets/enemies/stalker/gray/package_4_clips.inc"
 
-/// Player reaction selected by the Stalker's arm contact keys.
-enum { ACTOR_400500_PLAYER_REACTION_SPARK_AND_PUFFS = 7 };
-
 /// Gray Stalker attack definitions: arm strikes, grab damage and an unused third row.
 ///
 /// Power is the base damage before health-band scaling; reaction selects the
 /// player's hit presentation/status. Both arms use row 0; the grab uses row 1.
 /// No package code selects row 2, whose stored definition is retained.
 static DamageAttack _gActor400500Attacks[3] = {
-    { 28, ACTOR_400500_PLAYER_REACTION_SPARK_AND_PUFFS },
+    { 28, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 35, GAME_ACTOR_REACTION_CONFUSION },
-    { 8, ACTOR_400500_PLAYER_REACTION_SPARK_AND_PUFFS },
+    { 8, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
 };
 
 /// Shared Gray Stalker health, battle rewards and incoming-hit reaction parameters.
@@ -564,19 +561,16 @@ static TaskMessageEntry _gActor400500RoomCommandMessages[2] = {
 /// The table and its clip records remain live for the rig's entire lifetime.
 #include "assets/enemies/stalker/gray/bank.inc"
 
-/// Execution priority shared by the Stalker's body and attached strike-arm tasks.
-enum { ACTOR_400500_MODEL_TASK_PRIORITY = 96 };
-
 /// Attached strike-arm spawn recipes, indexed by `ACTOR_400500_ARM_LEFT/RIGHT`.
 ///
 /// Each creates an owned TMD body from borrowed package geometry at priority 96.
 /// The parent owns the child handles and ends both tasks during teardown.
 static TaskDesc _gActor400500ArmTaskDescs[2] = {
-    { { { TASK_BODY_TMD, ACTOR_400500_MODEL_TASK_PRIORITY } }, _actor400500LeftArmTask, { .model = &_gStalkerGrayBurstArmLeft } },
-    { { { TASK_BODY_TMD, ACTOR_400500_MODEL_TASK_PRIORITY } }, _actor400500RightArmTask, { .model = &_gStalkerGrayBurstArmRight } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor400500LeftArmTask, { .model = &_gStalkerGrayBurstArmLeft } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor400500RightArmTask, { .model = &_gStalkerGrayBurstArmRight } },
 };
 
-TaskDesc gActor400500TaskDesc = { { { TASK_BODY_TMD, ACTOR_400500_MODEL_TASK_PRIORITY } }, _actor400500Task, { .model = &_gStalkerGrayBody } };
+TaskDesc gActor400500TaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor400500Task, { .model = &_gStalkerGrayBody } };
 
 /// Six crawl-route rectangles in room X/Z coordinates, followed by `ACTOR_ZONE_END`.
 ///
@@ -986,34 +980,34 @@ static void _actor400500DrawLimbShadow(Task* task, s16 firstJoint, s16 secondJoi
     /// X/Y words, sorting Z/4 and byte-range modulation. Requires the loaded
     /// texture and one free POLY_FT4 in the frame arena. Advances the cursor
     /// without a bounds check; packet storage must survive frame DMA.
-#define ACTOR_400500_QUEUE_LIMB_SHADOW()                                                                                                                \
-    {                                                                                                                                                   \
-        poly           = gGpuPrimCursor;                                                                                                                \
-        gGpuPrimCursor = poly + 1;                                                                                                                      \
-        setPolyFT4(poly);                                                                                                                               \
-        setSemiTrans(poly, true);                                                                                                                       \
-        GPU_PRIMITIVE_XY_WORD(poly, 0) = screen0;                                                                                                       \
-        GPU_PRIMITIVE_XY_WORD(poly, 1) = screen1;                                                                                                       \
-        GPU_PRIMITIVE_XY_WORD(poly, 2) = screen2;                                                                                                       \
-        GPU_PRIMITIVE_XY_WORD(poly, 3) = screen3;                                                                                                       \
-        setUV4(poly, ACTOR_400500_SHADOW_U_MIN, ACTOR_400500_SHADOW_V_MIN,                                                                              \
-               ACTOR_400500_SHADOW_U_MAX, ACTOR_400500_SHADOW_V_MIN,                                                                                    \
-               ACTOR_400500_SHADOW_U_MIN, ACTOR_400500_SHADOW_V_MAX,                                                                                    \
-               ACTOR_400500_SHADOW_U_MAX, ACTOR_400500_SHADOW_V_MAX);                                                                                   \
-        poly->tpage = getTPage(ACTOR_400500_SHADOW_TEXTURE_4_BIT, GPU_BLEND_SUBTRACT,                                                                   \
-                               ACTOR_400500_SHADOW_PAGE_X, ACTOR_400500_SHADOW_PAGE_Y);                                                                 \
-        poly->clut  = getClut(ACTOR_400500_SHADOW_CLUT_X, ACTOR_400500_SHADOW_CLUT_Y);                                                                  \
-        room        = gGameSession->location.roomState;                                                                                                 \
-        if ((room == 1) || (room == 3) || (room == 5) || (room == 6)) {                                                                                 \
-            poly->r0 = modulation;                                                                                                                      \
-            poly->g0 = modulation;                                                                                                                      \
-            poly->b0 = modulation;                                                                                                                      \
-        } else {                                                                                                                                        \
-            poly->r0 = shade;                                                                                                                           \
-            poly->g0 = modulation >> 1;                                                                                                                 \
-            poly->b0 = shade;                                                                                                                           \
-        }                                                                                                                                               \
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((u32)(depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK), poly); \
+#define ACTOR_400500_QUEUE_LIMB_SHADOW()                                                \
+    {                                                                                   \
+        poly           = gGpuPrimCursor;                                                \
+        gGpuPrimCursor = poly + 1;                                                      \
+        setPolyFT4(poly);                                                               \
+        setSemiTrans(poly, true);                                                       \
+        GPU_PRIMITIVE_XY_WORD(poly, 0) = screen0;                                       \
+        GPU_PRIMITIVE_XY_WORD(poly, 1) = screen1;                                       \
+        GPU_PRIMITIVE_XY_WORD(poly, 2) = screen2;                                       \
+        GPU_PRIMITIVE_XY_WORD(poly, 3) = screen3;                                       \
+        setUV4(poly, ACTOR_400500_SHADOW_U_MIN, ACTOR_400500_SHADOW_V_MIN,              \
+               ACTOR_400500_SHADOW_U_MAX, ACTOR_400500_SHADOW_V_MIN,                    \
+               ACTOR_400500_SHADOW_U_MIN, ACTOR_400500_SHADOW_V_MAX,                    \
+               ACTOR_400500_SHADOW_U_MAX, ACTOR_400500_SHADOW_V_MAX);                   \
+        poly->tpage = getTPage(ACTOR_400500_SHADOW_TEXTURE_4_BIT, GPU_BLEND_SUBTRACT,   \
+                               ACTOR_400500_SHADOW_PAGE_X, ACTOR_400500_SHADOW_PAGE_Y); \
+        poly->clut  = getClut(ACTOR_400500_SHADOW_CLUT_X, ACTOR_400500_SHADOW_CLUT_Y);  \
+        room        = gGameSession->location.roomState;                                 \
+        if ((room == 1) || (room == 3) || (room == 5) || (room == 6)) {                 \
+            poly->r0 = modulation;                                                      \
+            poly->g0 = modulation;                                                      \
+            poly->b0 = modulation;                                                      \
+        } else {                                                                        \
+            poly->r0 = shade;                                                           \
+            poly->g0 = modulation >> 1;                                                 \
+            poly->b0 = shade;                                                           \
+        }                                                                               \
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(depth), poly);                        \
     }
     modulation  = shade;
     partCoords  = task->extra.tmd->coords;
@@ -2840,7 +2834,7 @@ static void _actor400500TickCrawlPositiveX(Task* task)
                             work->subState = ACTOR_400500_CRAWL_STEP_TURN_NEGATIVE_X;
                         }
                     } else if (work->toTarget.vx < (-ACTOR_400500_POSTURE_CHANGE_TARGET_GAP + 1)) {
-                        randomState     = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                         gRandomLcgState = randomState;
                         if (((randomState >> 0x10) & ACTOR_400500_POSTURE_CHANGE_CHANCE_MASK) == 0) {
                             if (!(work->posture & ACTOR_400500_POSTURE_ON_FLOOR)) {
@@ -2952,7 +2946,7 @@ static void _actor400500TickCrawlNegativeX(Task* task)
                         work->subState = ACTOR_400500_CRAWL_STEP_TURN_POSITIVE_X;
                     }
                 } else if (work->toTarget.vx >= ACTOR_400500_POSTURE_CHANGE_TARGET_GAP) {
-                    randomState     = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                    randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                     gRandomLcgState = randomState;
                     if (((randomState >> 0x10) & ACTOR_400500_POSTURE_CHANGE_CHANCE_MASK) == 0) {
                         if (!(work->posture & ACTOR_400500_POSTURE_ON_FLOOR)) {
@@ -3861,7 +3855,7 @@ static void _actor400500FinishFloorArmStrike(Task* task)
             cloakWork->cloakPhase   = ACTOR_400500_CLOAK_PHASE_FIRST_RAMP;
         }
         boundaryWork->attackCooldown = ACTOR_400500_ATTACK_COOLDOWN_TICKS;
-        randomState                  = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomState                  = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState              = randomState;
         if (!((randomState >> 16) & ACTOR_400500_FLOOR_STRIKE_ROUTE_CHANCE_MASK)) {
             _actor400500SetState(task, ACTOR_400500_STATE_CRAWL, ACTOR_400500_CRAWL_STEP_SELECT);
@@ -4374,7 +4368,7 @@ static void _actor400500TickTurnOver(Task* task)
             actorRenderComposeCoord(rootCoord);
             knockdownTaken = _actor400500TakeKnockdown(task);
             if (knockdownTaken == 0) {
-                randomState     = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                 gRandomLcgState = randomState;
                 if (((randomState >> 16) & ACTOR_400500_TURN_OVER_ROUTE_CHANCE_MASK) == 0) {
                     _actor400500SetState(task, ACTOR_400500_STATE_CRAWL, ACTOR_400500_CRAWL_STEP_SELECT);

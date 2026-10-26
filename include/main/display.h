@@ -25,6 +25,14 @@
 /// free it. The display code owns and clears the backing storage before drawing.
 extern u_long* gGpuCurrentOt;
 
+/// The game's display, in pixels: the size of a full-screen tile, fade, capture or view, and the rows from one of the
+/// two display buffers' tops to the other's (the second buffer starts at this row of video memory).
+enum {
+    DISPLAY_SCREEN_WIDTH       = 320,
+    DISPLAY_SCREEN_HEIGHT      = 240,
+    DISPLAY_BUFFER_STRIDE_ROWS = 272,
+};
+
 /// Four-byte-aligned byte-offset mask for the 1024 depth-sorted ordering-table tags.
 ///
 /// Callers scale a sorting depth by `otDepthShift`, shift that value right by
@@ -57,6 +65,15 @@ enum { GPU_DMA_LINK_ADDRESS_MASK  = 0xFFFFFF,
 /// and `addPrims` expand their OT argument twice; their offsets must have no side
 /// effects and their table base must remain stable while linking the packet.
 #define GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(byteOffset) (&gGpuCurrentOt[(byteOffset) / sizeof(*gGpuCurrentOt)])
+
+/// The ordering-table tag for a sorting depth: the depth scaled by `otDepthShift`, as one of the 1024
+/// depth-sorted tags (deeper values wrap into them). `depth` is evaluated once per expansion, and converted to
+/// `u32` as a whole.
+#define GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(depth) GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(depth, gDisplayState.otDepthShift)
+
+/// The same, with the scale read where the caller has it (a local pointer to the display state).
+#define GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(depth, otDepthShift) \
+    GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(depth) << (otDepthShift)) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)
 
 /// A writable `u32` view of a primitive's packed colour group.
 ///

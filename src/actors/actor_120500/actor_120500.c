@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_120500.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -165,7 +165,6 @@ enum {
     ACTOR_120500_SKIP_FINAL_VIEW           = 5,
     ACTOR_120500_SKIP_FADE_WAIT_FRAMES     = 8,
     ACTOR_120500_SKIP_VIEW_WAIT_FRAMES     = 2,
-    ACTOR_120500_SCENE_TASK_PRIORITY       = 192,
 };
 
 /// CAP-cued player, Kyle-body and movie choreography for motel room 6.
@@ -234,19 +233,19 @@ static TaskMessageEntry _gActor120500KyleMadiganMessages[2] = {
 
 /// Bodyless motel scene recipes: 0 movie, 1 fade from black, 2 fade to black.
 ///
-/// All run at priority 192; indices 0..2 have no terminator. Movie arguments
+/// All run at priority `TASK_PRIORITY_CONTROL`; indices 0..2 have no terminator. Movie arguments
 /// are unused and playback requires the room's loaded view-100 stream. Fade
 /// argument 1 is an unsigned-halfword intensity step per update, normally 8;
 /// argument 2 is unused. Keep the actor package loaded until each task ends.
 static TaskDesc _gActor120500MovieFadeTaskDescriptors[3] = {
-    { { { TASK_BODY_NONE, ACTOR_120500_SCENE_TASK_PRIORITY } }, _actor120500MovieTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_120500_SCENE_TASK_PRIORITY } }, _screenFadeInTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_120500_SCENE_TASK_PRIORITY } }, _screenFadeOutTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor120500MovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeOutTask, { .value = 0 } },
 };
 
 TaskDesc gActor120500EmptyPlacementTaskDesc[2] = {
-    { { { TASK_BODY_NONE, ACTOR_120500_SCENE_TASK_PRIORITY } }, taskKill, { .value = 0 } },
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), ACTOR_120500_SCENE_TASK_PRIORITY } }, _actor120500SceneTask, { .model = &gKyleBody } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill, { .value = 0 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_CONTROL } }, _actor120500SceneTask, { .model = &gKyleBody } },
 };
 
 /// Borrowed Kyle Madigan body task for the motel-room movie's request channels.
@@ -608,7 +607,7 @@ static void _actor120500SceneTask(Task* task)
 
                 _actor120500InitBody(task);
                 _actor120500BlendPlayerWeaponPose();
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, ACTOR_120500_SCENE_OBJECTIVE);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, ACTOR_120500_SCENE_OBJECTIVE);
                 evsStartScriptWithSkip(_gActor120500MotelSceneScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gActor120500MotelSceneSkipScript);
                 task->state += 1;
                 break;

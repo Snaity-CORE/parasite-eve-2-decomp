@@ -13,7 +13,9 @@
 
 #include "actors/actor_04400.h"
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_07000.h"
+#include "actors/actor_207200.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/actor_render.h"
@@ -93,7 +95,7 @@ static void _waterDrawTile(const GfxCoord* coord, s16 frameIndex, s16 radiusScal
 /// invocation consumes one draw, including draws followed by failed spawns.
 /// Do not combine unsequenced invocations in a single expression. This room
 /// uses the same resident sequence as other loaded gameplay effects.
-#define SHELTER_B4_RESERVOIR_NEXT_RANDOM_U16() ((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16)
+#define SHELTER_B4_RESERVOIR_NEXT_RANDOM_U16() ((RANDOM_LCG_ADVANCE()) >> 16)
 
 enum {
     SHELTER_B4_RESERVOIR_BURST_CHANCE_SCALE     = 100,
@@ -106,7 +108,6 @@ enum {
 
 enum {
     SHELTER_B4_RESERVOIR_BURST_SPRITE_FRAME_COUNT = 6,
-    SHELTER_B4_RESERVOIR_MESSAGE_USE_KEY_ITEM     = 5105,
 };
 
 enum {
@@ -224,11 +225,11 @@ static void                   _shelterB4ReservoirCancelEffects(void);
 
 /// Bodyless screen-wave recipe in slot 0, followed by TASK_DESC_END.
 ///
-/// Runs at priority 192 and borrows a ScreenWaveCtx through spawnArg2.
+/// Runs at priority `TASK_PRIORITY_CONTROL` and borrows a ScreenWaveCtx through spawnArg2.
 /// Only one wave may be active; its context and this carrier's code/storage
 /// must remain live through the final draw. The spawner copies the recipe.
 static TaskDesc _gScreenWaveTaskDescs[2] = {
-    { { { TASK_BODY_NONE, 192 } }, _screenWaveTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -287,8 +288,6 @@ enum {
     SHELTER_B4_RESERVOIR_TASK_VIEW10_WATER_RAMP = 2,
     SHELTER_B4_RESERVOIR_TASK_EXIT              = 3,
     SHELTER_B4_RESERVOIR_EVENT_TASK_COUNT       = 4,
-    SHELTER_B4_RESERVOIR_EVENT_TASK_PRIORITY    = 32,
-    SHELTER_B4_RESERVOIR_WATER_TASK_PRIORITY    = 96,
     SHELTER_B4_RESERVOIR_DIVER_COMMAND_STRAND   = 6,
 };
 
@@ -297,10 +296,10 @@ enum {
 /// Indexed by SHELTER_B4_RESERVOIR_TASK_*; there is no end record. Ramp
 /// spawnArg1 supplies updates and exit spawnArg1 selects the CAP command.
 static TaskDesc _gShelterB4ReservoirEventTasks[SHELTER_B4_RESERVOIR_EVENT_TASK_COUNT] = {
-    [SHELTER_B4_RESERVOIR_TASK_WATER_EVENT]       = { { { TASK_BODY_NONE, SHELTER_B4_RESERVOIR_EVENT_TASK_PRIORITY } }, _shelterB4ReservoirWaterEventTask, { .value = 0 } },
-    [SHELTER_B4_RESERVOIR_TASK_MAIN_WATER_RAMP]   = { { { TASK_BODY_NONE, SHELTER_B4_RESERVOIR_EVENT_TASK_PRIORITY } }, _shelterB4ReservoirRampMainWaterHeightTask, { .value = 0 } },
-    [SHELTER_B4_RESERVOIR_TASK_VIEW10_WATER_RAMP] = { { { TASK_BODY_NONE, SHELTER_B4_RESERVOIR_EVENT_TASK_PRIORITY } }, _shelterB4ReservoirRampView10WaterHeightTask, { .value = 0 } },
-    [SHELTER_B4_RESERVOIR_TASK_EXIT]              = { { { TASK_BODY_NONE, SHELTER_B4_RESERVOIR_EVENT_TASK_PRIORITY } }, _shelterB4ReservoirExitTask, { .value = 0 } },
+    [SHELTER_B4_RESERVOIR_TASK_WATER_EVENT]       = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4ReservoirWaterEventTask, { .value = 0 } },
+    [SHELTER_B4_RESERVOIR_TASK_MAIN_WATER_RAMP]   = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4ReservoirRampMainWaterHeightTask, { .value = 0 } },
+    [SHELTER_B4_RESERVOIR_TASK_VIEW10_WATER_RAMP] = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4ReservoirRampView10WaterHeightTask, { .value = 0 } },
+    [SHELTER_B4_RESERVOIR_TASK_EXIT]              = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4ReservoirExitTask, { .value = 0 } },
 };
 
 /// Strands the reservoir's placed Bog Diver after normal or skipped water events.
@@ -314,7 +313,7 @@ static ActorCommand _gShelterB4ReservoirDiverStrandCommand = { { .loc = { GAME_S
 /// Creates a TMD body while deferring its draw buffer; no end record. The model
 /// task borrows the room geometry and stays live for later script state requests.
 static TaskDesc _gShelterB4ReservoirEventModelTasks[1] = {
-    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), SHELTER_B4_RESERVOIR_EVENT_TASK_PRIORITY } }, _shelterB4ReservoirView8ModelTask, { .model = &_gShelterB4ReservoirModel07220 } },
+    { { { (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), TASK_PRIORITY_SCENE } }, _shelterB4ReservoirView8ModelTask, { .model = &_gShelterB4ReservoirModel07220 } },
 };
 
 /// Retained handle of the most recently started main or view-10 water ramp.
@@ -353,7 +352,7 @@ enum {
 static EvsCommand _gShelterB4ReservoirWaterEventScript[48] = {
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_CAP_CONTROL }, { .value = 0 }, { .value = CAP_CONTROL_MESSAGE_START }, { .value = SHELTER_B4_RESERVOIR_WATER_EVENT_CAP_COMMAND }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = 0 }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callbackNoArg = _shelterB4ReservoirCancelEffects }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _screenWaveRun }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _shelterB4ReservoirSetEventModelState }, { .value = SHELTER_B4_RESERVOIR_EVENT_MODEL_RESET }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -389,7 +388,7 @@ static EvsCommand _gShelterB4ReservoirWaterEventScript[48] = {
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _shelterB4ReservoirWaterCommand }, { .value = SHELTER_B4_RESERVOIR_WATER_RESET_VIEW10 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = SHELTER_B4_RESERVOIR_WATER_EVENT_RETURN_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = 1 }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gShelterB4ReservoirDiverStrandCommand } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_COMPANION }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
@@ -416,7 +415,7 @@ static EvsCommand _gShelterB4ReservoirWaterEventSkipScript[18] = {
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _screenWaveRun }, { .value = SCREEN_WAVE_RAMP_FINISHED }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _shelterB4ReservoirWaterCommand }, { .value = SHELTER_B4_RESERVOIR_WATER_FINISH_MAIN_RAMP }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callback = _shelterB4ReservoirSetBurstChance }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = 1 }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gShelterB4ReservoirDiverStrandCommand } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callbackNoArg = _shelterB4ReservoirCancelEffects }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_COMPANION }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
@@ -465,7 +464,7 @@ static s16 _gShelterB4ReservoirView10WaterY = SHELTER_B4_RESERVOIR_VIEW10_WATER_
 /// Initialization supplies zero payloads; there is no terminator. The task
 /// publishes water Y and borrows the room's surfaces for its lifetime.
 static TaskDesc _gShelterB4ReservoirWaterTasks[1] = {
-    { { { TASK_BODY_NONE, SHELTER_B4_RESERVOIR_WATER_TASK_PRIORITY } }, _shelterB4ReservoirWaterTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, _shelterB4ReservoirWaterTask, { .value = 0 } },
 };
 
 /// Main water rectangle and its `WATER_SURFACE_LIST_END` terminator.
@@ -1444,7 +1443,6 @@ static void _shelterB4ReservoirWaterEventTask(Task* task)
         SHELTER_B4_RESERVOIR_CAP_RETAIN_ACTOR_CONTROL = 1,
         SHELTER_B4_RESERVOIR_CAP_CHOICE_ROW_STRIDE    = 5,
         SHELTER_B4_RESERVOIR_EVENT_PLACED_ACTOR       = 0,
-        SHELTER_B4_RESERVOIR_EVENT_ACTOR_HIDE         = 0,
         SHELTER_B4_RESERVOIR_EVENT_DONE               = 1,
         SHELTER_B4_RESERVOIR_EVENT_MAP_MARK           = 2,
         SHELTER_B4_RESERVOIR_CONTROL_ROOM_AFTER_EVENT = 1,
@@ -1478,7 +1476,7 @@ static void _shelterB4ReservoirWaterEventTask(Task* task)
                 gDirectionInteractionRearmUpdates = SHELTER_B4_RESERVOIR_INTERACTION_REARM_UPDATES;
                 break;
             }
-            sceneSetPlacedActorDrawMode(SHELTER_B4_RESERVOIR_EVENT_PLACED_ACTOR, SHELTER_B4_RESERVOIR_EVENT_ACTOR_HIDE);
+            sceneSetPlacedActorDrawMode(SHELTER_B4_RESERVOIR_EVENT_PLACED_ACTOR, ACTOR_MESSAGE_DRAW_HIDE);
             evsStartScriptWithSkip(_gShelterB4ReservoirWaterEventScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gShelterB4ReservoirWaterEventSkipScript);
             task->state++;
             break;
@@ -1595,7 +1593,7 @@ static void _shelterB4ReservoirExitTask(Task* task)
 
 /// Rejects key-item use in the reservoir by returning zero without consuming the item.
 ///
-/// Handles `SHELTER_B4_RESERVOIR_MESSAGE_USE_KEY_ITEM`; all four arguments are ignored.
+/// Handles `ROOM_MESSAGE_USE_KEY_ITEM`; all four arguments are ignored.
 static s32 _shelterB4ReservoirRejectKeyItemMessage(Task* task, s32 messageId, s32 itemId, s32 secondArg)
 {
     return 0;
@@ -1960,25 +1958,25 @@ static void _shelterB4ReservoirDrawWaterTask(Task* task)
 /// Head insertion links the mode last so the GPU selects subtractive blending
 /// before drawing RGB (128, 0, 0). Packets stay live until GPU consumption.
 /// Expands to a statement list: invoke inside braces after a valid projection.
-#define SHELTER_B4_RESERVOIR_EMIT_RED_WATER_QUAD()                                                                                                                                               \
-    waterQuad                           = (POLY_F4*)_gShelterB4ReservoirWaterPrimCursor;                                                                                                         \
-    _gShelterB4ReservoirWaterPrimCursor = (u8*)(waterQuad + 1);                                                                                                                                  \
-    setlen(waterQuad, sizeof(*waterQuad) / sizeof(u32) - 1);                                                                                                                                     \
-    setcode(waterQuad, SHELTER_B4_RESERVOIR_WATER_QUAD_CODE);                                                                                                                                    \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 0) = screenXY0;                                                                                                                                             \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 1) = screenXY1;                                                                                                                                             \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 2) = screenXY2;                                                                                                                                             \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 3) = screenXY3;                                                                                                                                             \
-    waterQuad->r0                       = SHELTER_B4_RESERVOIR_WATER_RED_INTENSITY;                                                                                                              \
-    waterQuad->g0                       = 0;                                                                                                                                                     \
-    waterQuad->b0                       = 0;                                                                                                                                                     \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS) << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), \
-            waterQuad);                                                                                                                                                                          \
-    drawMode                            = (DR_MODE*)_gShelterB4ReservoirWaterPrimCursor;                                                                                                         \
-    _gShelterB4ReservoirWaterPrimCursor = (u8*)(drawMode + 1);                                                                                                                                   \
-    setlen(drawMode, SHELTER_B4_RESERVOIR_WATER_DRAW_MODE_WORDS);                                                                                                                                \
-    drawMode->code[0] = SHELTER_B4_RESERVOIR_WATER_DRAW_MODE;                                                                                                                                    \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS) << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), \
+#define SHELTER_B4_RESERVOIR_EMIT_RED_WATER_QUAD()                                                    \
+    waterQuad                           = (POLY_F4*)_gShelterB4ReservoirWaterPrimCursor;              \
+    _gShelterB4ReservoirWaterPrimCursor = (u8*)(waterQuad + 1);                                       \
+    setlen(waterQuad, sizeof(*waterQuad) / sizeof(u32) - 1);                                          \
+    setcode(waterQuad, SHELTER_B4_RESERVOIR_WATER_QUAD_CODE);                                         \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 0) = screenXY0;                                                  \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 1) = screenXY1;                                                  \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 2) = screenXY2;                                                  \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 3) = screenXY3;                                                  \
+    waterQuad->r0                       = SHELTER_B4_RESERVOIR_WATER_RED_INTENSITY;                   \
+    waterQuad->g0                       = 0;                                                          \
+    waterQuad->b0                       = 0;                                                          \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS), \
+            waterQuad);                                                                               \
+    drawMode                            = (DR_MODE*)_gShelterB4ReservoirWaterPrimCursor;              \
+    _gShelterB4ReservoirWaterPrimCursor = (u8*)(drawMode + 1);                                        \
+    setlen(drawMode, SHELTER_B4_RESERVOIR_WATER_DRAW_MODE_WORDS);                                     \
+    drawMode->code[0] = SHELTER_B4_RESERVOIR_WATER_DRAW_MODE;                                         \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS), \
             drawMode);
 
 /// Draws the changing main water rectangle as 32 flat quads along Z.
@@ -2194,25 +2192,25 @@ static void _shelterB4ReservoirDrawView10WaterStrips(Task* task)
     /// RGB is (0, blueIntensity / 4, blueIntensity). Head insertion makes the
     /// mode execute before the quad; the packed XY casts are intentional word
     /// views of adjacent signed pixel halfwords. Packets outlive this call.
-#define SHELTER_B4_RESERVOIR_EMIT_VIEW10_WATER_STRIPS_QUAD()                                                                                                                                     \
-    waterQuad                           = (POLY_F4*)_gShelterB4ReservoirWaterPrimCursor;                                                                                                         \
-    _gShelterB4ReservoirWaterPrimCursor = (u8*)(waterQuad + 1);                                                                                                                                  \
-    setlen(waterQuad, sizeof(*waterQuad) / sizeof(u32) - 1);                                                                                                                                     \
-    setcode(waterQuad, SHELTER_B4_RESERVOIR_WATER_QUAD_CODE);                                                                                                                                    \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 0) = screenXY0;                                                                                                                                             \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 1) = screenXY1;                                                                                                                                             \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 2) = screenXY2;                                                                                                                                             \
-    GPU_PRIMITIVE_XY_WORD(waterQuad, 3) = screenXY3;                                                                                                                                             \
-    waterQuad->r0                       = 0;                                                                                                                                                     \
-    waterQuad->g0                       = blueIntensity >> 2;                                                                                                                                    \
-    waterQuad->b0                       = blueIntensity;                                                                                                                                         \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS) << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), \
-            waterQuad);                                                                                                                                                                          \
-    drawMode                            = (DR_MODE*)_gShelterB4ReservoirWaterPrimCursor;                                                                                                         \
-    _gShelterB4ReservoirWaterPrimCursor = (u8*)(drawMode + 1);                                                                                                                                   \
-    setlen(drawMode, SHELTER_B4_RESERVOIR_WATER_DRAW_MODE_WORDS);                                                                                                                                \
-    drawMode->code[0] = SHELTER_B4_RESERVOIR_WATER_DRAW_MODE;                                                                                                                                    \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS) << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), \
+#define SHELTER_B4_RESERVOIR_EMIT_VIEW10_WATER_STRIPS_QUAD()                                          \
+    waterQuad                           = (POLY_F4*)_gShelterB4ReservoirWaterPrimCursor;              \
+    _gShelterB4ReservoirWaterPrimCursor = (u8*)(waterQuad + 1);                                       \
+    setlen(waterQuad, sizeof(*waterQuad) / sizeof(u32) - 1);                                          \
+    setcode(waterQuad, SHELTER_B4_RESERVOIR_WATER_QUAD_CODE);                                         \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 0) = screenXY0;                                                  \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 1) = screenXY1;                                                  \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 2) = screenXY2;                                                  \
+    GPU_PRIMITIVE_XY_WORD(waterQuad, 3) = screenXY3;                                                  \
+    waterQuad->r0                       = 0;                                                          \
+    waterQuad->g0                       = blueIntensity >> 2;                                         \
+    waterQuad->b0                       = blueIntensity;                                              \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS), \
+            waterQuad);                                                                               \
+    drawMode                            = (DR_MODE*)_gShelterB4ReservoirWaterPrimCursor;              \
+    _gShelterB4ReservoirWaterPrimCursor = (u8*)(drawMode + 1);                                        \
+    setlen(drawMode, SHELTER_B4_RESERVOIR_WATER_DRAW_MODE_WORDS);                                     \
+    drawMode->code[0] = SHELTER_B4_RESERVOIR_WATER_DRAW_MODE;                                         \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(orderingDepth + SHELTER_B4_RESERVOIR_WATER_DEPTH_BIAS), \
             drawMode);
 
     SVECTOR                 corner0, corner1, corner2, corner3;
@@ -2530,7 +2528,7 @@ static inline void _shelterB4ReservoirInitializeBurstVelocity(EffectWork* sprite
 
     spriteWork->move.vy = 0;
     spriteWork->move.vz = 0;
-    randomSample        = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    randomSample        = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState     = randomSample;
     spriteWork->move.vx = -((randomSample >> 16) & SHELTER_B4_RESERVOIR_BURST_DIRECTION_VARIATION_MASK) -
                           SHELTER_B4_RESERVOIR_BURST_DIRECTION_MAGNITUDE_MIN;
@@ -2690,7 +2688,7 @@ static void _shelterB4ReservoirDrawBurstSprite(const GfxCoord* spriteCoord, u16 
         projection->screenExtent = (halfExtent * (SHELTER_B4_RESERVOIR_BURST_SPRITE_CELL_TEXELS - 1)) / projection->depth;
         _shelterB4ReservoirSetBurstSpriteBounds(quad, projection);
         displayState = &gDisplayState;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->depth << displayState->otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH_SCALED(projection->depth, displayState->otDepthShift),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectCentreScratch);

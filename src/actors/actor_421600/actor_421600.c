@@ -203,8 +203,8 @@ static AnimationSet _gStingerPuppetPlayerKnockbackFrontClip;
 static AnimationSet _gStingerPuppetPlayerKnockbackBackClip;
 static AnimationSet _gStingerPuppetPlayerKnockbackRecoverFrontClip;
 static AnimationSet _gStingerPuppetPlayerKnockbackRecoverBackClip;
-static AnimationSet _gChaserDesertPlayerKnockedBackFrontClip;
-static AnimationSet _gChaserDesertPlayerKnockedBackRearClip;
+static AnimationSet _gAyaHitHeadClip;
+static AnimationSet _gAyaHitBodyClip;
 static TmdSource    _gChaserDesertBody;
 static s32          _actor421600ApplyCommand(Task* task, s32 messageId, const ActorCommand* request, s32 unusedExtra);
 static s32          _actor421600IsPresent(Task* task, s32 messageId, s32 unusedArg, s32 unusedExtra);
@@ -2322,7 +2322,7 @@ static void _actor421600DownedWaitState(Task* task)
 
     work = task->work;
     if (work->stateEntered != 0) {
-        randomState      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomState      = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState  = randomState;
         work->stateTimer = work->downFramesBase + ((randomState >> 0x10) & 0xF);
     }

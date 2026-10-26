@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_05700.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -79,10 +79,10 @@ static AnimationSet _gGolemBurstCancelClip;
 static AnimationSet _gGolemRookGrenadeLauncherReloadClip;
 static AnimationSet _gGolemLauncherStrikeClip;
 extern AnimationSet gGolemStaggerClip;
-static AnimationSet _gGolemRecoilFrontClip;
-static AnimationSet _gGolemRecoilBehindClip;
-static AnimationSet _gGolemBuildupClip;
-static AnimationSet _gGolemScreamRecoverClip;
+extern AnimationSet gGolemRecoilFrontClip;
+extern AnimationSet gGolemRecoilBehindClip;
+extern AnimationSet gGolemBuildupClip;
+extern AnimationSet gGolemScreamRecoverClip;
 static AnimationSet _gGolemFallBehindClip;
 static AnimationSet _gGolemDownedHitBehindClip;
 static AnimationSet _gGolemWritheBehindClip;
@@ -156,11 +156,11 @@ static s16 _gGolemPawnRookAnimBlendFrames[32] = {
 /// 3 is the grenade and 4 is the launcher strike. Unused weapon rows remain
 /// present so every carrier uses the same attack indices.
 static DamageAttack _gGolemPawnRookAttacks[5] = {
-    { 30, 5 },
-    { 20, 5 },
+    { 30, GAME_ACTOR_REACTION_HIT_FLASHES },
+    { 20, GAME_ACTOR_REACTION_HIT_FLASHES },
     { 0, GAME_ACTOR_REACTION_SILENCE },
     { 20, GAME_ACTOR_REACTION_PARALYSIS },
-    { 30, 7 },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
 };
 
 /// Rook GOLEM launcher combat, reaction and release-reward parameters.
@@ -605,13 +605,11 @@ static s16 _gGolemPawnRookBeamRibbonCorners[2][4] = {
     { 0, 1, 4, 5 },
 };
 
-enum { ACTOR_05700_TASK_PRIORITY = 96 };
-
 TaskDesc gActor05700RookGolemTasks[4] = {
-    { { { TASK_BODY_TMD, ACTOR_05700_TASK_PRIORITY } }, _actor05700RookGolemTask, { .model = &_gGolemRookBody } },
-    { { { TASK_BODY_TMD, ACTOR_05700_TASK_PRIORITY } }, _actor05700GrenadeLauncherTask, { .model = &_gGolemGrenadeLauncher } },
-    { { { TASK_BODY_TMD, ACTOR_05700_TASK_PRIORITY } }, _actor05700GrenadeTask, { .model = &gGolemGrenade } },
-    { { { TASK_BODY_TMD, ACTOR_05700_TASK_PRIORITY } }, _actor05700ShieldTask, { .model = &_gGolemRookShield } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor05700RookGolemTask, { .model = &_gGolemRookBody } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor05700GrenadeLauncherTask, { .model = &_gGolemGrenadeLauncher } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor05700GrenadeTask, { .model = &gGolemGrenade } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor05700ShieldTask, { .model = &_gGolemRookShield } },
 };
 
 /// Launcher GOLEM body clip bank indexed by animation selectors 0..30.

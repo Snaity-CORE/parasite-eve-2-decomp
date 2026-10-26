@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_213000.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -102,36 +102,34 @@ static AnimationSet** _gActor213000EricBaldwinAnimationBanks[1] = {
     _gActor213000EricBaldwinAnimationSets,
 };
 
-enum { ACTOR_213000_ERIC_TASK_PRIORITY = 192 };
-
 TaskDesc gActor213000EricBaldwinTaskDescriptors[5] = {
     // 0: body.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_213000_ERIC_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor213000BodyTask,
         .data     = { .model = &_gEricBody },
     },
     // 1: first held model.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_213000_ERIC_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor213000HeldModelTask,
         .data     = { .model = &_gMistR18BriefingFile },
     },
     // 2: second held model.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_213000_ERIC_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor213000HeldModelTask,
         .data     = { .model = &_gMistR18Laptop },
     },
     // 3: three-root attachment.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_213000_ERIC_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor213000ThreeRootModelTask,
         .data     = { .model = &_gEricArmRight },
     },
     // 4: right hand.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_213000_ERIC_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor213000RightHandTask,
         .data     = { .model = &_gEricHandRight },
     },
@@ -530,8 +528,7 @@ static s32 _actor213000PlayAnimation(Task* actorTask, s32 messageId, const Anima
 static s32 _actor213000SetModelDraw(Task* actorTask, s32 messageId, s32 mode, s32 unusedSecondArg)
 {
     enum {
-        ACTOR_213000_DRAW_SHOW_SKIP_AUTO_BUFFER = 3,
-        ACTOR_213000_BUFFER_FREE_DELAY_TICKS    = 2,
+        ACTOR_213000_BUFFER_FREE_DELAY_TICKS = 2,
     };
 
     TmdObject*                   model;
@@ -557,7 +554,7 @@ static s32 _actor213000SetModelDraw(Task* actorTask, s32 messageId, s32 mode, s3
             work->freeCountdown = ACTOR_213000_BUFFER_FREE_DELAY_TICKS;
             model->flags       |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_213000_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             model->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             model->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

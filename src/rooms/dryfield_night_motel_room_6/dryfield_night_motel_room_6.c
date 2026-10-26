@@ -60,8 +60,6 @@
 #include "main/wipsys.h"
 #include "main/wipsys_types.h"
 
-#include "rooms/akropolis_square.h"
-
 #include "rooms/room.h"
 
 #include "rooms/room_common.h"
@@ -124,23 +122,13 @@ static s32                   _dryfieldNightMotelRoom6IgnoreActionMessage(Task* r
 static s32                   _dryfieldNightMotelRoom6SoundMessage(Task* unusedTask, s32 unusedMessageId, s32 cueKey, s32 unusedSecondArg);
 static void                  _dryfieldNightMotelRoom6RestTask(Task* task);
 
-/// Key-item use request sent to the room task by the inventory menu.
-enum { DRYFIELD_NIGHT_MOTEL_ROOM_6_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 #include "../../shared/room/telephone_data.inc.c"
 
 #include "../../shared/room/planar_reflection_data.inc.c"
 
-/// Execution priorities for this room's reflection and rest recipes.
-enum {
-    DRYFIELD_NIGHT_MOTEL_ROOM_6_REFLECTION_PRIORITY     = 112,
-    DRYFIELD_NIGHT_MOTEL_ROOM_6_REST_PRIORITY           = 32,
-    DRYFIELD_NIGHT_MOTEL_ROOM_6_ALTERNATE_REST_PRIORITY = 192,
-};
-
 TaskDesc gDryfieldNightMotelRoom6ReflectionTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_NIGHT_MOTEL_ROOM_6_REFLECTION_PRIORITY } }, dryfieldNightMotelRoom6PlayerReflectionTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_NIGHT_MOTEL_ROOM_6_REFLECTION_PRIORITY } }, _planarReflectionAttachmentTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, dryfieldNightMotelRoom6PlayerReflectionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_EFFECT } }, _planarReflectionAttachmentTask, { .value = 0 } },
 };
 
 /// Borrows this overlay's two reflection task descriptors.
@@ -160,8 +148,8 @@ static inline TaskDesc* _planarReflectionGetTaskTable(void)
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -172,7 +160,7 @@ static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
 /// makes unsupported messages return zero; callback payload types follow each ID.
 static const TaskMessageEntry _gDryfieldNightMotelRoom6RoomMessages[6] SECTION(".data") = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _roomVariantMotelBalconyMsg },
-    { DRYFIELD_NIGHT_MOTEL_ROOM_6_MESSAGE_USE_KEY_ITEM, _dryfieldNightMotelRoom6RejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldNightMotelRoom6RejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldNightMotelRoom6IgnoreActionMessage },
     { ROOM_MESSAGE_COMMAND, _motelRoom6CutsceneMessage },
     { ROOM_MESSAGE_SOUND, _dryfieldNightMotelRoom6SoundMessage },
@@ -184,7 +172,7 @@ static const TaskMessageEntry _gDryfieldNightMotelRoom6RoomMessages[6] SECTION("
 /// Command 6 spawns this single entry at slot zero. Spawn payloads are ignored;
 /// keep the room callback loaded until the rest task completes.
 static TaskDesc _gDryfieldNightMotelRoom6RestTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, DRYFIELD_NIGHT_MOTEL_ROOM_6_REST_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = _dryfieldNightMotelRoom6RestTask,
     .data     = { .value = 0 },
 };
@@ -194,7 +182,7 @@ static TaskDesc _gDryfieldNightMotelRoom6RestTaskDesc = {
 /// No current caller selects this retained descriptor; its intended dispatch
 /// path is unproven. Payloads would be ignored by the callback.
 static TaskDesc _gDryfieldNightMotelRoom6RestPriority192TaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, DRYFIELD_NIGHT_MOTEL_ROOM_6_ALTERNATE_REST_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } },
     .callback = _dryfieldNightMotelRoom6RestTask,
     .data     = { .value = 0 },
 };
@@ -1360,9 +1348,7 @@ static s32 _dryfieldNightMotelRoom6HandleCommand(Task* unusedTask, s32 unusedMes
 /// returns 0 so the inventory menu reports that the item cannot be used here.
 static s32 _dryfieldNightMotelRoom6RejectKeyItemMessage(Task* receiver, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_NIGHT_MOTEL_ROOM_6_KEY_ITEM_RESULT_REFUSED = 0 };
-
-    return DRYFIELD_NIGHT_MOTEL_ROOM_6_KEY_ITEM_RESULT_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 #include "../../shared/room/room_variants_motel_balcony.inc.c"

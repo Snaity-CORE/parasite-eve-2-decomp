@@ -26,6 +26,7 @@
 
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/fs.h"
 #include "main/gameflag.h"
 #include "main/gamemain.h"
@@ -47,8 +48,6 @@
 #include "main/wipsys_types.h"
 
 #include "mapui/map_dryfield_full.h"
-
-#include "rooms/akropolis_square.h"
 
 #include "rooms/room.h"
 
@@ -125,37 +124,8 @@ TaskDesc gDryfieldNightTrailerCoachShopSessionTaskDesc = {
     .data     = { .value = 0 },
 };
 
-static TmdBone _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Skeleton[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_skeleton.inc"
-};
-
-static u32 _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0PartVerts[3] = {
-#include "assets/acropolis_sanctuary_model_090F0_partVerts.inc"
-};
-
-static SVECTOR _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Verts[56] = {
-#include "assets/acropolis_sanctuary_model_090F0_verts.inc"
-};
-
-static SVECTOR _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Normals[6] = {
-#include "assets/acropolis_sanctuary_model_090F0_normals.inc"
-};
-
-static u32 _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Stream[215] = {
-#include "assets/acropolis_sanctuary_model_090F0_stream.inc"
-};
-
-TmdSource gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0 = {
-    0,
-    1768,
-    0,
-    3,
-    _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0PartVerts,
-    _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Verts,
-    _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Normals,
-    _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Skeleton,
-    _gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0Stream,
-};
+#include "assets/rooms/item_box/model.inc"
+DEFINE_ALIAS(_gItemBoxModel, gDryfieldNightTrailerCoachItemBoxModel);
 
 #include "../../shared/room/telephone_data.inc.c"
 
@@ -166,8 +136,8 @@ TmdSource gDryfieldNightTrailerCoachAcropolisSanctuaryModel090F0 = {
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -427,14 +397,12 @@ static const TaskMessageEntry _gDryfieldNightTrailerCoachRoomMessages[] SECTION(
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { DRYFIELD_NIGHT_TRAILER_COACH_TALK_TASK_PRIORITY = 32 };
-
 /// Bodyless priority-32 recipe for the room-command conversation task.
 ///
 /// Spawning copies the recipe; the room's callback code must remain loaded
 /// until the task completes. Spawn payload words are unused.
 static TaskDesc _gDryfieldNightTrailerCoachTalkTaskDescriptor = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = DRYFIELD_NIGHT_TRAILER_COACH_TALK_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_SCENE } },
     .callback = _dryfieldNightTrailerCoachTalkTask,
     .data     = { .value = 0 },
 };
@@ -1109,8 +1077,8 @@ static void _dryfieldNightTrailerCoachInitRoomTask(Task* task)
         evsStartScriptWithSkip(gDryfieldNightTrailerCoachWarp3ArrivalScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gDryfieldNightTrailerCoachWarp3ArrivalSkipScript);
         areaSetCurrentObjectState(DRYFIELD_NIGHT_TRAILER_COACH_ARRIVAL_OBJECT, 1);
     }
-    if (gameFlagGetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE) == DRYFIELD_NIGHT_TRAILER_COACH_OBJECTIVE_BEFORE_ENTRY) {
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_TRAILER_COACH_OBJECTIVE_AFTER_ENTRY);
+    if (gameFlagGetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE) == DRYFIELD_NIGHT_TRAILER_COACH_OBJECTIVE_BEFORE_ENTRY) {
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_TRAILER_COACH_OBJECTIVE_AFTER_ENTRY);
     }
     gDisplayState.otDepthShift = DISPLAY_DEPTH_SHIFT_8X;
     // The indirect state store keeps the initial depth-scale write ordered.
@@ -1149,7 +1117,7 @@ static void _dryfieldNightTrailerCoachTalkTask(Task* task)
                 task->state++;
                 break;
             }
-            if (gameFlagGetNibble(GAME_FLAG_NIGHT_TRAILER_COACH_CHAPTER4_SCENE_SEEN) == 0 && gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) >= DRYFIELD_NIGHT_TRAILER_COACH_LATE_CHAPTER) {
+            if (gameFlagGetNibble(GAME_FLAG_NIGHT_TRAILER_COACH_CHAPTER4_SCENE_SEEN) == 0 && gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) >= DRYFIELD_NIGHT_TRAILER_COACH_LATE_CHAPTER) {
                 gameFlagSetNibble(GAME_FLAG_NIGHT_TRAILER_COACH_CHAPTER4_SCENE_SEEN, 1);
                 evsStartScript(_gDryfieldNightTrailerCoachChapter4ShopGreetingScript, EVENT_SCRIPT_HUD_HIDE_RESTORE);
             } else {
@@ -1170,7 +1138,7 @@ static void _dryfieldNightTrailerCoachTalkTask(Task* task)
                     areaApplySavedUpdates(gDryfieldNightTrailerCoachStoryAreaUpdates);
                     evsStartScriptWithSkip(gDryfieldNightTrailerCoachStoryScript, EVENT_SCRIPT_HUD_KEEP,
                                            gDryfieldNightTrailerCoachStorySkipScript);
-                    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_TRAILER_COACH_STORY_OBJECTIVE);
+                    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_TRAILER_COACH_STORY_OBJECTIVE);
                     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = DRYFIELD_NIGHT_TRAILER_COACH_STORY_SOUND_EVENT;
                 } else {
                     evsStartScript(gDryfieldNightTrailerCoachStoryRepeatScript, EVENT_SCRIPT_HUD_KEEP);
@@ -1245,7 +1213,7 @@ static inline void _dryfieldNightTrailerCoachQueueCutscene(void)
     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.warp = DRYFIELD_NIGHT_TRAILER_COACH_CUTSCENE_WARP;
     gDryfieldNightTrailerCoachCutscene.view                = DRYFIELD_NIGHT_TRAILER_COACH_CUTSCENE_VIEW;
     gDryfieldNightTrailerCoachCutscene.capSlot             = DRYFIELD_NIGHT_TRAILER_COACH_CUTSCENE_CAP_SLOT;
-    if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) < DRYFIELD_NIGHT_TRAILER_COACH_LATE_CHAPTER) {
+    if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) < DRYFIELD_NIGHT_TRAILER_COACH_LATE_CHAPTER) {
         gDryfieldNightTrailerCoachCutscene.capTPageX = DRYFIELD_NIGHT_TRAILER_COACH_CUTSCENE_TPAGE_X_EARLY;
         gDryfieldNightTrailerCoachCutscene.capFile   = DRYFIELD_NIGHT_TRAILER_COACH_CUTSCENE_CAP_FILE_EARLY;
     } else {

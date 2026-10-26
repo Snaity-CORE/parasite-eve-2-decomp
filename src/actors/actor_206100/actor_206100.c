@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_206100.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -439,14 +439,12 @@ static AreaPlacement _gActor206100BogDiverPlacements[6] = {
     { .entryId = AREA_PLACEMENT_END },
 };
 
-enum { ACTOR_206100_SHOT_PLAYER_REACTION = 5 };
-
 /// Sea Diver shot's unscaled damage and player hit-presentation selector.
 ///
 /// Entry zero packs 26 damage and reaction 5 (no status effect) into each
 /// shot's contact key. The enemy parameter record borrows this single row
 /// for the actor package's lifetime; collision keys copy its values.
-static DamageAttack _gActor206100SeaDiverShotAttack = { 26, ACTOR_206100_SHOT_PLAYER_REACTION };
+static DamageAttack _gActor206100SeaDiverShotAttack = { 26, GAME_ACTOR_REACTION_HIT_FLASHES };
 
 /// Sea Diver health, rewards and hit-reaction tuning, with its single shot attack.
 ///
@@ -467,14 +465,12 @@ static EnemyParams _gActor206100SeaDiverParams = {
 
 #include "assets/enemies/diver/sea/clips.inc"
 
-enum { ACTOR_206100_ENTRANCE_WAVE_TASK_PRIORITY = 192 };
-
 /// Screen distortion task used during the Sea Diver's entrance relocation.
 ///
 /// Descriptor 0 has no body and borrows the entrance wave context until the
 /// task ends; descriptor 1 terminates the recipe table. Priority is 192.
 static TaskDesc _gActor206100EntranceWaveTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, ACTOR_206100_ENTRANCE_WAVE_TASK_PRIORITY } }, _screenWaveTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -484,18 +480,16 @@ static TaskDesc _gActor206100EntranceWaveTaskDescriptors[2] = {
 /// the initial 256 to zero; the context must have a positive span while drawing.
 static s32 _gScreenWaveAmplitude = 256;
 
-enum { ACTOR_206100_SEA_DIVER_TASK_PRIORITY = 96 };
-
 TaskDesc gActor206100SeaDiverTaskDescriptors[2] = {
     // 0: body.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_206100_SEA_DIVER_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_ACTOR } },
         .callback = _actor206100Task,
         .data     = { .model = &_gDiverBody },
     },
     // 1: shot.
     {
-        .header   = { .fields = { .flags = TASK_BODY_COORD, .priority = ACTOR_206100_SEA_DIVER_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_COORD, .priority = TASK_PRIORITY_ACTOR } },
         .callback = _actor206100ShotTask,
         .data     = { .value = 0 },
     },
@@ -2035,7 +2029,7 @@ static void _actor206100SurfaceSplashTick(Task* task)
     }
     // One draw in four restarts the dive; the rest advance to surface completion.
     if (work->stateFrames >= ACTOR_206100_SURFACE_DECISION_TICK) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
         if (((gRandomLcgState >> 0x10) & ACTOR_206100_SURFACE_REDIVE_DRAW_MASK) == 0) {
             _diverSetState(task, ACTOR_206100_FIGHT_STATE_DIVE);
             return;

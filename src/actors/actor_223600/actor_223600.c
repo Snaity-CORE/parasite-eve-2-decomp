@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_223600.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -189,13 +189,11 @@ static TmdSource _gSucklerBloodBody;
 
 #include "../../shared/actor/actor_contacts.h"
 
-enum { ACTOR_223600_ATTACK_REACTION_SPARK_AND_PUFFS = 7 };
-
 /// Blood Suckler attack row 0: base damage 24 with the spark-and-puff hit reaction.
 ///
 /// The kind parameters borrow this single row for packed contact keys; it applies no status.
 static DamageAttack _gActor223600Attacks[1] = {
-    { 24, ACTOR_223600_ATTACK_REACTION_SPARK_AND_PUFFS },
+    { 24, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
 };
 
 /// Shared combat parameters of this staged Blood Suckler kind.
@@ -531,10 +529,8 @@ static const TaskMessageEntry _gActor223600Messages[4] __attribute__((section(".
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { ACTOR_223600_BLOOD_SUCKLER_TASK_PRIORITY = 96 };
-
 TaskDesc gActor223600BloodSucklerTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_223600_BLOOD_SUCKLER_TASK_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_ACTOR } },
     .callback = _actor223600Task,
     .data     = { .model = &_gSucklerBloodBody },
 };

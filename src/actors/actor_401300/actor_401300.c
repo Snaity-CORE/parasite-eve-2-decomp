@@ -9,7 +9,7 @@
 
 #include "actors/actor.h"
 #include "actors/hit_effect.h"
-#include "actors/task_tables.h"
+#include "actors/actor_401300.h"
 
 #include "gameplay/actor.h"
 #include "gameplay/actor_render.h"
@@ -325,9 +325,9 @@ static TmdSource _gStrangerHornedBurstArm;
 static TmdSource _gStrangerHornedBurstHead;
 static TmdSource _gStrangerHornedBurstFragment;
 
-/// Overlay-data word `_actor401300StateDormantScripted` points
-/// `_gActor401300AnimationSets[16]` at on entering its state.
-extern AnimationSet gActor401300Animation20D98;
+/// The odd Stranger's scripted dormant clip, which `_actor401300StateDormantScripted`
+/// binds to slot 16 (dormant_scripted) on entering its state.
+static AnimationSet _gStrangerOddScriptedDormantClip;
 
 static void _actor401300ReleaseResources(Task* task);
 static void _actor401300StateHidden(Task* task);
@@ -355,28 +355,25 @@ static inline SVECTOR* _actorContactGetLastPushStep(void)
     return &ActorContact_ScratchPosition;
 }
 
-static AnimationSet _gActor401300Animation24A48;
-static AnimationSet _gActor401300Animation251E4;
-static AnimationSet _gActor401300Animation259F0;
-static AnimationSet _gActor401300Animation26204;
+static AnimationSet _gStingerPuppetPlayerKnockbackFrontClip;
+static AnimationSet _gStingerPuppetPlayerKnockbackBackClip;
+static AnimationSet _gStingerPuppetPlayerKnockbackRecoverFrontClip;
+static AnimationSet _gStingerPuppetPlayerKnockbackRecoverBackClip;
 static TmdSource    _gStrangerHornedBody;
 static s32          _actor401300ApplyCommand(Task* task, s32 msgId, const ActorCommand* command, s32 unusedArg);
 static s32          _actor401300PlayMessageAnimation(Task* task, s32 msgId, const AnimationPlayRequest* request, s32 unusedArg);
 static s32          _actor401300IgnoreMessage2015(Task* task, s32 msgId, s32 unusedFirstArg, s32 unusedArg);
 static void         _actor401300Task(Task* task);
 
-/// Player hit presentation selected by this actor's grab, strikes and leap.
-enum { ACTOR_401300_ATTACK_REACTION_SPARK_AND_PUFFS = 7 };
-
 /// Enemy attack rows used by grab/strike A (0), strike B (1), leap (2/3) and charge (4/5).
 ///
 /// Leap/charge choose back then front rows. Power is packed in the low twelve
 /// contact-key bits; reaction 7 produces spark/puff bursts, reaction 0 an ordinary hit.
 static DamageAttack _gActor401300Attacks[6] = {
-    { 30, ACTOR_401300_ATTACK_REACTION_SPARK_AND_PUFFS },
-    { 30, ACTOR_401300_ATTACK_REACTION_SPARK_AND_PUFFS },
-    { 50, ACTOR_401300_ATTACK_REACTION_SPARK_AND_PUFFS },
-    { 50, ACTOR_401300_ATTACK_REACTION_SPARK_AND_PUFFS },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 40, GAME_ACTOR_REACTION_ORDINARY },
     { 40, GAME_ACTOR_REACTION_ORDINARY },
 };
@@ -416,665 +413,7 @@ static ActorHornedStrangerVariant _gActor401300Variants[3] = {
 
 #include "assets/enemies/stranger/horned/burst_fragment.inc"
 
-static AnimationPackedPose _gActor401300Animation17714Bank1[28] = {
-#include "assets/actor_401300_animation_17714_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation17714Bank4[247] = {
-#include "assets/actor_401300_animation_17714_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation17714Records[362] = {
-#include "assets/actor_401300_animation_17714_records.inc"
-};
-
-static u16 _gActor401300Animation17714Indices[20] = {
-#include "assets/actor_401300_animation_17714_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation17714 = {
-    _gActor401300Animation17714Records,
-    _gActor401300Animation17714Indices,
-    { NULL, _gActor401300Animation17714Bank1, NULL, NULL, _gActor401300Animation17714Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation186D8Bank1[29] = {
-#include "assets/actor_401300_animation_186D8_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation186D8Bank4[374] = {
-#include "assets/actor_401300_animation_186D8_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation186D8Records[528] = {
-#include "assets/actor_401300_animation_186D8_records.inc"
-};
-
-static u16 _gActor401300Animation186D8Indices[20] = {
-#include "assets/actor_401300_animation_186D8_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation186D8 = {
-    _gActor401300Animation186D8Records,
-    _gActor401300Animation186D8Indices,
-    { NULL, _gActor401300Animation186D8Bank1, NULL, NULL, _gActor401300Animation186D8Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation19700Bank1[27] = {
-#include "assets/actor_401300_animation_19700_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation19700Bank4[406] = {
-#include "assets/actor_401300_animation_19700_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation19700Records[527] = {
-#include "assets/actor_401300_animation_19700_records.inc"
-};
-
-static u16 _gActor401300Animation19700Indices[20] = {
-#include "assets/actor_401300_animation_19700_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation19700 = {
-    _gActor401300Animation19700Records,
-    _gActor401300Animation19700Indices,
-    { NULL, _gActor401300Animation19700Bank1, NULL, NULL, _gActor401300Animation19700Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1A170Bank1[24] = {
-#include "assets/actor_401300_animation_1A170_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1A170Bank4[248] = {
-#include "assets/actor_401300_animation_1A170_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1A170Records[328] = {
-#include "assets/actor_401300_animation_1A170_records.inc"
-};
-
-static u16 _gActor401300Animation1A170Indices[20] = {
-#include "assets/actor_401300_animation_1A170_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1A170 = {
-    _gActor401300Animation1A170Records,
-    _gActor401300Animation1A170Indices,
-    { NULL, _gActor401300Animation1A170Bank1, NULL, NULL, _gActor401300Animation1A170Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1A750Bank1[10] = {
-#include "assets/actor_401300_animation_1A750_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1A750Bank4[138] = {
-#include "assets/actor_401300_animation_1A750_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1A750Records[188] = {
-#include "assets/actor_401300_animation_1A750_records.inc"
-};
-
-static u16 _gActor401300Animation1A750Indices[20] = {
-#include "assets/actor_401300_animation_1A750_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1A750 = {
-    _gActor401300Animation1A750Records,
-    _gActor401300Animation1A750Indices,
-    { NULL, _gActor401300Animation1A750Bank1, NULL, NULL, _gActor401300Animation1A750Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1AD34Bank1[8] = {
-#include "assets/actor_401300_animation_1AD34_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1AD34Bank4[151] = {
-#include "assets/actor_401300_animation_1AD34_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1AD34Records[182] = {
-#include "assets/actor_401300_animation_1AD34_records.inc"
-};
-
-static u16 _gActor401300Animation1AD34Indices[20] = {
-#include "assets/actor_401300_animation_1AD34_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1AD34 = {
-    _gActor401300Animation1AD34Records,
-    _gActor401300Animation1AD34Indices,
-    { NULL, _gActor401300Animation1AD34Bank1, NULL, NULL, _gActor401300Animation1AD34Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1B788Bank1[20] = {
-#include "assets/actor_401300_animation_1B788_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1B788Bank4[228] = {
-#include "assets/actor_401300_animation_1B788_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1B788Records[353] = {
-#include "assets/actor_401300_animation_1B788_records.inc"
-};
-
-static u16 _gActor401300Animation1B788Indices[20] = {
-#include "assets/actor_401300_animation_1B788_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1B788 = {
-    _gActor401300Animation1B788Records,
-    _gActor401300Animation1B788Indices,
-    { NULL, _gActor401300Animation1B788Bank1, NULL, NULL, _gActor401300Animation1B788Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1C4CCBank1[23] = {
-#include "assets/actor_401300_animation_1C4CC_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1C4CCBank4[334] = {
-#include "assets/actor_401300_animation_1C4CC_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1C4CCRecords[426] = {
-#include "assets/actor_401300_animation_1C4CC_records.inc"
-};
-
-static u16 _gActor401300Animation1C4CCIndices[20] = {
-#include "assets/actor_401300_animation_1C4CC_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1C4CC = {
-    _gActor401300Animation1C4CCRecords,
-    _gActor401300Animation1C4CCIndices,
-    { NULL, _gActor401300Animation1C4CCBank1, NULL, NULL, _gActor401300Animation1C4CCBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1CD3CBank1[14] = {
-#include "assets/actor_401300_animation_1CD3C_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1CD3CBank4[216] = {
-#include "assets/actor_401300_animation_1CD3C_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1CD3CRecords[262] = {
-#include "assets/actor_401300_animation_1CD3C_records.inc"
-};
-
-static u16 _gActor401300Animation1CD3CIndices[20] = {
-#include "assets/actor_401300_animation_1CD3C_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1CD3C = {
-    _gActor401300Animation1CD3CRecords,
-    _gActor401300Animation1CD3CIndices,
-    { NULL, _gActor401300Animation1CD3CBank1, NULL, NULL, _gActor401300Animation1CD3CBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1D0CCBank1[5] = {
-#include "assets/actor_401300_animation_1D0CC_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1D0CCBank4[82] = {
-#include "assets/actor_401300_animation_1D0CC_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1D0CCRecords[111] = {
-#include "assets/actor_401300_animation_1D0CC_records.inc"
-};
-
-static u16 _gActor401300Animation1D0CCIndices[20] = {
-#include "assets/actor_401300_animation_1D0CC_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1D0CC = {
-    _gActor401300Animation1D0CCRecords,
-    _gActor401300Animation1D0CCIndices,
-    { NULL, _gActor401300Animation1D0CCBank1, NULL, NULL, _gActor401300Animation1D0CCBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1D904Bank1[16] = {
-#include "assets/actor_401300_animation_1D904_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1D904Bank4[199] = {
-#include "assets/actor_401300_animation_1D904_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1D904Records[259] = {
-#include "assets/actor_401300_animation_1D904_records.inc"
-};
-
-static u16 _gActor401300Animation1D904Indices[20] = {
-#include "assets/actor_401300_animation_1D904_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1D904 = {
-    _gActor401300Animation1D904Records,
-    _gActor401300Animation1D904Indices,
-    { NULL, _gActor401300Animation1D904Bank1, NULL, NULL, _gActor401300Animation1D904Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1DE54Bank1[10] = {
-#include "assets/actor_401300_animation_1DE54_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1DE54Bank4[113] = {
-#include "assets/actor_401300_animation_1DE54_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1DE54Records[177] = {
-#include "assets/actor_401300_animation_1DE54_records.inc"
-};
-
-static u16 _gActor401300Animation1DE54Indices[20] = {
-#include "assets/actor_401300_animation_1DE54_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1DE54 = {
-    _gActor401300Animation1DE54Records,
-    _gActor401300Animation1DE54Indices,
-    { NULL, _gActor401300Animation1DE54Bank1, NULL, NULL, _gActor401300Animation1DE54Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1ED6CBank1[26] = {
-#include "assets/actor_401300_animation_1ED6C_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1ED6CBank4[330] = {
-#include "assets/actor_401300_animation_1ED6C_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1ED6CRecords[538] = {
-#include "assets/actor_401300_animation_1ED6C_records.inc"
-};
-
-static u16 _gActor401300Animation1ED6CIndices[20] = {
-#include "assets/actor_401300_animation_1ED6C_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1ED6C = {
-    _gActor401300Animation1ED6CRecords,
-    _gActor401300Animation1ED6CIndices,
-    { NULL, _gActor401300Animation1ED6CBank1, NULL, NULL, _gActor401300Animation1ED6CBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1F110Bank1[10] = {
-#include "assets/actor_401300_animation_1F110_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1F110Bank4[73] = {
-#include "assets/actor_401300_animation_1F110_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1F110Records[110] = {
-#include "assets/actor_401300_animation_1F110_records.inc"
-};
-
-static u16 _gActor401300Animation1F110Indices[20] = {
-#include "assets/actor_401300_animation_1F110_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1F110 = {
-    _gActor401300Animation1F110Records,
-    _gActor401300Animation1F110Indices,
-    { NULL, _gActor401300Animation1F110Bank1, NULL, NULL, _gActor401300Animation1F110Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1F4C4Bank1[6] = {
-#include "assets/actor_401300_animation_1F4C4_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1F4C4Bank4[81] = {
-#include "assets/actor_401300_animation_1F4C4_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1F4C4Records[118] = {
-#include "assets/actor_401300_animation_1F4C4_records.inc"
-};
-
-static u16 _gActor401300Animation1F4C4Indices[20] = {
-#include "assets/actor_401300_animation_1F4C4_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1F4C4 = {
-    _gActor401300Animation1F4C4Records,
-    _gActor401300Animation1F4C4Indices,
-    { NULL, _gActor401300Animation1F4C4Bank1, NULL, NULL, _gActor401300Animation1F4C4Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1F848Bank1[13] = {
-#include "assets/actor_401300_animation_1F848_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1F848Bank4[58] = {
-#include "assets/actor_401300_animation_1F848_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1F848Records[108] = {
-#include "assets/actor_401300_animation_1F848_records.inc"
-};
-
-static u16 _gActor401300Animation1F848Indices[20] = {
-#include "assets/actor_401300_animation_1F848_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1F848 = {
-    _gActor401300Animation1F848Records,
-    _gActor401300Animation1F848Indices,
-    { NULL, _gActor401300Animation1F848Bank1, NULL, NULL, _gActor401300Animation1F848Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation1FF3CBank1[15] = {
-#include "assets/actor_401300_animation_1FF3C_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation1FF3CBank4[159] = {
-#include "assets/actor_401300_animation_1FF3C_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation1FF3CRecords[221] = {
-#include "assets/actor_401300_animation_1FF3C_records.inc"
-};
-
-static u16 _gActor401300Animation1FF3CIndices[20] = {
-#include "assets/actor_401300_animation_1FF3C_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation1FF3C = {
-    _gActor401300Animation1FF3CRecords,
-    _gActor401300Animation1FF3CIndices,
-    { NULL, _gActor401300Animation1FF3CBank1, NULL, NULL, _gActor401300Animation1FF3CBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation20D98Bank1[18] = {
-#include "assets/actor_401300_animation_20D98_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation20D98Bank4[361] = {
-#include "assets/actor_401300_animation_20D98_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation20D98Records[484] = {
-#include "assets/actor_401300_animation_20D98_records.inc"
-};
-
-static u16 _gActor401300Animation20D98Indices[20] = {
-#include "assets/actor_401300_animation_20D98_indices.inc"
-};
-
-AnimationSet gActor401300Animation20D98 = {
-    _gActor401300Animation20D98Records,
-    _gActor401300Animation20D98Indices,
-    { NULL, _gActor401300Animation20D98Bank1, NULL, NULL, _gActor401300Animation20D98Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation21618Bank1[26] = {
-#include "assets/actor_401300_animation_21618_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation21618Bank4[165] = {
-#include "assets/actor_401300_animation_21618_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation21618Records[281] = {
-#include "assets/actor_401300_animation_21618_records.inc"
-};
-
-static u16 _gActor401300Animation21618Indices[20] = {
-#include "assets/actor_401300_animation_21618_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation21618 = {
-    _gActor401300Animation21618Records,
-    _gActor401300Animation21618Indices,
-    { NULL, _gActor401300Animation21618Bank1, NULL, NULL, _gActor401300Animation21618Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation21DE0Bank1[24] = {
-#include "assets/actor_401300_animation_21DE0_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation21DE0Bank4[150] = {
-#include "assets/actor_401300_animation_21DE0_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation21DE0Records[256] = {
-#include "assets/actor_401300_animation_21DE0_records.inc"
-};
-
-static u16 _gActor401300Animation21DE0Indices[20] = {
-#include "assets/actor_401300_animation_21DE0_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation21DE0 = {
-    _gActor401300Animation21DE0Records,
-    _gActor401300Animation21DE0Indices,
-    { NULL, _gActor401300Animation21DE0Bank1, NULL, NULL, _gActor401300Animation21DE0Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation2231CBank1[18] = {
-#include "assets/actor_401300_animation_2231C_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation2231CBank4[107] = {
-#include "assets/actor_401300_animation_2231C_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation2231CRecords[154] = {
-#include "assets/actor_401300_animation_2231C_records.inc"
-};
-
-static u16 _gActor401300Animation2231CIndices[20] = {
-#include "assets/actor_401300_animation_2231C_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation2231C = {
-    _gActor401300Animation2231CRecords,
-    _gActor401300Animation2231CIndices,
-    { NULL, _gActor401300Animation2231CBank1, NULL, NULL, _gActor401300Animation2231CBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation22A58Bank1[22] = {
-#include "assets/actor_401300_animation_22A58_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation22A58Bank4[147] = {
-#include "assets/actor_401300_animation_22A58_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation22A58Records[230] = {
-#include "assets/actor_401300_animation_22A58_records.inc"
-};
-
-static u16 _gActor401300Animation22A58Indices[20] = {
-#include "assets/actor_401300_animation_22A58_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation22A58 = {
-    _gActor401300Animation22A58Records,
-    _gActor401300Animation22A58Indices,
-    { NULL, _gActor401300Animation22A58Bank1, NULL, NULL, _gActor401300Animation22A58Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation2303CBank1[15] = {
-#include "assets/actor_401300_animation_2303C_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation2303CBank4[129] = {
-#include "assets/actor_401300_animation_2303C_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation2303CRecords[183] = {
-#include "assets/actor_401300_animation_2303C_records.inc"
-};
-
-static u16 _gActor401300Animation2303CIndices[20] = {
-#include "assets/actor_401300_animation_2303C_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation2303C = {
-    _gActor401300Animation2303CRecords,
-    _gActor401300Animation2303CIndices,
-    { NULL, _gActor401300Animation2303CBank1, NULL, NULL, _gActor401300Animation2303CBank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation23444Bank1[6] = {
-#include "assets/actor_401300_animation_23444_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation23444Bank4[70] = {
-#include "assets/actor_401300_animation_23444_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation23444Records[150] = {
-#include "assets/actor_401300_animation_23444_records.inc"
-};
-
-static u16 _gActor401300Animation23444Indices[20] = {
-#include "assets/actor_401300_animation_23444_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation23444 = {
-    _gActor401300Animation23444Records,
-    _gActor401300Animation23444Indices,
-    { NULL, _gActor401300Animation23444Bank1, NULL, NULL, _gActor401300Animation23444Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation23A98Bank1[18] = {
-#include "assets/actor_401300_animation_23A98_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation23A98Bank4[146] = {
-#include "assets/actor_401300_animation_23A98_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation23A98Records[185] = {
-#include "assets/actor_401300_animation_23A98_records.inc"
-};
-
-static u16 _gActor401300Animation23A98Indices[20] = {
-#include "assets/actor_401300_animation_23A98_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation23A98 = {
-    _gActor401300Animation23A98Records,
-    _gActor401300Animation23A98Indices,
-    { NULL, _gActor401300Animation23A98Bank1, NULL, NULL, _gActor401300Animation23A98Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation24200Bank1[19] = {
-#include "assets/actor_401300_animation_24200_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation24200Bank4[174] = {
-#include "assets/actor_401300_animation_24200_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation24200Records[223] = {
-#include "assets/actor_401300_animation_24200_records.inc"
-};
-
-static u16 _gActor401300Animation24200Indices[20] = {
-#include "assets/actor_401300_animation_24200_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation24200 = {
-    _gActor401300Animation24200Records,
-    _gActor401300Animation24200Indices,
-    { NULL, _gActor401300Animation24200Bank1, NULL, NULL, _gActor401300Animation24200Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation24A48Bank1[21] = {
-#include "assets/actor_401300_animation_24A48_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation24A48Bank4[193] = {
-#include "assets/actor_401300_animation_24A48_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation24A48Records[254] = {
-#include "assets/actor_401300_animation_24A48_records.inc"
-};
-
-static u16 _gActor401300Animation24A48Indices[20] = {
-#include "assets/actor_401300_animation_24A48_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation24A48 = {
-    _gActor401300Animation24A48Records,
-    _gActor401300Animation24A48Indices,
-    { NULL, _gActor401300Animation24A48Bank1, NULL, NULL, _gActor401300Animation24A48Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation251E4Bank1[20] = {
-#include "assets/actor_401300_animation_251E4_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation251E4Bank4[172] = {
-#include "assets/actor_401300_animation_251E4_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation251E4Records[235] = {
-#include "assets/actor_401300_animation_251E4_records.inc"
-};
-
-static u16 _gActor401300Animation251E4Indices[20] = {
-#include "assets/actor_401300_animation_251E4_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation251E4 = {
-    _gActor401300Animation251E4Records,
-    _gActor401300Animation251E4Indices,
-    { NULL, _gActor401300Animation251E4Bank1, NULL, NULL, _gActor401300Animation251E4Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation259F0Bank1[15] = {
-#include "assets/actor_401300_animation_259F0_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation259F0Bank4[206] = {
-#include "assets/actor_401300_animation_259F0_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation259F0Records[244] = {
-#include "assets/actor_401300_animation_259F0_records.inc"
-};
-
-static u16 _gActor401300Animation259F0Indices[20] = {
-#include "assets/actor_401300_animation_259F0_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation259F0 = {
-    _gActor401300Animation259F0Records,
-    _gActor401300Animation259F0Indices,
-    { NULL, _gActor401300Animation259F0Bank1, NULL, NULL, _gActor401300Animation259F0Bank4, NULL, NULL, NULL },
-};
-
-static AnimationPackedPose _gActor401300Animation26204Bank1[14] = {
-#include "assets/actor_401300_animation_26204_bank1.inc"
-};
-
-static AnimationPackedRotation _gActor401300Animation26204Bank4[207] = {
-#include "assets/actor_401300_animation_26204_bank4.inc"
-};
-
-static AnimationRecord _gActor401300Animation26204Records[248] = {
-#include "assets/actor_401300_animation_26204_records.inc"
-};
-
-static u16 _gActor401300Animation26204Indices[20] = {
-#include "assets/actor_401300_animation_26204_indices.inc"
-};
-
-static AnimationSet _gActor401300Animation26204 = {
-    _gActor401300Animation26204Records,
-    _gActor401300Animation26204Indices,
-    { NULL, _gActor401300Animation26204Bank1, NULL, NULL, _gActor401300Animation26204Bank4, NULL, NULL, NULL },
-};
+#include "assets/enemies/stranger/horned/package_4_clips.inc"
 
 /// Blend durations from the previous animation row to the requested animation column.
 ///
@@ -1133,24 +472,14 @@ static s8 _gActor401300AnimationBlendFrames[45][45] = {
 /// Contains 46 entries; NULL slots require loaded descriptors before playback.
 /// Scripted dormancy installs clip 16 on entry. Blend transitions require keys
 /// below 45; reset playback requires a populated entry with all driven tracks.
-static AnimationSet* _gActor401300AnimationSets[46] = { NULL, NULL, &_gActor401300Animation17714, &_gActor401300Animation21618, NULL, NULL, NULL, NULL, &_gActor401300Animation1C4CC, &_gActor401300Animation1D904, &_gActor401300Animation1F110, &_gActor401300Animation1F4C4, &_gActor401300Animation1AD34, &_gActor401300Animation1A750, &_gActor401300Animation1ED6C, &_gActor401300Animation1B788, NULL, &_gActor401300Animation1DE54, &_gActor401300Animation1A170, &_gActor401300Animation1FF3C, NULL, NULL, &_gActor401300Animation1CD3C, &_gActor401300Animation1F4C4, &_gActor401300Animation1AD34, &_gActor401300Animation186D8, &_gActor401300Animation19700, &_gActor401300Animation21DE0, &_gActor401300Animation2231C, &_gActor401300Animation22A58, &_gActor401300Animation2303C, &_gActor401300Animation23444, &_gActor401300Animation23A98, &_gActor401300Animation24200, &_gActor401300Animation1D0CC, &_gActor401300Animation1F848, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+#include "assets/enemies/stranger/horned/bank.inc"
 
 /// Player reaction clips borrowed during Horned Stranger holds and knockbacks.
 ///
 /// Keys 4/5 are backward/forward falls and 6/7 their recoveries. Keys 0..3 and
 /// 8 are NULL in the initial bank; grab logic requests 1..3, so those paths
 /// require populated entries before playback. Resources must outlive the hold.
-static AnimationSet* _gActor401300PlayerAnimationSets[9] = {
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    &_gActor401300Animation24A48,
-    &_gActor401300Animation251E4,
-    &_gActor401300Animation259F0,
-    &_gActor401300Animation26204,
-    NULL,
-};
+#include "assets/enemies/stranger/horned/player_bank.inc"
 
 /// Seed request copied into each Horned Stranger's held-player state.
 ///
@@ -1227,9 +556,7 @@ static SVECTOR _gActor401300Part8Rotations[2] = {
     { 30, 130, -190, 0 },
 };
 
-enum { ACTOR_401300_TASK_PRIORITY = 96 };
-
-TaskDesc gActor401300HornedStrangerTaskDesc = { { { TASK_BODY_TMD, ACTOR_401300_TASK_PRIORITY } }, _actor401300Task, { .model = &_gStrangerHornedBody } };
+TaskDesc gActor401300HornedStrangerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor401300Task, { .model = &_gStrangerHornedBody } };
 
 SVECTOR ActorContact_ScratchPosition = { 0 };
 
@@ -2556,8 +1883,8 @@ static inline void _actor401300SelectHitOffset(s16 hitYaw, ActorHitAnchor* hitPl
     absoluteHitYaw = (hitYaw >= 0) ? hitYaw : -hitYaw;
     // Pick a local impact offset and model part from the incoming hit bearing.
     if (absoluteHitYaw < ACTOR_401300_HIT_FRONT_HALF_ANGLE) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        switch ((s32)(gRandomLcgState >> 16) & 3) {
+        RANDOM_LCG_ADVANCE();
+        switch ((s32)RANDOM_LCG_DRAW() & 3) {
             case 0:
                 *hitPlacement = _gActor401300HitPlacements[0];
                 break;
@@ -2575,9 +1902,9 @@ static inline void _actor401300SelectHitOffset(s16 hitYaw, ActorHitAnchor* hitPl
                 break;
         }
     } else if (absoluteHitYaw > ACTOR_401300_HIT_REAR_MIN_ANGLE) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
         // The retained mask selects only rear offsets 5 and 7.
-        switch ((s32)(gRandomLcgState >> 16) & 2) {
+        switch ((s32)RANDOM_LCG_DRAW() & 2) {
             case 0:
                 *hitPlacement = _gActor401300HitPlacements[5];
                 break;
@@ -2589,15 +1916,15 @@ static inline void _actor401300SelectHitOffset(s16 hitYaw, ActorHitAnchor* hitPl
                 break;
         }
     } else if (hitYaw > 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             *hitPlacement = _gActor401300HitPlacements[8];
         } else {
             *hitPlacement = _gActor401300HitPlacements[9];
         }
     } else {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             *hitPlacement = _gActor401300HitPlacements[10];
         } else {
             *hitPlacement = _gActor401300HitPlacements[11];
@@ -2782,7 +2109,7 @@ static void _actor401300TakeHit(Task* actor)
             enemy->hp -= hitScratch->damage;
             worldTargetAddReadoutAmount(&enemy->node, hitScratch->damage, 0);
             if (work->state == ACTOR_401300_STATE_DORMANT_SCRIPTED) {
-                sndEvtRequestScriptStop(SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
+                sndEvtRequestScriptStop(SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE);
             }
             if ((work->state == ACTOR_401300_STATE_GRAB_PULL || work->state == ACTOR_401300_STATE_GRAB_STRIKE || work->state == ACTOR_401300_STATE_GRAB_DONE) && playerStatus->hp > 0 && work->playerHeld == 1) {
                 taskMessageDispatch(gameGetTaskSlot(GAME_TASK_SLOT_PLAYER), GAME_ACTOR_MESSAGE_END_SCRIPTED, 0, 0);
@@ -3082,8 +2409,8 @@ static void _actor401300StateWounded(Task* actor)
     }
     if (++work->stateTimer == 0) {
         work->animRequest = ACTOR_401300_ANIM_REQUEST_RESET;
-        gRandomLcgState   = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        rateChoice        = (gRandomLcgState >> 16) % ACTOR_401300_WOUNDED_RATE_CHOICES;
+        RANDOM_LCG_ADVANCE();
+        rateChoice = RANDOM_LCG_DRAW() % ACTOR_401300_WOUNDED_RATE_CHOICES;
         switch (rateChoice) {
             case 0:
                 work->animRate = (2 * ANIMATION_RATE_ONE);
@@ -3106,8 +2433,8 @@ static void _actor401300StateWounded(Task* actor)
         _actor401300UpdateAnimationEffects(actor);
     }
     if (work->stateTimer >= ACTOR_401300_WOUNDED_TWITCH_TICKS) {
-        gRandomLcgState  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->stateTimer = -((gRandomLcgState >> 16) & ACTOR_401300_WOUNDED_PAUSE_MASK);
+        RANDOM_LCG_ADVANCE();
+        work->stateTimer = -(RANDOM_LCG_DRAW() & ACTOR_401300_WOUNDED_PAUSE_MASK);
     }
     if (enemy->hp <= 0) {
         work->state = ACTOR_401300_STATE_DOWN;
@@ -3206,15 +2533,15 @@ static inline void _actor401300ChooseChaseAttack(_Actor401300Work* work, s32 pla
     if (playerDistance > ACTOR_401300_CHARGE_DISTANCE) {
         work->state = ACTOR_401300_STATE_CHARGE;
     } else if (playerDistance > ACTOR_401300_LEAP_DISTANCE) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (((gRandomLcgState >> 16) & ACTOR_401300_ATTACK_DRAW_MASK) < ACTOR_401300_CHARGE_DRAW_COUNT) {
+        RANDOM_LCG_ADVANCE();
+        if ((RANDOM_LCG_DRAW() & ACTOR_401300_ATTACK_DRAW_MASK) < ACTOR_401300_CHARGE_DRAW_COUNT) {
             work->state = ACTOR_401300_STATE_CHARGE;
         } else {
             work->state = ACTOR_401300_STATE_LEAP;
         }
     } else if (playerDistance < ACTOR_401300_STRIKE_DISTANCE) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (((gRandomLcgState >> 16) & ACTOR_401300_ATTACK_DRAW_MASK) < ACTOR_401300_STRIKE_A_DRAW_COUNT) {
+        RANDOM_LCG_ADVANCE();
+        if ((RANDOM_LCG_DRAW() & ACTOR_401300_ATTACK_DRAW_MASK) < ACTOR_401300_STRIKE_A_DRAW_COUNT) {
             work->state = ACTOR_401300_STATE_STRIKE_A;
         } else {
             work->state = ACTOR_401300_STATE_STRIKE_B;
@@ -3662,8 +2989,8 @@ static void _actor401300StateSidestep(Task* actor)
         _actorPositionDeltaToPlayer(&gPlayerStatus, actor->extra.tmd->coords, &sidestep->delta);
         sidestep->turn = ratan2(savedCursor[-1].delta.vx, sidestep->delta.vz);
         if (work->sidestepSide == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
                 work->sidestepSide = 1;
             } else {
                 work->sidestepSide = -1;
@@ -4285,8 +3612,8 @@ static void _actor401300StateDormant(Task* actor)
     }
     // A skipped long-idle tick also skips player detection.
     if (work->stateTimer > ACTOR_401300_DORMANT_THROTTLE_TICKS) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (!((gRandomLcgState >> 16) & ACTOR_401300_DORMANT_SKIP_DRAW_MASK)) {
+        RANDOM_LCG_ADVANCE();
+        if (!(RANDOM_LCG_DRAW() & ACTOR_401300_DORMANT_SKIP_DRAW_MASK)) {
             return;
         }
     } else {
@@ -4295,8 +3622,8 @@ static void _actor401300StateDormant(Task* actor)
     ACTOR_401300_CHECK_DORMANT_ALERT(actor, work, rootCoord, delta, toPlayer);
     _actor401300UpdateAnimationEffects(actor);
     if (work->animId == ACTOR_401300_ANIM_DORMANT && (work->rig.slots[1].status.fields.flags & ANIMATION_SLOT_FOLLOWED_JUMP)) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if ((gRandomLcgState >> 16) & 1) {
+        RANDOM_LCG_ADVANCE();
+        if (RANDOM_LCG_DRAW() & 1) {
             work->animId      = ACTOR_401300_ANIM_DORMANT_ALTERNATE;
             work->animRequest = ACTOR_401300_ANIM_REQUEST_BLEND;
             _actor401300UpdateAnimationEffects(actor);
@@ -4330,7 +3657,7 @@ static void _actor401300StateDormant(Task* actor)
         (toPlayer)->vy = gPlayerStatus.coordMtx->t[1] - (rootCoord)->coord.t[1];                             \
         (toPlayer)->vz = gPlayerStatus.coordMtx->t[2] - (rootCoord)->coord.t[2];                             \
         if (!_actorRangeOutsideRadiusXZ((toPlayer), ACTOR_401300_DORMANT_NOTICE_RADIUS)) {                   \
-            sndEvtRequestScriptStop(SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE); \
+            sndEvtRequestScriptStop(SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT, SOUND_SCRIPT_STOP_KEEP_RELEASE); \
             sceneEngageBattle(1);                                                                            \
             (work)->state = ACTOR_401300_STATE_ALERT;                                                        \
         }                                                                                                    \
@@ -4367,7 +3694,7 @@ static void _actor401300StateDormantScripted(Task* actor)
     enemy = actor->spawnArg2.pointer;
     if (work->stateEntered != 0) {
         model                                                          = actor->extra.tmd;
-        _gActor401300AnimationSets[ACTOR_401300_ANIM_DORMANT_SCRIPTED] = &gActor401300Animation20D98;
+        _gActor401300AnimationSets[ACTOR_401300_ANIM_DORMANT_SCRIPTED] = &_gStrangerOddScriptedDormantClip;
         work->animId                                                   = ACTOR_401300_ANIM_DORMANT_SCRIPTED;
         work->animRequest                                              = ACTOR_401300_ANIM_REQUEST_RESET;
         model->flags                                                   = 0;
@@ -4381,7 +3708,7 @@ static void _actor401300StateDormantScripted(Task* actor)
         work->lookYawTarget           = 0;
         work->stateTimer              = 0;
     } else if (work->stateTimer == 0) {
-        soundScriptId = ((enemy->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << ACTOR_401300_DORMANT_SOUND_PLACE_SHIFT) | SOUND_ACROPOLIS_PATIO_STRANGER_DORMANT;
+        soundScriptId = ((enemy->placeKey >> ENEMY_PLACE_INDEX_SHIFT) << ACTOR_401300_DORMANT_SOUND_PLACE_SHIFT) | SOUND_AKROPOLIS_PATIO_STRANGER_DORMANT;
         audioPan      = (s8)worldCoordGetOriginAudioPan(actor->extra.tmd->coords);
         sndEvtRequestScriptStart(soundScriptId, audioPan, (s8)worldCoordGetOriginAudioDepth(actor->extra.tmd->coords));
         work->stateTimer = 1;
@@ -7030,8 +6357,8 @@ static void _actor401300StateDown(Task* actor)
     if (work->stateEntered != 0) {
         work->jointPairTarget = ACTOR_401300_FALL_PAIR_BLEND;
         work->jointPairStep   = ACTOR_401300_FALL_PAIR_STEP;
-        gRandomLcgState       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->stateTimer      = work->downFramesBase + ((gRandomLcgState >> 16) & ACTOR_401300_DOWN_RANDOM_TICKS_MASK);
+        RANDOM_LCG_ADVANCE();
+        work->stateTimer = work->downFramesBase + (RANDOM_LCG_DRAW() & ACTOR_401300_DOWN_RANDOM_TICKS_MASK);
     }
     _actor401300UpdateAnimationEffects(actor);
     if (--work->stateTimer < 0) {

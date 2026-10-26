@@ -109,8 +109,6 @@ enum {
 
 // Scheduling priorities and placement indices of this room's scene tasks.
 enum {
-    SHELTER_B6_TRAINING_ROOM_HEAD_AIM_TASK_PRIORITY   = 96,
-    SHELTER_B6_TRAINING_ROOM_MOVIE_TASK_PRIORITY      = 192,
     SHELTER_B6_TRAINING_ROOM_DEFEAT_EVE_ACTOR         = 0,
     SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR        = 1,
     SHELTER_B6_TRAINING_ROOM_DEFEAT_BATTLE_BODY_ACTOR = 4,
@@ -119,8 +117,6 @@ enum {
 
 // Draw modes used by the scene walkers; mode 2 also schedules buffer release.
 enum {
-    SHELTER_B6_TRAINING_ROOM_SCENE_DRAW_HIDE    = 0,
-    SHELTER_B6_TRAINING_ROOM_SCENE_DRAW_SHOW    = 1,
     SHELTER_B6_TRAINING_ROOM_SCENE_DRAW_RELEASE = 2
 };
 
@@ -242,7 +238,7 @@ static AnimationSet _gShelterB6TrainingRoomAnimation063C0 = {
     { NULL, _gShelterB6TrainingRoomAnimation063C0Bank1, NULL, NULL, _gShelterB6TrainingRoomAnimation063C0Bank4, NULL, NULL, NULL },
 };
 
-TaskDesc gShelterB6TrainingRoomPlayerHeadAimTaskDesc = { { { TASK_BODY_NONE, SHELTER_B6_TRAINING_ROOM_HEAD_AIM_TASK_PRIORITY } }, shelterB6TrainingRoomPlayerHeadAimTask, { .value = 0 } };
+TaskDesc gShelterB6TrainingRoomPlayerHeadAimTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, shelterB6TrainingRoomPlayerHeadAimTask, { .value = 0 } };
 
 /// Five words copied to the equipped player's bank at set indices 47..51.
 ///
@@ -365,11 +361,11 @@ EvsCommand gShelterB6TrainingRoomDefeatScript[58] = {
     { EVENT_SCRIPT_OPCODE_HIDE_WEAPONS, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_AMBIENT_RGB, { .value = 100 }, { .value = 100 }, { .value = 100 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gShelterB6TrainingRoomDefeatPlayerInitialTransform } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_EVE_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_TRAINING_ROOM_SCENE_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_EVE_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_EVE_ACTOR }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gShelterB6TrainingRoomDefeatEveInitialTransform } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_TRAINING_ROOM_SCENE_DRAW_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gShelterB6TrainingRoomDefeatKyleTransform } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_BATTLE_BODY_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_TRAINING_ROOM_SCENE_DRAW_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_BATTLE_BODY_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callbackNoArg = shelterB6TrainingRoomStartPlayerHeadAim }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gShelterB6TrainingRoomDefeatPlayerClip49Request }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gShelterB6TrainingRoomDefeatKyleClip1Request } }, { .value = 0 } },
@@ -383,7 +379,7 @@ EvsCommand gShelterB6TrainingRoomDefeatScript[58] = {
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gShelterB6TrainingRoomDefeatPlayerFinalTransform } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gShelterB6TrainingRoomDefeatPlayerClip50Request }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = SHELTER_B6_TRAINING_ROOM_SCENE_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = SHELTER_B6_TRAINING_ROOM_DEFEAT_KYLE_ACTOR }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gShelterB6TrainingRoomDefeatKyleClip2Request } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_START_SOUND, { .value = SHELTER_B6_TRAINING_ROOM_SOUND_SCRIPT_4 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -439,8 +435,8 @@ EvsCommand gShelterB6TrainingRoomDepartureScript[7] = {
 };
 
 TaskDesc gShelterB6TrainingRoomMovieTasks[2] = {
-    { { { TASK_BODY_NONE, SHELTER_B6_TRAINING_ROOM_MOVIE_TASK_PRIORITY } }, shelterB6TrainingRoomStartMovieTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B6_TRAINING_ROOM_MOVIE_TASK_PRIORITY } }, streamedScenePlayThenHold, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterB6TrainingRoomStartMovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, streamedScenePlayThenHold, { .value = 0 } },
 };
 
 /// Fixed room-space effect positions, in signed whole-coordinate units.
@@ -549,7 +545,7 @@ void shelterB6TrainingRoomGlowTask(Task* task)
         // Preserve all three seed passes over the selected band, including the discarded draws.
         for (seedPass = 0; seedPass < 3; seedPass++) {
             for (segmentIndex = 0; segmentIndex < SHELTER_B6_TRAINING_ROOM_BAND_SEGMENT_COUNT; segmentIndex++) {
-                gShelterB6TrainingRoomRingTexturePhases[task->spawnArg1.value][segmentIndex] = (gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16;
+                gShelterB6TrainingRoomRingTexturePhases[task->spawnArg1.value][segmentIndex] = (RANDOM_LCG_ADVANCE()) >> 16;
             }
         }
         task->state = SHELTER_B6_TRAINING_ROOM_GLOW_DRAW;
@@ -847,7 +843,7 @@ void shelterB6TrainingRoomDrawSummonBeam(const GfxCoord* endCoord, s16 radiusSca
                         quad->y2 = scratch->pair.sy1;
                         quad->x3 = scratch->pair.sx1 + ((scratch->pair.radius1 * rsin(sweepAngle + (SHELTER_B6_TRAINING_ROOM_BEAM_HALF_TURN + SHELTER_B6_TRAINING_ROOM_BEAM_QUARTER_TURN))) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
                         quad->y3 = scratch->pair.sy1 + ((scratch->pair.radius1 * rcos(sweepAngle + (SHELTER_B6_TRAINING_ROOM_BEAM_HALF_TURN + SHELTER_B6_TRAINING_ROOM_BEAM_QUARTER_TURN))) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
-                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz1),
                                 quad);
                         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz1);
 
@@ -863,7 +859,7 @@ void shelterB6TrainingRoomDrawSummonBeam(const GfxCoord* endCoord, s16 radiusSca
                         quad->y2       = scratch->pair.sy0;
                         quad->x3       = scratch->pair.sx0 + ((scratch->pair.radius0 * rsin(nextSweepAngle)) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
                         quad->y3       = scratch->pair.sy0 + ((scratch->pair.radius0 * rcos(nextSweepAngle)) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
-                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz0 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz0),
                                 quad);
                         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz0);
 
@@ -883,7 +879,7 @@ void shelterB6TrainingRoomDrawSummonBeam(const GfxCoord* endCoord, s16 radiusSca
                         quad->y2 = scratch->pair.sy0;
                         quad->x3 = scratch->pair.sx1;
                         quad->y3 = scratch->pair.sy1;
-                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz1),
                                 quad);
                         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz1);
                         sweepAngle = nextSweepAngle;
@@ -978,7 +974,7 @@ static void _shelterB6TrainingRoomDrawGroundBeam(const GfxCoord* startCoord, con
                     quad->y2 = scratch->pair.sy1;
                     quad->x3 = scratch->pair.sx1 + ((scratch->pair.radius1 * rsin(sweepAngle + (SHELTER_B6_TRAINING_ROOM_BEAM_HALF_TURN + SHELTER_B6_TRAINING_ROOM_BEAM_QUARTER_TURN))) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
                     quad->y3 = scratch->pair.sy1 + ((scratch->pair.radius1 * rcos(sweepAngle + (SHELTER_B6_TRAINING_ROOM_BEAM_HALF_TURN + SHELTER_B6_TRAINING_ROOM_BEAM_QUARTER_TURN))) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
-                    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz1),
                             quad);
                     gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz1);
 
@@ -994,7 +990,7 @@ static void _shelterB6TrainingRoomDrawGroundBeam(const GfxCoord* startCoord, con
                     quad->y2       = scratch->pair.sy0;
                     quad->x3       = scratch->pair.sx0 + ((scratch->pair.radius0 * rsin(nextSweepAngle)) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
                     quad->y3       = scratch->pair.sy0 + ((scratch->pair.radius0 * rcos(nextSweepAngle)) >> SHELTER_B6_TRAINING_ROOM_BEAM_TRIG_SHIFT);
-                    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz0 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz0),
                             quad);
                     gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz0);
 
@@ -1014,7 +1010,7 @@ static void _shelterB6TrainingRoomDrawGroundBeam(const GfxCoord* startCoord, con
                     quad->y2 = scratch->pair.sy0;
                     quad->x3 = scratch->pair.sx1;
                     quad->y3 = scratch->pair.sy1;
-                    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->pair.otz1 << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->pair.otz1),
                             quad);
                     gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratch->pair.otz1);
                     sweepAngle = nextSweepAngle;
@@ -1300,7 +1296,7 @@ static void _shelterB6TrainingRoomDrawRingBand(const EffectWork* work, const Gfx
             quad->y2 = (u16)scratch->sxy2.vy;
             quad->x3 = (u16)scratch->sxy3.vx;
             quad->y3 = (u16)scratch->sxy3.vy;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->otz),
                     quad);
         }
     }
@@ -1334,10 +1330,10 @@ void shelterB6TrainingRoomDrawBodyGlow(Task* task)
         rgb[2]                                = brightness >> 1;
         effectDrawGouraudDisc(anchorCoord, SHELTER_B6_TRAINING_ROOM_BODY_GLOW_INNER_RADIUS, rgb);
         effectDrawGouraudDisc(anchorCoord, SHELTER_B6_TRAINING_ROOM_BODY_GLOW_OUTER_RADIUS, rgb);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (((gRandomLcgState >> 16) & SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FLASH_CHANCE_MASK) == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            effectSpawn(EFFECT_FLASH_BURST, task->extra.tmd->coords + (((gRandomLcgState >> 16) & SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FLASH_JOINT_MASK) + SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FIRST_FLASH_JOINT), SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FLASH_SIZE_PALETTE, NULL);
+        RANDOM_LCG_ADVANCE();
+        if ((RANDOM_LCG_DRAW() & SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FLASH_CHANCE_MASK) == 0) {
+            RANDOM_LCG_ADVANCE();
+            effectSpawn(EFFECT_FLASH_BURST, task->extra.tmd->coords + ((RANDOM_LCG_DRAW() & SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FLASH_JOINT_MASK) + SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FIRST_FLASH_JOINT), SHELTER_B6_TRAINING_ROOM_BODY_GLOW_FLASH_SIZE_PALETTE, NULL);
         }
     }
 }
@@ -1362,16 +1358,16 @@ void shelterB6TrainingRoomEnergyArcTask(Task* task)
 
             coord->parent = work->parent;
             gfxSetRotIdentity(&coord->coord);
-            coord->coord.t[0]   = work->pos.vx;
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            sizeRandom          = gRandomLcgState;
-            coord->coord.t[1]   = work->pos.vy;
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            coord->coord.t[0] = work->pos.vx;
+            RANDOM_LCG_ADVANCE();
+            sizeRandom        = gRandomLcgState;
+            coord->coord.t[1] = work->pos.vy;
+            RANDOM_LCG_ADVANCE();
             coord->coord.t[2]   = work->pos.vz;
             coord->composeStamp = GRAPHICS_COORD_DIRTY;
             work->scale         = ((sizeRandom >> 16) & 0x1FF) + 0x100;
-            work->angle         = (gRandomLcgState >> 16) & (ONE - 1);
-            work->period        = ((gRandomLcgState >> 16) & 0xF) + 6;
+            work->angle         = RANDOM_LCG_DRAW() & (ONE - 1);
+            work->period        = (RANDOM_LCG_DRAW() & 0xF) + 6;
             task->state         = SHELTER_B6_TRAINING_ROOM_ENERGY_ARC_DRAW;
         }
         // Draw the animated sprite every tick and the link to the body anchor on odd ticks.
@@ -1490,7 +1486,7 @@ static void _shelterB6TrainingRoomDrawEnergyStrip(const GfxCoord* startCoord, co
             quad->x2             = (u16)block->screenStart.vx - (u16)block->cornerOffsetX;
             quad->y1             = (u16)block->screenEnd.vy - (u16)block->cornerOffsetY;
             quad->y2             = (u16)block->screenStart.vy + (u16)block->cornerOffsetY;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                     quad);
         }
     }
@@ -1563,12 +1559,12 @@ void shelterB6TrainingRoomSinkingSpriteTask(Task* task)
     if (gRoomEffectState->effectControl == ROOM_EFFECT_CONTROL_RUNNING) {
         work->age++;
         if (task->state == SHELTER_B6_TRAINING_ROOM_SINKING_SPRITE_INIT) {
-            work->move.vx   = 0;
-            work->move.vy   = 8;
-            work->move.vz   = 0;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = ((gRandomLcgState >> 16) & (ONE - 1)) | ONE;
-            task->state     = SHELTER_B6_TRAINING_ROOM_SINKING_SPRITE_DRAW;
+            work->move.vx = 0;
+            work->move.vy = 8;
+            work->move.vz = 0;
+            RANDOM_LCG_ADVANCE();
+            work->scale = (RANDOM_LCG_DRAW() & (ONE - 1)) | ONE;
+            task->state = SHELTER_B6_TRAINING_ROOM_SINKING_SPRITE_DRAW;
         }
         coord->coord.t[1]  += work->move.vy;
         coord->composeStamp = GRAPHICS_COORD_DIRTY;
@@ -1619,8 +1615,8 @@ void shelterB6TrainingRoomDescendingSpriteTask(Task* task)
             if (work->age & 1) {
                 work->index = (work->index + 1) & SHELTER_B6_TRAINING_ROOM_DESCENDING_SPRITE_FRAME_MASK;
                 effectDrawModulatedBillboard(coord, work->index, SHELTER_B6_TRAINING_ROOM_DESCENDING_SPRITE_SIZE_BANK, SHELTER_B6_TRAINING_ROOM_DESCENDING_SPRITE_BRIGHTNESS_PALETTE);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                if (((gRandomLcgState >> 16) & SHELTER_B6_TRAINING_ROOM_DESCENDING_SPRITE_SHED_CHANCE_MASK) == 0) {
+                RANDOM_LCG_ADVANCE();
+                if ((RANDOM_LCG_DRAW() & SHELTER_B6_TRAINING_ROOM_DESCENDING_SPRITE_SHED_CHANCE_MASK) == 0) {
                     effectSpawn(EFFECT_1AD, coord, 0, NULL);
                 }
             }
@@ -1650,9 +1646,9 @@ void shelterB6TrainingRoomHealSpiralTask(Task* task)
     }
     if (gRoomEffectState->effectControl == ROOM_EFFECT_CONTROL_RUNNING) {
         work->age++;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
         // The scale slot holds a wrapping 16-bit angle here, and move holds the next world position.
-        work->scale  += ((gRandomLcgState >> 16) & SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_PHASE_STEP_MASK) + SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_PHASE_STEP_MIN;
+        work->scale  += (RANDOM_LCG_DRAW() & SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_PHASE_STEP_MASK) + SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_PHASE_STEP_MIN;
         work->move.vx = _gShelterB6TrainingRoomEffectPositions[SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_CENTRE_INDEX].vx + ((rcos(work->scale) * SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_RADIUS) >> SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_TRIG_SHIFT);
         work->move.vy = _gShelterB6TrainingRoomEffectPositions[SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_CENTRE_INDEX].vy - work->age * SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_RISE_STEP;
         work->move.vz = _gShelterB6TrainingRoomEffectPositions[SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_CENTRE_INDEX].vz + ((rsin(work->scale) * SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_RADIUS) >> SHELTER_B6_TRAINING_ROOM_HEAL_SPIRAL_TRIG_SHIFT);
@@ -1668,10 +1664,10 @@ void shelterB6TrainingRoomSpawnShieldArcs(Task* task)
         SHELTER_B6_TRAINING_ROOM_SHIELD_ARC_JOINT_COUNT = 18
     };
     if (gRoomEffectState->effectControl == ROOM_EFFECT_CONTROL_RUNNING) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (((gRandomLcgState >> 16) & SHELTER_B6_TRAINING_ROOM_SHIELD_ARC_CHANCE_MASK) == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            effectSpawn(EFFECT_TRAINING_ROOM_ENERGY_ARC, task->extra.tmd->coords + ((u16)((gRandomLcgState >> 16) % SHELTER_B6_TRAINING_ROOM_SHIELD_ARC_JOINT_COUNT) + SHELTER_B6_TRAINING_ROOM_SHIELD_ARC_FIRST_JOINT), 0, NULL);
+        RANDOM_LCG_ADVANCE();
+        if ((RANDOM_LCG_DRAW() & SHELTER_B6_TRAINING_ROOM_SHIELD_ARC_CHANCE_MASK) == 0) {
+            RANDOM_LCG_ADVANCE();
+            effectSpawn(EFFECT_TRAINING_ROOM_ENERGY_ARC, task->extra.tmd->coords + ((u16)(RANDOM_LCG_DRAW() % SHELTER_B6_TRAINING_ROOM_SHIELD_ARC_JOINT_COUNT) + SHELTER_B6_TRAINING_ROOM_SHIELD_ARC_FIRST_JOINT), 0, NULL);
         }
     }
 }

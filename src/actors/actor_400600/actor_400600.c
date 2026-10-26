@@ -570,17 +570,14 @@ static TmdSource _gStalkerZebraBurstArmLeft;
 
 #include "assets/enemies/stalker/zebra/burst_arm_left.inc"
 
-/// Category-4 victim presentation used by the Stalker's strikes and bites.
-enum { ACTOR_400600_ATTACK_REACTION_SPARK_PUFF = 7 };
-
 /// Arm-strike and held-player bite attacks, indexed as rows 0 and 1.
 ///
 /// Both use the spark/puff hit presentation without a status effect. Powers
 /// are base HP damage before the victim's HP-band scaling. The collision
 /// spheres and enemy parameters borrow these rows while the overlay is loaded.
 static DamageAttack _gActor400600Attacks[2] = {
-    { 26, ACTOR_400600_ATTACK_REACTION_SPARK_PUFF }, // Both arm strikes
-    { 10, ACTOR_400600_ATTACK_REACTION_SPARK_PUFF }, // Each bite during the hold
+    { 26, GAME_ACTOR_REACTION_SPARK_AND_PUFFS }, // Both arm strikes
+    { 10, GAME_ACTOR_REACTION_SPARK_AND_PUFFS }, // Each bite during the hold
 };
 
 /// Enemy-kind health, battle rewards and hit/status tuning of the Zebra Stalker.
@@ -628,20 +625,17 @@ static TaskMessageEntry _gActor400600MessageHandlers[3] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-/// Execution priority of the Stalker body and its separately drawn arms.
-enum { ACTOR_400600_TASK_PRIORITY = 96 };
-
 /// Attached-arm model spawn recipes, indexed 0 left and 1 right.
 ///
 /// The parent supplies transforms, textures and lighting after each spawn,
 /// retains the tasks and kills them during corpse release. Their borrowed
 /// model sources and callbacks must remain loaded until teardown.
 static TaskDesc _gActor400600ArmTaskDescs[2] = {
-    { { { TASK_BODY_TMD, ACTOR_400600_TASK_PRIORITY } }, _actor400600InitLeftArmTask, { .model = &_gStalkerZebraBurstArmLeft } },
-    { { { TASK_BODY_TMD, ACTOR_400600_TASK_PRIORITY } }, _actor400600InitRightArmTask, { .model = &_gStalkerZebraBurstArmRight } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor400600InitLeftArmTask, { .model = &_gStalkerZebraBurstArmLeft } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor400600InitRightArmTask, { .model = &_gStalkerZebraBurstArmRight } },
 };
 
-TaskDesc gActor400600ZebraStalkerTaskDesc = { { { TASK_BODY_TMD, ACTOR_400600_TASK_PRIORITY } }, _actor400600Task, { .model = &_gStalkerZebraBody } };
+TaskDesc gActor400600ZebraStalkerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor400600Task, { .model = &_gStalkerZebraBody } };
 
 /// Grounded-death clip selected from the requested body pose, indexed 0..34.
 ///
@@ -1537,7 +1531,7 @@ static void _actor400600SpawnEnemy(Task* task)
     work->spawnX       = rootCoord->coord.t[0];
     work->floorY       = rootCoord->coord.t[1];
     work->spawnZ       = rootCoord->coord.t[2];
-    randomValue        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+    randomValue        = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState    = randomValue;
     work->frameCount   = randomValue >> 16;
     work->shadowHeight = work->floorY;
@@ -1676,7 +1670,7 @@ static void _actor400600WaitHiddenWakeup(Task* task)
         sndEvtRequestScriptStart(soundId, soundPan, (s8)worldCoordGetOriginAudioDepth(task->extra.tmd->coords));
         _actor400600StartCloakFade(task, ACTOR_400600_REVEAL);
         sceneEngageBattle(1);
-        randomValue        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomValue        = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState    = randomValue;
         work->hideCooldown = ((randomValue >> 0x10) & ACTOR_400600_HIDE_COOLDOWN_MASK) + ACTOR_400600_HIDE_COOLDOWN_BASE;
         _stalkerZebraIvorySelectState(task, ACTOR_400600_STATE_WALK);
@@ -2277,7 +2271,7 @@ static void _actor400600FinishCeilingDropLanding(Task* task)
         work->stateFrames++;
     }
     if ((s16)_stalkerZebraIvoryApplyPendingReaction(task) == 0 && (s16)_stalkerZebraIvoryClipDone(task) != 0) {
-        randomValue           = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomValue           = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState       = randomValue;
         work->ceilingCooldown = ((randomValue >> 0x10) & ACTOR_400600_CEILING_COOLDOWN_MASK) + ACTOR_400600_CEILING_COOLDOWN_BASE;
         _actor400600SelectBehavior(task, ACTOR_400600_STATE_WALK);
@@ -2324,7 +2318,7 @@ static void _actor400600FinishCeilingFallLanding(Task* task)
             return;
         }
         work->pendingAction = STALKER_ZEBRA_IVORY_PENDING_NONE;
-        randomValue         = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomValue         = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState     = randomValue;
         work->countdown     = ((randomValue >> 0x10) & ACTOR_400600_ON_BACK_COUNTDOWN_MASK) + ACTOR_400600_ON_BACK_COUNTDOWN_BASE;
         _actor400600SelectBehavior(task, ACTOR_400600_STATE_STATUS_HOLD);
@@ -3411,10 +3405,10 @@ static s32 _actor400600TrySelectAttack(Task* task)
     s32                           ceilingDistance;
     s16                           ceilingY;
 
-    work            = (_Actor400600ZebraStalkerWork*)task->work;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    rootCoord       = task->extra.tmd->coords;
-    attackRandom    = gRandomLcgState >> 0x10;
+    work = (_Actor400600ZebraStalkerWork*)task->work;
+    RANDOM_LCG_ADVANCE();
+    rootCoord    = task->extra.tmd->coords;
+    attackRandom = gRandomLcgState >> 0x10;
     switch (work->ceilingProbePending) {
         case 0:
             if (work->timer != 0) {
@@ -3454,8 +3448,8 @@ static s32 _actor400600TrySelectAttack(Task* task)
                     return 1;
                 }
             } else {
-                timerRandom1                                       = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
-                timerRandom2                                       = (timerRandom1 * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+                timerRandom1                                       = RANDOM_LCG_NEXT(gRandomLcgState);
+                timerRandom2                                       = RANDOM_LCG_NEXT(timerRandom1);
                 gRandomLcgState                                    = timerRandom2;
                 ((_Actor400600ZebraStalkerWork*)task->work)->timer = 0x3C + ((timerRandom1 >> 0x10) & 0x3F) + ((timerRandom2 >> 0x10) & 0xF);
                 return 0;
@@ -5150,7 +5144,7 @@ static void _actor400600TickWalk(Task* task)
 
     minimumWalkRate = ANIMATION_RATE_ONE;
     if (work->playerDistance > ACTOR_400600_HURRIED_TARGET_DISTANCE && work->walkHurried == 0) {
-        randomValue     = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomValue     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomValue;
         if ((randomValue >> 0x10) & 1) {
             minimumWalkRate = ACTOR_400600_FAST_WALK_RATE;
@@ -5523,7 +5517,7 @@ static void _actor400600FinishCeilingLeapLanding(Task* task)
 
     work = task->work;
     if ((s16)_stalkerZebraIvoryApplyPendingReaction(task) == 0 && (s16)_stalkerZebraIvoryClipDone(task) != 0) {
-        randomValue           = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomValue           = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState       = randomValue;
         work->ceilingCooldown = ((randomValue >> 0x10) & ACTOR_400600_CEILING_COOLDOWN_MASK) + ACTOR_400600_CEILING_COOLDOWN_BASE;
         _actor400600SelectBehavior(task, ACTOR_400600_STATE_WALK);
@@ -5702,7 +5696,7 @@ static void _actor400600StartHiddenIdle(Task* task)
     u32                           randomValue;
 
     _actor400600SetBlendRequest(task, ACTOR_400600_CLIP_IDLE, ANIMATION_RATE_ONE, ACTOR_400600_IDLE_BLEND_FRAMES);
-    randomValue      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+    randomValue      = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState  = randomValue;
     work->idleFrames = ((randomValue >> 0x10) & ACTOR_400600_IDLE_TIMER_MASK) + ACTOR_400600_IDLE_TIMER_BASE;
     work->subState++;
@@ -5728,7 +5722,7 @@ static void _actor400600TickHiddenIdle(Task* task)
         framesLeft       = work->idleFrames - 1;
         work->idleFrames = framesLeft;
         if (((u32)framesLeft << 16) == 0) {
-            randomValue        = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            randomValue        = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState    = randomValue;
             work->hideCooldown = ((randomValue >> 0x10) & ACTOR_400600_HIDE_COOLDOWN_MASK) + ACTOR_400600_HIDE_COOLDOWN_BASE;
             _actor400600StartCloakFade(task, ACTOR_400600_REVEAL);
@@ -5856,7 +5850,7 @@ static void _actor400600WaitGroupEntrance(Task* task)
 
     work = task->work;
     if (gSceneCombatState.zebraStalkerGroupPhase == SCENE_COMBAT_ZEBRA_STALKER_DELAYED) {
-        randomValue       = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomValue       = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState   = randomValue;
         work->stateFrames = ((randomValue >> 0x10) & ACTOR_400600_GROUP_DELAY_MASK) + ACTOR_400600_GROUP_DELAY_BASE;
         work->state++;

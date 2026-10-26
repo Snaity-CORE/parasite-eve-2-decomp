@@ -44,8 +44,6 @@
 
 #include "mapui/map_neo_ark.h"
 
-#include "rooms/akropolis_square.h"
-
 #include "rooms/room.h"
 
 #include "rooms/room_common.h"
@@ -76,8 +74,8 @@ static s32 _shelter1fTentHandleRoomAction(Task* task, s32 messageId, const Direc
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -146,7 +144,7 @@ static void _shelter1fTentInitializeRoom(Task* task)
         gameFlagSetNibble(GAME_FLAG_SHELTER_ELEVATOR_ENABLED, 0);
         gameFlagSetNibble(GAME_FLAG_SHELTER_1F_TENT_1BA, 2);
         gameFlagSetNibble(GAME_FLAG_MAP_MARK_SHELTER_1BB, MAP_MARK_SHOWN);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, ARRIVAL_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, ARRIVAL_OBJECTIVE);
         playerStateRestoreFullHpMp();
         areaApplySavedUpdates(gShelter1fTentFirstArrivalAreaUpdates);
         evsStartScriptWithSkip(gActor460200TentArrivalScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor460200TentArrivalSkipScript);

@@ -5,7 +5,8 @@
 
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_07000.h"
+#include "actors/actor_342400.h"
 
 #include "gameplay/area_entry.h"
 #include "gameplay/collision.h"
@@ -140,12 +141,11 @@ static void _actor342400WaveSlouchTask(Task* waveTask);
 static void _actor342400WavePairTask(Task* waveTask);
 
 enum {
-    ACTOR_342400_ENCOUNTER_CONTROLLER_PRIORITY = 32,
-    ACTOR_342400_ENCOUNTER_SPAWNER_PRIORITY    = 97,
+    ACTOR_342400_ENCOUNTER_SPAWNER_PRIORITY = 97,
 };
 
 TaskDesc gActor342400EncounterTaskDescs[ACTOR_342400_ENCOUNTER_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ACTOR_342400_ENCOUNTER_CONTROLLER_PRIORITY } }, _actor342400WaveControllerTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _actor342400WaveControllerTask, { .value = 0 } },
     { { { TASK_BODY_NONE, ACTOR_342400_ENCOUNTER_SPAWNER_PRIORITY } }, _actor342400WaveMadChaserTask, { .value = 0 } },
     { { { TASK_BODY_NONE, ACTOR_342400_ENCOUNTER_SPAWNER_PRIORITY } }, _actor342400WaveSlouchTask, { .value = 0 } },
     { { { TASK_BODY_NONE, ACTOR_342400_ENCOUNTER_SPAWNER_PRIORITY } }, _actor342400WavePairTask, { .value = 0 } },
@@ -199,14 +199,12 @@ static s16 _gActor342400EncounterSpotChoices[6][4] = {
 
 #include "assets/enemies/chaser/mad/body.inc"
 
-enum { MAD_CHASER_ATTACK_REACTION_NORMAL = 0 };
-
 /// Mad Chaser contact attack: index 0, base power 22, ordinary player hit without status.
 ///
 /// Enemy parameters borrow this row while the carrier is loaded. Its key is
 /// shared by the attack sphere; HP-band scaling is applied by the victim.
 static DamageAttack _gMadChaserAttacks[1] = {
-    { 22, MAD_CHASER_ATTACK_REACTION_NORMAL },
+    { 22, GAME_ACTOR_REACTION_ORDINARY },
 };
 
 EnemyParams gActor342400MadChaserEnemyParams = { _gMadChaserAttacks, 110, 20, 40, 1, 100, 10, 100, 0 };
@@ -409,27 +407,27 @@ static s16 _actor342400PickEncounterSpot(void)
     s16       playerZ     = playerCoord->coord.t[2];
 
     if (playerX <= 5000) {
-        return _gActor342400EncounterSpotChoices[0][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+        return _gActor342400EncounterSpotChoices[0][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
     }
     if (playerX <= 8000) {
-        return _gActor342400EncounterSpotChoices[1][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+        return _gActor342400EncounterSpotChoices[1][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
     }
     if (playerX <= 11000) {
-        return _gActor342400EncounterSpotChoices[2][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+        return _gActor342400EncounterSpotChoices[2][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
     }
     if (playerZ >= -5500) {
-        return _gActor342400EncounterSpotChoices[3][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+        return _gActor342400EncounterSpotChoices[3][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
     }
     if (playerZ >= -8500) {
-        return _gActor342400EncounterSpotChoices[4][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+        return _gActor342400EncounterSpotChoices[4][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
     }
     if (playerZ >= -11500) {
-        return _gActor342400EncounterSpotChoices[5][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+        return _gActor342400EncounterSpotChoices[5][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
     }
     if (playerZ >= -24500) {
-        return _gActor342400EncounterSpotChoices[5][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+        return _gActor342400EncounterSpotChoices[5][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
     }
-    return _gActor342400EncounterSpotChoices[5][(gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
+    return _gActor342400EncounterSpotChoices[5][(RANDOM_LCG_ADVANCE()) >> ACTOR_342400_ENCOUNTER_RANDOM_SHIFT & ACTOR_342400_ENCOUNTER_PICK_MASK];
 }
 
 /// Latches a stop command that suspends the controller's feeding stage.

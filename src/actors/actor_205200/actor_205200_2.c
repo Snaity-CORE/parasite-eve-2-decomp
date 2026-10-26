@@ -7,7 +7,7 @@
 #include "common.h"
 
 #include "actors/actor.h"
-#include "actors/task_tables.h"
+#include "actors/actor_205200.h"
 
 #include "gameplay/actor.h"
 #include "gameplay/actor_render.h"
@@ -192,7 +192,7 @@ static SVECTOR _gActor205200BodyTouchCenters[2] = {
     { 0, -700, 0, 0 },
 };
 
-TaskDesc gActor205200BodyTaskDesc = { { { TASK_BODY_TMD, ACTOR_205200_ENEMY_TASK_PRIORITY } }, _actor205200BodyTask, { .model = &gEveMaskedBody } };
+TaskDesc gActor205200BodyTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor205200BodyTask, { .model = &gEveMaskedBody } };
 
 /// Stationary-body messages for model drawing and command-triggered teardown.
 ///
@@ -397,8 +397,8 @@ static inline void _actor205200TickFidget(_Actor205200Work* work)
         ACTOR_205200_FIDGET_DRAW_MASK  = 7
     };
     if (--work->fidgetTimer <= 0) {
-        work->fidgetTimer = (((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & ACTOR_205200_FIDGET_DELAY_MASK) + ACTOR_205200_FIDGET_MIN_DELAY;
-        if (!(((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16) & ACTOR_205200_FIDGET_DRAW_MASK)) {
+        work->fidgetTimer = (((RANDOM_LCG_ADVANCE()) >> 16) & ACTOR_205200_FIDGET_DELAY_MASK) + ACTOR_205200_FIDGET_MIN_DELAY;
+        if (!(((RANDOM_LCG_ADVANCE()) >> 16) & ACTOR_205200_FIDGET_DRAW_MASK)) {
             work->actionStep = ACTOR_205200_IDLE_FIDGET;
             work->anim       = ACTOR_205200_ANIM_FIDGET;
         }

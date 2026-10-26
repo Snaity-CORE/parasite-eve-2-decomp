@@ -40,7 +40,7 @@
 /// at 32 bits, and the updated `gRandomLcgState` is visible to other consumers.
 /// Each invocation consumes a draw, including separate sign and magnitude draws;
 /// evaluating this expression again advances the sequence again.
-#define ACTOR_341300_DRAW_RANDOM_U16() ((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16)
+#define ACTOR_341300_DRAW_RANDOM_U16() ((RANDOM_LCG_ADVANCE()) >> 16)
 
 /// Work block of a debris shard task: one flat triangle that tumbles and falls
 /// under gravity until its origin drops below y 0.
@@ -122,23 +122,18 @@ static void _actor341300TexturedQuadsTask(Task* task);
 
 #include "assets/rooms/shelter/b2_north_maintenance_walkway/stinger_scene_clips.inc"
 
-/// Priority of the scene's temporary tasks and placed-resource exit recipe.
-enum { ACTOR_341300_TASK_PRIORITY = 192 };
-
 /// Scene-local script choices; music durations count audio updates.
 enum {
     ACTOR_341300_SCENE_VIEW               = 4,
     ACTOR_341300_SCENE_CAP_COMMAND        = 2,
     ACTOR_341300_MUSIC_FADE_TICKS         = 60,
-    ACTOR_341300_SCENE_ACTOR_DRAW_HIDE    = 0,
-    ACTOR_341300_SCENE_ACTOR_DRAW_SHOW    = 1,
     ACTOR_341300_SCENE_ACTOR_EXIT_COMMAND = 1
 };
 
 TaskDesc gActor341300ScriptTaskDescriptors[3] = {
-    { { { TASK_BODY_COORD, ACTOR_341300_TASK_PRIORITY } }, _actor341300TexturedQuadsTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_341300_TASK_PRIORITY } }, _actor341300TurnPlayerTowardScenePlacementTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_341300_TASK_PRIORITY } }, enemyTaskExit, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _actor341300TexturedQuadsTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor341300TurnPlayerTowardScenePlacementTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, enemyTaskExit, { .value = 0 } },
 };
 
 /// Player weapon-bank extension: NULL at index 47, then scene sets at 48..52.
@@ -263,7 +258,7 @@ EvsCommand gActor341300WalkwaySceneScript[] = {
     { EVENT_SCRIPT_OPCODE_STOP_AREA_MUSIC, { .value = ACTOR_341300_MUSIC_FADE_TICKS }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_COPY_BANK_EXTENSION }, { .message = { .animationBankCopy = &_gActor341300PlayerAnimationExtensionCopy } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = GAME_ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_341300_SCENE_ACTOR_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SET_VIEW, { .value = ACTOR_341300_SCENE_VIEW }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLACE }, { .message = { .transform = &_gActor341300SceneActorPlacement } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_PLAY_ANIMATION }, { .message = { .animation = &_gActor341300SceneActorAnimation0Request } }, { .value = 0 } },
@@ -291,7 +286,7 @@ EvsCommand gActor341300WalkwaySceneScript[] = {
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callbackS16 = _actor341300StopDebrisEmitterCallback }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gActor341300PlayerSceneAnimation3Request }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_341300_SCENE_ACTOR_DRAW_HIDE }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = 0 }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_HIDE }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callbackS16 = _actor341300StartDebrisEmitterCallback }, { .value = 1 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_CAP_CUE, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_CALLBACK, { .callbackS16 = _actor341300StopDebrisEmitterCallback }, { .value = 1 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -379,17 +374,17 @@ static void _actor341300Emitter2ShardTask(Task* task);
 /// until their first update joins its teardown tree. Emitters have no body;
 /// shards own coordinate bodies. All callbacks require this package loaded.
 static TaskDesc _gActor341300DebrisTaskDescriptors[4] = {
-    { { { TASK_BODY_NONE, ACTOR_341300_TASK_PRIORITY } }, _actor341300Emitter0Task, { .value = 0 } },
-    { { { TASK_BODY_COORD, ACTOR_341300_TASK_PRIORITY } }, _actor341300Emitter0ShardTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ACTOR_341300_TASK_PRIORITY } }, _actor341300Emitter2Task, { .value = 0 } },
-    { { { TASK_BODY_COORD, ACTOR_341300_TASK_PRIORITY } }, _actor341300Emitter2ShardTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor341300Emitter0Task, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _actor341300Emitter0ShardTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor341300Emitter2Task, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _actor341300Emitter2ShardTask, { .value = 0 } },
 };
 
 /// Unspawned bodyless emitter recipe for two delayed ten-pair shard bursts.
 ///
 /// Its callback uses shard descriptor 1 at positions 0/1. No package spawn
 /// path reaches this recipe; ignored script indices do not establish a mapping.
-static TaskDesc _gActor341300PairedDebrisEmitterTaskDescriptor = { { { TASK_BODY_NONE, ACTOR_341300_TASK_PRIORITY } }, _actor341300PairedDebrisEmitterTask, { .value = 0 } };
+static TaskDesc _gActor341300PairedDebrisEmitterTaskDescriptor = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor341300PairedDebrisEmitterTask, { .value = 0 } };
 
 /// Borrowed task handle shared by the player-facing and textured-quad script phases.
 ///
@@ -505,7 +500,7 @@ static void _actor341300DrawTexturedQuads(void)
             setRGB0(quad, ACTOR_341300_QUAD_NEUTRAL_RGB, ACTOR_341300_QUAD_NEUTRAL_RGB, ACTOR_341300_QUAD_NEUTRAL_RGB);
             quad->clut  = getClut(0, 248);
             quad->tpage = getTPage(1, 0, 448, 256);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(quadDepth[quadIndex] << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), quad);
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadDepth[quadIndex]), quad);
         }
     }
 }

@@ -110,10 +110,8 @@ enum {
     EQUIPMENT_SUPPLY_JAVELIN_BATTERY       = 0xBE
 };
 
-/// Fixed extent and counter-to-grey conversion of the display transition overlay.
+/// Steps, counter-to-grey conversion and ordering tags of the display transition overlay.
 enum {
-    FADE_DISPLAY_WIDTH_PIXELS    = 320,
-    FADE_DISPLAY_HEIGHT_PIXELS   = 240,
     FADE_DISPLAY_STEPS           = 8,
     FADE_DISPLAY_INTENSITY_SHIFT = 5,
     FADE_DISPLAY_MIN_GREY        = (1 << FADE_DISPLAY_INTENSITY_SHIFT) - 1,
@@ -1617,11 +1615,11 @@ void itemPickupContainerLidTask(Task* task)
                 task->killCountdown = 0;
                 switch (stageAreaKey) {
                     case GAME_LOCATION_KEY(GAME_STAGE_AKROPOLIS, GAME_AREA_AKROPOLIS_SECURITY_ROOM, 0, 0): {
-                        _itemPickupPlayLidSound(task, SOUND_ACROPOLIS_SECURITY_ROOM_ITEM_LID_OPEN);
+                        _itemPickupPlayLidSound(task, SOUND_AKROPOLIS_SECURITY_ROOM_ITEM_LID_OPEN);
                         break;
                     }
                     case GAME_LOCATION_KEY(GAME_STAGE_AKROPOLIS, GAME_AREA_AKROPOLIS_SANCTUARY, 0, 0): {
-                        _itemPickupPlayLidSound(task, SOUND_ACROPOLIS_SANCTUARY_ITEM_LID_OPEN);
+                        _itemPickupPlayLidSound(task, SOUND_AKROPOLIS_SANCTUARY_ITEM_LID_OPEN);
                     }
                     // Sanctuary also requests the following sound; retain this fallthrough.
                     case GAME_LOCATION_KEY(GAME_STAGE_DRYFIELD, GAME_AREA_DRYFIELD_TRAILER_COACH, 0, 0): {
@@ -1666,11 +1664,11 @@ void itemPickupContainerLidTask(Task* task)
         if (task->state == ITEM_PICKUP_LID_BEGIN_CLOSING) {
             switch (stageAreaKey) {
                 case GAME_LOCATION_KEY(GAME_STAGE_AKROPOLIS, GAME_AREA_AKROPOLIS_SECURITY_ROOM, 0, 0): {
-                    _itemPickupPlayLidSound(task, SOUND_ACROPOLIS_SECURITY_ROOM_ITEM_LID_CLOSE);
+                    _itemPickupPlayLidSound(task, SOUND_AKROPOLIS_SECURITY_ROOM_ITEM_LID_CLOSE);
                     break;
                 }
                 case GAME_LOCATION_KEY(GAME_STAGE_AKROPOLIS, GAME_AREA_AKROPOLIS_SANCTUARY, 0, 0): {
-                    _itemPickupPlayLidSound(task, SOUND_ACROPOLIS_SANCTUARY_ITEM_LID_CLOSE);
+                    _itemPickupPlayLidSound(task, SOUND_AKROPOLIS_SANCTUARY_ITEM_LID_CLOSE);
                     break;
                 }
                 case GAME_LOCATION_KEY(GAME_STAGE_DRYFIELD, GAME_AREA_DRYFIELD_TRAILER_COACH, 0, 0):
@@ -1947,10 +1945,10 @@ static inline void _fadeQueueDisplayTransitionOverlay(const s16* fadeStep, s32 y
     gGpuPrimCursor = fadeTile + 1;
     setTile(fadeTile);
     setSemiTrans(fadeTile, true);
-    fadeTile->x0 = -FADE_DISPLAY_WIDTH_PIXELS / 2;
-    fadeTile->y0 = -FADE_DISPLAY_HEIGHT_PIXELS / 2 - yOffsetPixels;
-    fadeTile->w  = FADE_DISPLAY_WIDTH_PIXELS;
-    fadeTile->h  = FADE_DISPLAY_HEIGHT_PIXELS;
+    fadeTile->x0 = -DISPLAY_SCREEN_WIDTH / 2;
+    fadeTile->y0 = -DISPLAY_SCREEN_HEIGHT / 2 - yOffsetPixels;
+    fadeTile->w  = DISPLAY_SCREEN_WIDTH;
+    fadeTile->h  = DISPLAY_SCREEN_HEIGHT;
     if (*fadeStep < FADE_DISPLAY_STEPS) {
         darkness     = (*fadeStep << FADE_DISPLAY_INTENSITY_SHIFT) + FADE_DISPLAY_MIN_GREY;
         fadeTile->b0 = darkness;

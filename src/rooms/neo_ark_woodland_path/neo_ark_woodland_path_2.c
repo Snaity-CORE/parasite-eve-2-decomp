@@ -77,10 +77,10 @@ static void _neoArkWoodlandPathRoamerPoolBTask(Task* task);
 /// select category-4 reaction 7 (presentation unproven); the last two select
 /// ordinary reaction 0. The pool controllers do not index these attack rows.
 static DamageAttack _gNeoArkWoodlandPathRoamerAttacks[6] = {
-    { 30, 7 },
-    { 30, 7 },
-    { 50, 7 },
-    { 50, 7 },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 30, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 50, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 40, 0 },
     { 40, 0 },
 };
@@ -263,11 +263,9 @@ static RoamerSpawnPoint _gRoamerPoolBSpawnPointEnd = {
     .yaw = ROAMER_SPAWN_POINT_END,
 };
 
-enum { NEO_ARK_WOODLAND_PATH_ROAMER_CONTROLLER_PRIORITY = 32 };
-
 TaskDesc gNeoArkWoodlandPathRoamerControllerTaskDescs[2] = {
-    { .header = { .fields = { .flags = TASK_BODY_NONE, .priority = NEO_ARK_WOODLAND_PATH_ROAMER_CONTROLLER_PRIORITY } }, .callback = _neoArkWoodlandPathRoamerPoolBTask, .data = { .value = 0 } },
-    { .header = { .fields = { .flags = TASK_BODY_NONE, .priority = NEO_ARK_WOODLAND_PATH_ROAMER_CONTROLLER_PRIORITY } }, .callback = _neoArkWoodlandPathRoamerPoolATask, .data = { .value = 0 } },
+    { .header = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_SCENE } }, .callback = _neoArkWoodlandPathRoamerPoolBTask, .data = { .value = 0 } },
+    { .header = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_SCENE } }, .callback = _neoArkWoodlandPathRoamerPoolATask, .data = { .value = 0 } },
 };
 
 ActorCommand gRoamerCommand = { { .loc = { 0, 0 } }, 0 };
@@ -332,13 +330,13 @@ void neoArkWoodlandPathPlayerWaterSplashTask(Task* task)
     surfaceCoord.coord.t[2]   = playerRoot->coord.t[2];                                                                                                                                                                                                                                                                                                           \
     surfaceCoord.composeStamp = GRAPHICS_COORD_DIRTY;                                                                                                                                                                                                                                                                                                             \
     actorRenderComposeCoord(&surfaceCoord);                                                                                                                                                                                                                                                                                                                       \
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                                                                                                                                                                                                                             \
-    if ((s32)((gRandomLcgState >> 16) & WATER_SPLASH_ROLL_MASK) < work->angle) {                                                                                                                                                                                                                                                                                  \
+    RANDOM_LCG_ADVANCE();                                                                                                                                                                                                                                                                                                                                         \
+    if ((s32)(RANDOM_LCG_DRAW() & WATER_SPLASH_ROLL_MASK) < work->angle) {                                                                                                                                                                                                                                                                                        \
         effectSpawn(gRoomEffectWaterRippleId, &surfaceCoord, WATER_SPLASH_RIPPLE_HALF_SIDE, 0);                                                                                                                                                                                                                                                                   \
     }                                                                                                                                                                                                                                                                                                                                                             \
-    work->angle    -= WATER_SPLASH_RIPPLE_ODDS_BIAS;                                                                                                                                                                                                                                                                                                              \
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;                                                                                                                                                                                                                                                                             \
-    if ((s32)((gRandomLcgState >> 16) & WATER_SPLASH_ROLL_MASK) < work->angle) {                                                                                                                                                                                                                                                                                  \
+    work->angle -= WATER_SPLASH_RIPPLE_ODDS_BIAS;                                                                                                                                                                                                                                                                                                                 \
+    RANDOM_LCG_ADVANCE();                                                                                                                                                                                                                                                                                                                                         \
+    if ((s32)(RANDOM_LCG_DRAW() & WATER_SPLASH_ROLL_MASK) < work->angle) {                                                                                                                                                                                                                                                                                        \
         effectSpawn(gRoomEffectWaterSprayId, &surfaceCoord, WATER_SPLASH_SPRAY_SPAWN_ARG, 0);                                                                                                                                                                                                                                                                     \
     }                                                                                                                                                                                                                                                                                                                                                             \
     gNeoArkWoodlandPathPlayerWaterPartHistory[(sampleIndex)].vx = trackedPart->workm.t[0];                                                                                                                                                                                                                                                                        \

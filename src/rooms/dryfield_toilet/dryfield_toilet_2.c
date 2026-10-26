@@ -11,7 +11,10 @@
 
 #include "dryfield_toilet_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01200.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_323300.h"
+#include "actors/actor_401000.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -75,7 +78,6 @@ enum {
     DRYFIELD_TOILET_WOMAN_COMMAND_RELEASE_STRANGER = 11,
     DRYFIELD_TOILET_WOMAN_COMMAND_TURN             = 12,
     DRYFIELD_TOILET_WOMAN_COMMAND_SPRAY            = 13,
-    DRYFIELD_TOILET_WOMAN_DRAW_SHOW                = 1,
     DRYFIELD_TOILET_WOMAN_DRAW_HIDE_RELEASE        = 2,
 };
 
@@ -169,7 +171,7 @@ EvsCommand gDryfieldToiletEncounterScript[31] = {
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_COPY_BANK_EXTENSION }, { .message = { .animationBankCopy = &_gDryfieldToiletPlayerAnimationBankCopy } }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldToiletPlayerEventAnimation48 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = DRYFIELD_TOILET_ODD_STRANGER_PLACEMENT_INDEX }, { .value = ACTOR_COMMAND_MESSAGE_APPLY }, { .message = { .command = &_gDryfieldToiletOddStrangerCommand1 } }, { .value = 0 } },
-    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = DRYFIELD_TOILET_WOMAN_PLACEMENT_INDEX }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = DRYFIELD_TOILET_WOMAN_DRAW_SHOW }, { .value = 0 } },
+    { EVENT_SCRIPT_OPCODE_SEND_MESSAGE, { .value = GAME_TASK_SLOT_SCENE }, { .value = DRYFIELD_TOILET_WOMAN_PLACEMENT_INDEX }, { .value = ACTOR_MESSAGE_SET_MODEL_DRAW }, { .value = ACTOR_MESSAGE_DRAW_SHOW }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 20 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_PLAY_WEAPON_ANIMATION, { .value = GAME_TASK_SLOT_PLAYER }, { .value = 0 }, { .value = ANIMATION_MESSAGE_PLAY }, { .animation = &_gDryfieldToiletPlayerEventAnimation49 }, { .value = 0 } },
     { EVENT_SCRIPT_OPCODE_WAIT_FRAMES, { .value = 40 }, { .value = 0 }, { .value = 0 }, { .value = 0 }, { .value = 0 } },
@@ -765,12 +767,12 @@ static inline void _dryfieldToiletNormalizeSprayDirection(EffectWork* work)
            SPRAY_RANDOM_DIRECTION_BIAS = 0x800 };
 
     if ((work->pos.vx | work->pos.vy | work->pos.vz) == 0) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->pos.vx    = ((gRandomLcgState >> 16) & SPRAY_RANDOM_DIRECTION_MASK) - SPRAY_RANDOM_DIRECTION_BIAS;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->pos.vy    = ((gRandomLcgState >> 16) & SPRAY_RANDOM_DIRECTION_MASK) - SPRAY_RANDOM_DIRECTION_BIAS;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->pos.vz    = ((gRandomLcgState >> 16) & SPRAY_RANDOM_DIRECTION_MASK) - SPRAY_RANDOM_DIRECTION_BIAS;
+        RANDOM_LCG_ADVANCE();
+        work->pos.vx = (RANDOM_LCG_DRAW() & SPRAY_RANDOM_DIRECTION_MASK) - SPRAY_RANDOM_DIRECTION_BIAS;
+        RANDOM_LCG_ADVANCE();
+        work->pos.vy = (RANDOM_LCG_DRAW() & SPRAY_RANDOM_DIRECTION_MASK) - SPRAY_RANDOM_DIRECTION_BIAS;
+        RANDOM_LCG_ADVANCE();
+        work->pos.vz = (RANDOM_LCG_DRAW() & SPRAY_RANDOM_DIRECTION_MASK) - SPRAY_RANDOM_DIRECTION_BIAS;
     }
     // The offset also supplies the spray direction, normalized to Q12.
     VectorNormalSS(&work->pos, &work->move);
@@ -909,7 +911,7 @@ void dryfieldToiletJetPuffTask(Task* task)
     gte_stszotz(&projection->otz);
     if ((scratchEnd - 1)->otz >= PUFF_MIN_DEPTH) {
         if (task->state == PUFF_INITIALIZE) {
-            randomBits  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomBits  = RANDOM_LCG_NEXT(gRandomLcgState);
             work->scale = task->spawnArg1.value & PUFF_SIZE_MASK;
             work->angle = ((u32)randomBits >> 16) & (ROOM_VISUAL_EFFECTS_FULL_TURN - 1);
             // Keep the signed halfword: nibble values 8..15 decode as negative.
@@ -922,12 +924,12 @@ void dryfieldToiletJetPuffTask(Task* task)
             }
             work->period = framePeriod;
             if (task->spawnArg1.value & PUFF_RANDOM_MOVE_FLAG) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = ((gRandomLcgState >> 16) & PUFF_RANDOM_MOVE_MASK) - PUFF_RANDOM_MOVE_BIAS;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = ((gRandomLcgState >> 16) & PUFF_RANDOM_MOVE_MASK) - PUFF_RANDOM_MOVE_BIAS;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = ((gRandomLcgState >> 16) & PUFF_RANDOM_MOVE_MASK) - PUFF_RANDOM_MOVE_BIAS;
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = (RANDOM_LCG_DRAW() & PUFF_RANDOM_MOVE_MASK) - PUFF_RANDOM_MOVE_BIAS;
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = (RANDOM_LCG_DRAW() & PUFF_RANDOM_MOVE_MASK) - PUFF_RANDOM_MOVE_BIAS;
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = (RANDOM_LCG_DRAW() & PUFF_RANDOM_MOVE_MASK) - PUFF_RANDOM_MOVE_BIAS;
             }
             if (task->spawnArg1.value & PUFF_SCALE_MOVE_FLAG) {
                 gte_lddp(work->scale << 2);
@@ -947,7 +949,7 @@ void dryfieldToiletJetPuffTask(Task* task)
         setUVWH(quad, (work->age / work->period) << PUFF_TEXTURE_CELL_SHIFT, PUFF_TEXTURE_ROW,
                 PUFF_TEXTURE_CELL_LAST, PUFF_TEXTURE_CELL_LAST);
         _dryfieldToiletSetJetPuffCorners(quad, projection, &work->scale, &work->angle);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->otz),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(OverlaySpriteScratch);

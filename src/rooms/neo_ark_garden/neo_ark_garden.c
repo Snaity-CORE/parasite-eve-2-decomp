@@ -12,7 +12,10 @@
 #include "neo_ark_garden_private.h"
 
 #include "actors/actor_151000.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_03800.h"
+#include "actors/actor_151000.h"
 
 #include "gameplay/area.h"
 #include "gameplay/area_flags.h"
@@ -255,7 +258,7 @@ static void _neoArkGardenInitializeRoom(Task* task)
     // Match arrival warp 3 and placement variant 2 as one halfword.
     if (*(u16*)&gGameSession->location.warp == NEO_ARK_GARDEN_ARRIVAL_KEY) {
         evsStartScriptWithSkip(gActor151000GardenArrivalScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor151000GardenArrivalSkipScript);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, NEO_ARK_GARDEN_ARRIVAL_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, NEO_ARK_GARDEN_ARRIVAL_OBJECTIVE);
     }
     task->state = task->state + 1;
 }

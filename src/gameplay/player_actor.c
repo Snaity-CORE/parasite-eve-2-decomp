@@ -1321,8 +1321,8 @@ static u16 D_801132BC[33][2] = {
     { 43, 6 }
 };
 TaskDesc gEffectPlayerBodyHitTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, 192 } }, effectPlayerBodyBlastTask, { NULL } },
-    { { { TASK_BODY_NONE, 192 } }, effectPlayerBodyPuffTask, { NULL } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, effectPlayerBodyBlastTask, { NULL } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, effectPlayerBodyPuffTask, { NULL } },
 };
 EffectSpawnArg gEffectPlayerHitSpawnArg        = { NULL, 512, 3 };
 u16            gCompanionAnimationBankBases[4] = {
@@ -1374,8 +1374,8 @@ void effectSpriteTask46(Task* task)
     actorRenderComposeCoord(coord);
     switch (task->state) {
         case EFFECT_GROUND_DECAL_STATE_NEW:
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            gfxRotMatrixY(&coord->coord, (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK, GRAPHICS_ROTATION_REPLACE);
+            RANDOM_LCG_ADVANCE();
+            gfxRotMatrixY(&coord->coord, RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK, GRAPHICS_ROTATION_REPLACE);
             coord->composeStamp = GRAPHICS_COORD_DIRTY;
             work->angle         = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
             paletteBits         = task->spawnArg1.halves.high;
@@ -1494,7 +1494,7 @@ static void _effectDrawProjectileSprite(const Task* task)
         quad->x1 = quad->x3 = scratch->screenX + (u16)scratch->screenExtent;
         quad->y0 = quad->y1 = scratch->screenY - (u16)scratch->screenExtent;
         quad->y2 = quad->y3 = scratch->screenY + (u16)scratch->screenExtent;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectCentreScratch);
@@ -1588,7 +1588,7 @@ static void _effectDrawGroundDecal(const GfxCoord* coord, s32 halfSize, s16 brig
         quad->y2    = quadScratch->screenCorners[2].vy;
         quad->x3    = quadScratch->screenCorners[3].vx;
         quad->y3    = quadScratch->screenCorners[3].vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectQuadScratch);
@@ -1608,8 +1608,8 @@ static inline void _effectSpawnProjectileBurstParticle(const EffectWork* work, G
     if (gRoomEffectState->effectControl != ROOM_EFFECT_CONTROL_RUNNING) {
         return;
     }
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    if ((u16)((gRandomLcgState >> 16) % (u32)EFFECT_PROJECTILE_BURST_RANDOM_CHOICES) == 0) {
+    RANDOM_LCG_ADVANCE();
+    if ((u16)(RANDOM_LCG_DRAW() % (u32)EFFECT_PROJECTILE_BURST_RANDOM_CHOICES) == 0) {
         effectSpawn(EFFECT_PROJECTILE_BURST_PARTICLE, coord, (s32)work->scale, NULL);
     }
 }
@@ -1685,8 +1685,8 @@ void effectProjectileGlowTask(Task* task)
             if (gRoomEffectState->effectControl != ROOM_EFFECT_CONTROL_RUNNING) {
                 break;
             }
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if (((gRandomLcgState >> 16) & EFFECT_PROJECTILE_GLOW_TRAIL_RANDOM_MASK) == 0) {
+            RANDOM_LCG_ADVANCE();
+            if ((RANDOM_LCG_DRAW() & EFFECT_PROJECTILE_GLOW_TRAIL_RANDOM_MASK) == 0) {
                 effectSpawn(EFFECT_TRAIL_PUFF, coord, work->scale + EFFECT_PROJECTILE_GLOW_TRAIL_PUFF_BITS, NULL);
             }
             work->age++;
@@ -1823,7 +1823,7 @@ void effectSpriteTask55(Task* task)
                 if (requestedSize != 0) {
                     size = requestedSize;
                 }
-                randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                 work->scale     = size;
                 work->angle     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
                 ticksPerFrame   = ((u16)task->spawnArg1.value & EFFECT_PUFF_PERIOD_MASK) << 16;
@@ -1841,12 +1841,12 @@ void effectSpriteTask55(Task* task)
                 work->move.vy -= EFFECT_PUFF_INITIAL_LIFT;
                 work->move.vz += ((work->angle & 0xF) * rcos(work->angle)) >> EFFECT_DRAW_FRACTION_BITS;
                 if (task->spawnArg1.value & EFFECT_PUFF_RANDOM_VELOCITY) {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vx   = ((gRandomLcgState >> 16) & 0x1F) - 0x10;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vy   = ((gRandomLcgState >> 16) & 0x1F) - 0x10;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vz   = ((gRandomLcgState >> 16) & 0x1F) - 0x10;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vx = (RANDOM_LCG_DRAW() & 0x1F) - 0x10;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vy = (RANDOM_LCG_DRAW() & 0x1F) - 0x10;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vz = (RANDOM_LCG_DRAW() & 0x1F) - 0x10;
                 }
                 if (task->spawnArg1.value & EFFECT_PUFF_SCALE_VELOCITY) {
                     gte_lddp(work->scale << EFFECT_PUFF_VELOCITY_SCALE_SHIFT);
@@ -1869,7 +1869,7 @@ void effectSpriteTask55(Task* task)
             quad->u3    = ((work->age / work->period) * EFFECT_PUFF_CELL_SIZE) + EFFECT_PUFF_CELL_SIZE - 1;
             quad->v3    = EFFECT_PUFF_TEXTURE_V + EFFECT_PUFF_CELL_SIZE - 1;
             EFFECT_SET_ROTATED_SHAPE_CORNERS(scratch, quad, work->scale * (EFFECT_PUFF_CELL_SIZE - 1), work->angle);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -1952,7 +1952,7 @@ void effectSpriteTask42(Task* task)
                 if (requestedSize != 0) {
                     size = requestedSize;
                 }
-                randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
                 work->scale     = size;
                 work->angle     = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
                 ticksPerFrame   = ((u16)task->spawnArg1.value & EFFECT_PUFF_PERIOD_MASK) << 16;
@@ -1967,12 +1967,12 @@ void effectSpriteTask42(Task* task)
                 work->step    = blendBits & 3;
                 work->move.vy = work->move.vy - EFFECT_PUFF_INITIAL_LIFT;
                 if (task->spawnArg1.value & EFFECT_PUFF_RANDOM_VELOCITY) {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vx   = ((gRandomLcgState >> 16) & 0x1F) - 0x10;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vy   = ((gRandomLcgState >> 16) & 0x1F) - 0x10;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vz   = ((gRandomLcgState >> 16) & 0x1F) - 0x10;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vx = (RANDOM_LCG_DRAW() & 0x1F) - 0x10;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vy = (RANDOM_LCG_DRAW() & 0x1F) - 0x10;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vz = (RANDOM_LCG_DRAW() & 0x1F) - 0x10;
                 }
                 if (task->spawnArg1.value & EFFECT_PUFF_SCALE_VELOCITY) {
                     gte_lddp(work->scale << EFFECT_PUFF_VELOCITY_SCALE_SHIFT);
@@ -1995,7 +1995,7 @@ void effectSpriteTask42(Task* task)
             quad->u3    = (work->age / work->period) * EFFECT_PUFF_CELL_SIZE - EFFECT_PUFF_TEXTURE_U_WRAP_OFFSET + EFFECT_PUFF_CELL_SIZE - 1;
             quad->v3    = EFFECT_PUFF_TEXTURE_V + EFFECT_PUFF_CELL_SIZE - 1;
             EFFECT_SET_ROTATED_SHAPE_CORNERS(scratch, quad, work->scale * (EFFECT_PUFF_CELL_SIZE - 1), work->angle);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -2081,14 +2081,14 @@ void effectHitPuffEmitterTask(Task* task)
     emissionWidth = work->scale;
     halfWidth     = emissionWidth >> 1;
     for (particleIndex = 0; particleIndex < work->step; particleIndex++) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vx   = (s32)(gRandomLcgState >> 16) % emissionWidth - halfWidth;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vy   = (s32)(gRandomLcgState >> 16) % emissionWidth - halfWidth;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vz   = (s32)(gRandomLcgState >> 16) % emissionWidth - halfWidth;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        effectSpawn(EFFECT_HIT_PUFF, coord, ((gRandomLcgState >> 16) & EFFECT_HIT_PUFF_CHILD_PERIOD_BIT) + EFFECT_HIT_PUFF_CHILD_ARGUMENT, &work->move);
+        RANDOM_LCG_ADVANCE();
+        work->move.vx = (s32)RANDOM_LCG_DRAW() % emissionWidth - halfWidth;
+        RANDOM_LCG_ADVANCE();
+        work->move.vy = (s32)RANDOM_LCG_DRAW() % emissionWidth - halfWidth;
+        RANDOM_LCG_ADVANCE();
+        work->move.vz = (s32)RANDOM_LCG_DRAW() % emissionWidth - halfWidth;
+        RANDOM_LCG_ADVANCE();
+        effectSpawn(EFFECT_HIT_PUFF, coord, (RANDOM_LCG_DRAW() & EFFECT_HIT_PUFF_CHILD_PERIOD_BIT) + EFFECT_HIT_PUFF_CHILD_ARGUMENT, &work->move);
     }
     work->age++;
 }
@@ -2129,12 +2129,12 @@ void effectHitSplatterSprayTask(Task* task)
         work->angle         = durationUnits;
         work->period        = durationUnits << EFFECT_SPLATTER_DURATION_SHIFT;
         if ((work->pos.vx | work->pos.vy | work->pos.vz) == 0) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vx    = ((gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK) - EFFECT_DRAW_FULL_TURN / 2;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vy    = ((gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK) - EFFECT_DRAW_FULL_TURN / 2;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vz    = ((gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK) - EFFECT_DRAW_FULL_TURN / 2;
+            RANDOM_LCG_ADVANCE();
+            work->pos.vx = (RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK) - EFFECT_DRAW_FULL_TURN / 2;
+            RANDOM_LCG_ADVANCE();
+            work->pos.vy = (RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK) - EFFECT_DRAW_FULL_TURN / 2;
+            RANDOM_LCG_ADVANCE();
+            work->pos.vz = (RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK) - EFFECT_DRAW_FULL_TURN / 2;
         }
         VectorNormalSS(&work->pos, &work->move);
     }
@@ -2234,23 +2234,23 @@ void effectGravityParticleTask(Task* task)
         case EFFECT_DRAW_TASK_NEW:
             // Reuse pos as size/frame-period/spin; keep the supplied or random Q12 heading in move.
             gfxSetRotIdentity(&coord->coord);
-            work->pos.vx    = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
-            work->scale     = EFFECT_GRAVITY_PARTICLE_INITIAL_SPEED;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vy    = (gRandomLcgState >> 16) & (EFFECT_GRAVITY_PARTICLE_FRAME_COUNT - 1);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->index     = (gRandomLcgState >> 16) & (EFFECT_GRAVITY_PARTICLE_FRAME_COUNT - 1);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vz    = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->period    = EFFECT_GRAVITY_PARTICLE_SPIN_BIAS - ((gRandomLcgState >> 16) & EFFECT_GRAVITY_PARTICLE_SPIN_MASK);
+            work->pos.vx = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
+            work->scale  = EFFECT_GRAVITY_PARTICLE_INITIAL_SPEED;
+            RANDOM_LCG_ADVANCE();
+            work->pos.vy = RANDOM_LCG_DRAW() & (EFFECT_GRAVITY_PARTICLE_FRAME_COUNT - 1);
+            RANDOM_LCG_ADVANCE();
+            work->index = RANDOM_LCG_DRAW() & (EFFECT_GRAVITY_PARTICLE_FRAME_COUNT - 1);
+            RANDOM_LCG_ADVANCE();
+            work->pos.vz = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->period = EFFECT_GRAVITY_PARTICLE_SPIN_BIAS - (RANDOM_LCG_DRAW() & EFFECT_GRAVITY_PARTICLE_SPIN_MASK);
             if ((work->move.vx | work->move.vy | work->move.vz) == 0) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_BIAS - ((gRandomLcgState >> 16) & EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_MASK);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_BIAS - ((gRandomLcgState >> 16) & EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_MASK);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_BIAS - ((gRandomLcgState >> 16) & EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_MASK);
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_BIAS - (RANDOM_LCG_DRAW() & EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_MASK);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_BIAS - (RANDOM_LCG_DRAW() & EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_MASK);
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_BIAS - (RANDOM_LCG_DRAW() & EFFECT_GRAVITY_PARTICLE_RANDOM_COMPONENT_MASK);
                 gte_SetRotMatrix(&coord->coord);
                 gte_ldv0(&work->move);
                 gte_rtv0();
@@ -2297,8 +2297,8 @@ void effectGravityParticleTask(Task* task)
                 work->period = work->period >> 1;
                 EFFECT_GRAVITY_PARTICLE_ADVANCE(coord, work->scale, &work->move, &displacement);
                 actorRenderComposeCoord(coord);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                if (((gRandomLcgState >> 16) & 1) != 0) {
+                RANDOM_LCG_ADVANCE();
+                if ((RANDOM_LCG_DRAW() & 1) != 0) {
                     if (task->spawnArg1.value == EFFECT_GRAVITY_PARTICLE_SUBTRACT_VARIANT) {
                         childArgumentBase = EFFECT_GRAVITY_PARTICLE_SMOKE_ARGUMENT;
                         childEffectId     = EFFECT_SMOKE_PUFF;
@@ -2344,9 +2344,9 @@ void effectGravityParticleTask(Task* task)
 
                     tintRgb[0] = tintRgb[1] = tintRgb[2] = work->angle;
                     _effectDrawGravityParticle(task, task->spawnArg1.value, tintRgb);
-                    work->period   += work->pos.vx >> 4;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    wispRoll        = (gRandomLcgState >> 16) % 3;
+                    work->period += work->pos.vx >> 4;
+                    RANDOM_LCG_ADVANCE();
+                    wispRoll = RANDOM_LCG_DRAW() % 3;
                     if (wispRoll == 0) {
                         effectSpawn(EFFECT_RISING_WISP, coord, (s32)work->pos.vx, NULL);
                     }
@@ -2386,9 +2386,9 @@ void effectGravityParticleTask(Task* task)
 
                     tintRgb[0] = tintRgb[1] = tintRgb[2] = work->angle;
                     _effectDrawGravityParticle(task, task->spawnArg1.value, tintRgb);
-                    work->period   += work->pos.vx >> 4;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    wispRoll        = (gRandomLcgState >> 16) % 3;
+                    work->period += work->pos.vx >> 4;
+                    RANDOM_LCG_ADVANCE();
+                    wispRoll = RANDOM_LCG_DRAW() % 3;
                     if (wispRoll == 0) {
                         effectSpawn(EFFECT_RISING_WISP, coord, (s32)work->pos.vx, NULL);
                     }
@@ -2523,7 +2523,7 @@ static void _effectDrawGravityParticle(const Task* task, s32 particleVariant, co
         textureUEnd = textureU + EFFECT_GRAVITY_PARTICLE_CELL_SIZE - 1;
         setUV4(quad, textureU, EFFECT_GRAVITY_PARTICLE_TEXTURE_V, textureUEnd, EFFECT_GRAVITY_PARTICLE_TEXTURE_V, textureU, EFFECT_GRAVITY_PARTICLE_TEXTURE_V + EFFECT_GRAVITY_PARTICLE_CELL_SIZE - 1, textureUEnd, EFFECT_GRAVITY_PARTICLE_TEXTURE_V + EFFECT_GRAVITY_PARTICLE_CELL_SIZE - 1);
         _effectPlaceGravityParticleCorners(scratch, quad, size, spinAngle);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -2626,7 +2626,7 @@ static void _effectDrawAnimatedGroundQuad(const GfxCoord* coord, s32 halfSize, u
             quad->y2 = quadScratch->screenCorners[2].vy;
             quad->x3 = quadScratch->screenCorners[3].vx;
             quad->y3 = quadScratch->screenCorners[3].vy;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                     quad);
         }
     }
@@ -2792,8 +2792,8 @@ void effectSpriteTask32(Task* task)
             work->angle     = EFFECT_CHARGE_PARTICLE_SPRITE_SIZE;
             work->period    = EFFECT_CHARGE_PARTICLE_INITIAL_BRIGHTNESS;
             work->step      = EFFECT_CHARGE_PARTICLE_INITIAL_RADIUS;
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            nextRandomState = randomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
+            nextRandomState = RANDOM_LCG_NEXT(randomState);
             elevationAngle  = ((nextRandomState >> 0x10) & EFFECT_CHARGE_PARTICLE_ELEVATION_MASK) - EFFECT_CHARGE_PARTICLE_ELEVATION_BIAS;
             gRandomLcgState = randomState;
             work->scale     = ((u32)randomState >> 0x10) & EFFECT_DRAW_ANGLE_MASK;
@@ -3140,14 +3140,14 @@ void effectEnergyShotAuraTask(Task* task)
         return;
     }
 
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    if ((gRandomLcgState >> 16) & 3) {
+    RANDOM_LCG_ADVANCE();
+    if (RANDOM_LCG_DRAW() & 3) {
         return;
     }
-    playerTask      = gameGetTaskSlot(GAME_TASK_SLOT_PLAYER);
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    playerTask = gameGetTaskSlot(GAME_TASK_SLOT_PLAYER);
+    RANDOM_LCG_ADVANCE();
     effectSpawn(EFFECT_RISING_ENERGY_SPARK,
-                &playerTask->extra.tmd->coords[((gRandomLcgState >> 16) & 1) * EFFECT_ENERGY_SHOT_SPARK_PART_STRIDE + EFFECT_ENERGY_SHOT_FIRST_SPARK_PART],
+                &playerTask->extra.tmd->coords[(RANDOM_LCG_DRAW() & 1) * EFFECT_ENERGY_SHOT_SPARK_PART_STRIDE + EFFECT_ENERGY_SHOT_FIRST_SPARK_PART],
                 work->step | EFFECT_ENERGY_SHOT_SPARK_RANDOM_PALETTE, NULL);
 }
 
@@ -3218,12 +3218,12 @@ static void _effectDrawRadialTriangles(const GfxCoord* coord, s32 radius, s32 ra
         scratch->depth++;
         // Randomize one narrow ray within each equal angular sector.
         for (sectorAngle = 0; sectorAngle < angleStep * narrowRayCount; sectorAngle += angleStep) {
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = randomState;
             triangle        = gGpuPrimCursor;
             gGpuPrimCursor  = triangle + 1;
             _effectFillRadialTriangle(scratch, triangle, rgb, narrowRadius, sectorAngle, randomState, angleStep);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     triangle);
             gpuSetPrimitiveBlendMode(triangle, GPU_BLEND_ADD, scratch->depth);
         }
@@ -3261,24 +3261,24 @@ void effectSpriteTaskF4(Task* task)
             return;
         }
         actorRenderComposeCoord(coord);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
         effectDrawSpinningBillboard(coord, work->index, work->angle,
-                                    work->scale | ((gRandomLcgState >> 16) & EFFECT_ENERGY_SPARK_PALETTE_ONE_BITS));
+                                    work->scale | (RANDOM_LCG_DRAW() & EFFECT_ENERGY_SPARK_PALETTE_ONE_BITS));
         return;
     }
 
     // Four update ticks advance one animation cell; negative local Y rises.
     work->age++;
     if (task->state == EFFECT_DRAW_TASK_NEW) {
-        work->move.vx   = 0;
-        work->move.vz   = 0;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->move.vy   = EFFECT_ENERGY_SPARK_BASE_Y_BITS - ((gRandomLcgState >> 16) & EFFECT_ENERGY_SPARK_Y_SPREAD_MASK);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        work->scale     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
-        work->angle     = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
-        task->state     = EFFECT_DRAW_TASK_ACTIVE;
-        work->period    = task->spawnArg1.halves.low & EFFECT_ENERGY_SPARK_PALETTE_MASK;
+        work->move.vx = 0;
+        work->move.vz = 0;
+        RANDOM_LCG_ADVANCE();
+        work->move.vy = EFFECT_ENERGY_SPARK_BASE_Y_BITS - (RANDOM_LCG_DRAW() & EFFECT_ENERGY_SPARK_Y_SPREAD_MASK);
+        RANDOM_LCG_ADVANCE();
+        work->scale  = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
+        work->angle  = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
+        task->state  = EFFECT_DRAW_TASK_ACTIVE;
+        work->period = task->spawnArg1.halves.low & EFFECT_ENERGY_SPARK_PALETTE_MASK;
     }
 
     nextY               = coord->coord.t[1] + work->move.vy;
@@ -3290,9 +3290,9 @@ void effectSpriteTaskF4(Task* task)
     }
     if (work->index < EFFECT_ENERGY_SPARK_FRAME_COUNT) {
         if (work->period & EFFECT_ENERGY_SPARK_RANDOM_PALETTE) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            RANDOM_LCG_ADVANCE();
             effectDrawSpinningBillboard(coord, work->index, work->angle,
-                                        work->scale | ((gRandomLcgState >> 16) & EFFECT_ENERGY_SPARK_PALETTE_ONE_BITS));
+                                        work->scale | (RANDOM_LCG_DRAW() & EFFECT_ENERGY_SPARK_PALETTE_ONE_BITS));
         } else {
             effectDrawSpinningBillboard(coord, work->index, work->angle,
                                         work->scale | work->period);
@@ -3410,12 +3410,12 @@ void effectAntibodyAuraTask(Task* task)
             work->angle = EFFECT_ANTIBODY_SUPPRESSED_HIT_BRIGHTNESS;
         }
     } else {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        if (((gRandomLcgState >> 16) & 3) == 0) {
-            playerTask      = gameGetTaskSlot(GAME_TASK_SLOT_PLAYER);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        RANDOM_LCG_ADVANCE();
+        if ((RANDOM_LCG_DRAW() & 3) == 0) {
+            playerTask = gameGetTaskSlot(GAME_TASK_SLOT_PLAYER);
+            RANDOM_LCG_ADVANCE();
             effectSpawn(EFFECT_FLASH_BURST,
-                        &playerTask->extra.tmd->coords[((gRandomLcgState >> 16) & EFFECT_ANTIBODY_FLASH_PART_MASK) + EFFECT_ANTIBODY_FIRST_FLASH_PART],
+                        &playerTask->extra.tmd->coords[(RANDOM_LCG_DRAW() & EFFECT_ANTIBODY_FLASH_PART_MASK) + EFFECT_ANTIBODY_FIRST_FLASH_PART],
                         EFFECT_ANTIBODY_AMBIENT_FLASH_ARGUMENT, NULL);
         }
     }
@@ -3425,15 +3425,15 @@ void effectAntibodyAuraTask(Task* task)
     if (work->angle < EFFECT_ANTIBODY_BASE_BRIGHTNESS + 1) {
         return;
     }
-    work->angle     = work->angle - EFFECT_ANTIBODY_FADE_STEP;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    if ((gRandomLcgState >> 16) & 1) {
+    work->angle = work->angle - EFFECT_ANTIBODY_FADE_STEP;
+    RANDOM_LCG_ADVANCE();
+    if (RANDOM_LCG_DRAW() & 1) {
         return;
     }
-    playerTask      = gameGetTaskSlot(GAME_TASK_SLOT_PLAYER);
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    playerTask = gameGetTaskSlot(GAME_TASK_SLOT_PLAYER);
+    RANDOM_LCG_ADVANCE();
     effectSpawn(EFFECT_FLASH_BURST,
-                &playerTask->extra.tmd->coords[((gRandomLcgState >> 16) & EFFECT_ANTIBODY_FLASH_PART_MASK) + EFFECT_ANTIBODY_FIRST_FLASH_PART],
+                &playerTask->extra.tmd->coords[(RANDOM_LCG_DRAW() & EFFECT_ANTIBODY_FLASH_PART_MASK) + EFFECT_ANTIBODY_FIRST_FLASH_PART],
                 EFFECT_ANTIBODY_HIT_FLASH_ARGUMENT, NULL);
 }
 
@@ -3665,13 +3665,13 @@ void effectDeathFlameTask(Task* task)
         case EFFECT_DRAW_TASK_NEW:
             // scale seeds heading/flicker; angle is brightness, period top Y, step base radius.
             work->age++;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = gRandomLcgState >> 16;
-            work->angle     = (work->scale & EFFECT_DEATH_FLAME_BRIGHTNESS_MASK) + EFFECT_DEATH_FLAME_BRIGHTNESS_BASE;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            flameTuning     = task->spawnArg1.value;
-            work->period    = -(flameTuning << EFFECT_DEATH_FLAME_HEIGHT_TUNING_SHIFT) - ((gRandomLcgState >> 16) & EFFECT_DEATH_FLAME_HEIGHT_JITTER_MASK);
-            work->step      = task->spawnArg1.value * EFFECT_DEATH_FLAME_RADIUS_PER_TUNING + EFFECT_DEATH_FLAME_RADIUS_BASE;
+            RANDOM_LCG_ADVANCE();
+            work->scale = RANDOM_LCG_DRAW();
+            work->angle = (work->scale & EFFECT_DEATH_FLAME_BRIGHTNESS_MASK) + EFFECT_DEATH_FLAME_BRIGHTNESS_BASE;
+            RANDOM_LCG_ADVANCE();
+            flameTuning  = task->spawnArg1.value;
+            work->period = -(flameTuning << EFFECT_DEATH_FLAME_HEIGHT_TUNING_SHIFT) - (RANDOM_LCG_DRAW() & EFFECT_DEATH_FLAME_HEIGHT_JITTER_MASK);
+            work->step   = task->spawnArg1.value * EFFECT_DEATH_FLAME_RADIUS_PER_TUNING + EFFECT_DEATH_FLAME_RADIUS_BASE;
             gfxRotMatrixY(&coord->coord, work->scale & EFFECT_DEATH_FLAME_HEADING_MASK, GRAPHICS_ROTATION_REPLACE);
             coord->composeStamp = GRAPHICS_COORD_DIRTY;
             actorRenderComposeCoord(coord);
@@ -3765,30 +3765,30 @@ static void _effectDrawDeathFlame(Task* task)
 /// the arena stays live through GPU completion. Arguments repeat and must be
 /// stable and side-effect-free. Captures only renderer/GTE globals and constants.
 /// Expand only as a standalone statement sequence inside a compound block.
-#define EFFECT_DEATH_FLAME_QUEUE_QUAD(scratch, quad, screenY, red, green, blue, depthBias)                                                                             \
-    if ((scratch)->projectionFlags >= 0) {                                                                                                                             \
-        gte_stszotz(&(scratch)->depth);                                                                                                                                \
-        (scratch)->depth = (scratch)->depth + (depthBias);                                                                                                             \
-        (quad)           = gGpuPrimCursor;                                                                                                                             \
-        gGpuPrimCursor   = (quad) + 1;                                                                                                                                 \
-        setPolyF4(quad);                                                                                                                                               \
-        (quad)->r0 = (red);                                                                                                                                            \
-        (quad)->g0 = (green);                                                                                                                                          \
-        (quad)->b0 = (blue);                                                                                                                                           \
-        (quad)->x0 = (u16)(scratch)->screenCorners[0].vx;                                                                                                              \
-        (screenY)  = (scratch)->screenCorners[0].vy;                                                                                                                   \
-        (quad)->y0 = (screenY);                                                                                                                                        \
-        (quad)->x1 = (u16)(scratch)->screenCorners[1].vx;                                                                                                              \
-        (screenY)  = (scratch)->screenCorners[1].vy;                                                                                                                   \
-        (quad)->y1 = (screenY);                                                                                                                                        \
-        (quad)->x2 = (u16)(scratch)->screenCorners[2].vx;                                                                                                              \
-        (screenY)  = (scratch)->screenCorners[2].vy;                                                                                                                   \
-        (quad)->y2 = (screenY);                                                                                                                                        \
-        (quad)->x3 = (u16)(scratch)->screenCorners[3].vx;                                                                                                              \
-        (screenY)  = (scratch)->screenCorners[3].vy;                                                                                                                   \
-        (quad)->y3 = (screenY);                                                                                                                                        \
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)(scratch)->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), (quad)); \
-        gpuSetPrimitiveBlendMode((quad), GPU_BLEND_ADD, (scratch)->depth);                                                                                             \
+#define EFFECT_DEATH_FLAME_QUEUE_QUAD(scratch, quad, screenY, red, green, blue, depthBias) \
+    if ((scratch)->projectionFlags >= 0) {                                                 \
+        gte_stszotz(&(scratch)->depth);                                                    \
+        (scratch)->depth = (scratch)->depth + (depthBias);                                 \
+        (quad)           = gGpuPrimCursor;                                                 \
+        gGpuPrimCursor   = (quad) + 1;                                                     \
+        setPolyF4(quad);                                                                   \
+        (quad)->r0 = (red);                                                                \
+        (quad)->g0 = (green);                                                              \
+        (quad)->b0 = (blue);                                                               \
+        (quad)->x0 = (u16)(scratch)->screenCorners[0].vx;                                  \
+        (screenY)  = (scratch)->screenCorners[0].vy;                                       \
+        (quad)->y0 = (screenY);                                                            \
+        (quad)->x1 = (u16)(scratch)->screenCorners[1].vx;                                  \
+        (screenY)  = (scratch)->screenCorners[1].vy;                                       \
+        (quad)->y1 = (screenY);                                                            \
+        (quad)->x2 = (u16)(scratch)->screenCorners[2].vx;                                  \
+        (screenY)  = (scratch)->screenCorners[2].vy;                                       \
+        (quad)->y2 = (screenY);                                                            \
+        (quad)->x3 = (u16)(scratch)->screenCorners[3].vx;                                  \
+        (screenY)  = (scratch)->screenCorners[3].vy;                                       \
+        (quad)->y3 = (screenY);                                                            \
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH((scratch)->depth), (quad));              \
+        gpuSetPrimitiveBlendMode((quad), GPU_BLEND_ADD, (scratch)->depth);                 \
     }
 
     // Pulse the height and red-dominant brightness from independent phases.
@@ -3929,7 +3929,7 @@ void effectSpriteTaskA7(Task* task)
     }
     // Reparent at the origin; upward acceleration is expressed in that frame.
     if (task->state == EFFECT_DRAW_TASK_NEW) {
-        randomState   = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        randomState   = RANDOM_LCG_NEXT(gRandomLcgState);
         work->scale   = ((u32)randomState >> 16) & EFFECT_DRAW_ANGLE_MASK;
         work->angle   = task->spawnArg1.halves.low & EFFECT_DRAW_SIZE_MASK;
         parentCoord   = work->parent;
@@ -3975,7 +3975,7 @@ void effectSpriteTaskA7(Task* task)
         quad->u3    = ((work->age / ticksPerFrame) * EFFECT_RISING_WISP_CELL_SIZE) + EFFECT_RISING_WISP_CELL_SIZE - 1;
         quad->v3    = EFFECT_RISING_WISP_TEXTURE_V + EFFECT_RISING_WISP_CELL_SIZE - 1;
         EFFECT_RISING_WISP_SET_CORNERS(scratch, quad, work->angle * (EFFECT_RISING_WISP_CELL_SIZE - 1), work->scale);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectBillboardScratch);
@@ -4134,12 +4134,12 @@ static const TaskFuncTable4 _gPlayerActorWorkStateHandlers = { {
 /// Writes only work->move XYZ, each narrowed to s16; vector metadata stays intact.
 static inline void _effectChooseHitBlastOffset(EffectWork* work, s16 offsetRange, s16 offsetHalfRange)
 {
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vx   = ((s32)(gRandomLcgState >> 16) % offsetRange) - offsetHalfRange;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vy   = (s32)(gRandomLcgState >> 16) % offsetRange;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vz   = ((s32)(gRandomLcgState >> 16) % offsetRange) - offsetHalfRange;
+    RANDOM_LCG_ADVANCE();
+    work->move.vx = ((s32)RANDOM_LCG_DRAW() % offsetRange) - offsetHalfRange;
+    RANDOM_LCG_ADVANCE();
+    work->move.vy = (s32)RANDOM_LCG_DRAW() % offsetRange;
+    RANDOM_LCG_ADVANCE();
+    work->move.vz = ((s32)RANDOM_LCG_DRAW() % offsetRange) - offsetHalfRange;
 }
 
 void effectControlTask7F(Task* task)
@@ -4207,8 +4207,8 @@ void effectControlTask7F(Task* task)
     offsetSpan      = work->scale >> 1;
     offsetHalfRange = (u32)offsetSpan >> 1;
     offsetRange     = offsetSpan;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    if ((gRandomLcgState >> 16) & 1) {
+    RANDOM_LCG_ADVANCE();
+    if (RANDOM_LCG_DRAW() & 1) {
         burstCount = work->step;
     } else {
         burstCount = 1;
@@ -4216,8 +4216,8 @@ void effectControlTask7F(Task* task)
     for (burstIndex = 0; burstIndex < burstCount; burstIndex++) {
         _effectChooseHitBlastOffset(work, offsetRange, offsetHalfRange);
         if (work->age < work->angle) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if (work->age < (s32)(gRandomLcgState >> 16) % work->period) {
+            RANDOM_LCG_ADVANCE();
+            if (work->age < (s32)RANDOM_LCG_DRAW() % work->period) {
                 // The signed X promotion sets the rise flag only on the negative side.
                 effectSpawn(EFFECT_ADDITIVE_PUFF, coord, (work->move.vx & EFFECT_HIT_BLAST_PUFF_RISE_FLAG) | EFFECT_HIT_BLAST_FLAME_SIZE,
                             &work->move);
@@ -4225,8 +4225,8 @@ void effectControlTask7F(Task* task)
                 effectSpawn(EFFECT_FIRE_BURST, coord, EFFECT_HIT_BLAST_FLAME_SIZE, &work->move);
             }
         } else {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((gRandomLcgState >> 16) & 1) {
+            RANDOM_LCG_ADVANCE();
+            if (RANDOM_LCG_DRAW() & 1) {
                 effectSpawn(EFFECT_SMOKE_PUFF, coord, (work->scale >> 2) + EFFECT_HIT_BLAST_SMOKE_ARGUMENT_BASE,
                             &work->move);
             }
@@ -4354,14 +4354,14 @@ void effectSpriteTask80(Task* task)
             if (requestedSize != 0) {
                 size = requestedSize;
             }
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = size;
-            work->angle     = (gRandomLcgState >> 16) % EFFECT_PUFF_LIFETIME_SPAN + EFFECT_PUFF_MIN_LAST_AGE;
-            riseFlags       = task->spawnArg1.halves.high;
+            RANDOM_LCG_ADVANCE();
+            work->scale = size;
+            work->angle = RANDOM_LCG_DRAW() % EFFECT_PUFF_LIFETIME_SPAN + EFFECT_PUFF_MIN_LAST_AGE;
+            riseFlags   = task->spawnArg1.halves.high;
             if (riseFlags & EFFECT_PUFF_RISE_FLAG) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                riseSpeed       = gRandomLcgState >> 16;
-                riseSpeed       = riseSpeed % EFFECT_PUFF_RISE_SPEED_RANGE;
+                RANDOM_LCG_ADVANCE();
+                riseSpeed = RANDOM_LCG_DRAW();
+                riseSpeed = riseSpeed % EFFECT_PUFF_RISE_SPEED_RANGE;
             } else {
                 riseSpeed = 0;
             }
@@ -4414,7 +4414,7 @@ void effectSpriteTask80(Task* task)
             quad->v3    = EFFECT_PUFF_TEXTURE_V + EFFECT_PUFF_CELL_SIZE - 1;
             quad->u3    = ((s16)((s16)frameAge % EFFECT_PUFF_FRAME_COUNT) * EFFECT_PUFF_CELL_SIZE) + EFFECT_PUFF_CELL_SIZE - 1;
             _effectSetPerspectiveBillboardCorners(scratch, quad, work->period * (EFFECT_PUFF_CELL_SIZE - 1));
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectCentreScratch);
@@ -4488,11 +4488,11 @@ void effectSpriteTask8D(Task* task)
                 if (requestedSize != 0) {
                     size = requestedSize;
                 }
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->scale     = size;
-                work->angle     = ((gRandomLcgState >> 16) & EFFECT_PUFF_LIFETIME_MASK) + EFFECT_PUFF_MIN_LAST_AGE;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->step      = (gRandomLcgState >> 16) % EFFECT_PUFF_RISE_SPEED_RANGE;
+                RANDOM_LCG_ADVANCE();
+                work->scale = size;
+                work->angle = (RANDOM_LCG_DRAW() & EFFECT_PUFF_LIFETIME_MASK) + EFFECT_PUFF_MIN_LAST_AGE;
+                RANDOM_LCG_ADVANCE();
+                work->step = RANDOM_LCG_DRAW() % EFFECT_PUFF_RISE_SPEED_RANGE;
                 task->state++;
                 task->spawnArg1.value &= EFFECT_PUFF_RETAINED_SPAWN_FLAG;
             }
@@ -4524,7 +4524,7 @@ void effectSpriteTask8D(Task* task)
             quad->v3    = EFFECT_PUFF_TEXTURE_V + EFFECT_PUFF_CELL_SIZE - 1;
             quad->u3    = ((frameAge & (EFFECT_PUFF_FRAME_COUNT - 1)) * EFFECT_PUFF_CELL_SIZE) + EFFECT_PUFF_CELL_SIZE - 1;
             _effectSetPerspectiveBillboardCorners(scratch, quad, work->period * (EFFECT_PUFF_CELL_SIZE - 1));
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectCentreScratch);
@@ -4575,13 +4575,13 @@ void effectSpriteTask3F(Task* task)
         if (scratch->projectionFlags >= 0) {
             // Initialize after projection, retaining its screen point when reparenting.
             if (task->state == EFFECT_DRAW_TASK_NEW) {
-                work->period    = ((task->spawnArg1.value >> 12) & 3) + 2;
-                size            = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->angle     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
-                work->scale     = size;
-                attachmentBits  = task->spawnArg1.halves.high;
-                work->index     = attachmentBits & 1;
+                work->period = ((task->spawnArg1.value >> 12) & 3) + 2;
+                size         = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
+                RANDOM_LCG_ADVANCE();
+                work->angle    = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
+                work->scale    = size;
+                attachmentBits = task->spawnArg1.halves.high;
+                work->index    = attachmentBits & 1;
                 if (work->index != 0) {
                     coord->parent = work->parent;
                     gfxSetRotIdentity(&coord->coord);
@@ -4590,15 +4590,15 @@ void effectSpriteTask3F(Task* task)
                     coord->coord.t[0]   = 0;
                     coord->composeStamp = GRAPHICS_COORD_DIRTY;
                     actorRenderComposeCoord(coord);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vy   = -((gRandomLcgState >> 16) & 3);
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vy = -(RANDOM_LCG_DRAW() & 3);
                 } else {
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vx   = ((gRandomLcgState >> 16) & 0xF) - 8;
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vy   = -((gRandomLcgState >> 16) & 0xF);
-                    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    work->move.vz   = ((gRandomLcgState >> 16) & 0xF) - 8;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vx = (RANDOM_LCG_DRAW() & 0xF) - 8;
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vy = -(RANDOM_LCG_DRAW() & 0xF);
+                    RANDOM_LCG_ADVANCE();
+                    work->move.vz = (RANDOM_LCG_DRAW() & 0xF) - 8;
                 }
                 task->state++;
             }
@@ -4615,7 +4615,7 @@ void effectSpriteTask3F(Task* task)
                    (work->age / work->period) * EFFECT_BURST_PARTICLE_CELL_SIZE, EFFECT_BURST_PARTICLE_TEXTURE_V + EFFECT_BURST_PARTICLE_CELL_SIZE - 1,
                    ((work->age / work->period) * EFFECT_BURST_PARTICLE_CELL_SIZE) + EFFECT_BURST_PARTICLE_CELL_SIZE - 1, EFFECT_BURST_PARTICLE_TEXTURE_V + EFFECT_BURST_PARTICLE_CELL_SIZE - 1);
             EFFECT_SET_ROTATED_SHAPE_CORNERS(scratch, quad, work->scale * (EFFECT_BURST_PARTICLE_CELL_SIZE - 1), work->angle);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -4656,21 +4656,21 @@ static inline void _effectEmitHitSparkParticle(EffectWork* work, GfxCoord* coord
     s32 transitionAge;
     s32 particleEffectId;
 
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vx   = (s32)(gRandomLcgState >> 16) % emissionWidth - halfWidth;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vy   = (s32)(gRandomLcgState >> 16) % emissionWidth - halfWidth;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    work->move.vz   = (s32)(gRandomLcgState >> 16) % emissionWidth - halfWidth;
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    transitionAge   = (s32)(gRandomLcgState >> 16) % work->period;
+    RANDOM_LCG_ADVANCE();
+    work->move.vx = (s32)RANDOM_LCG_DRAW() % emissionWidth - halfWidth;
+    RANDOM_LCG_ADVANCE();
+    work->move.vy = (s32)RANDOM_LCG_DRAW() % emissionWidth - halfWidth;
+    RANDOM_LCG_ADVANCE();
+    work->move.vz = (s32)RANDOM_LCG_DRAW() % emissionWidth - halfWidth;
+    RANDOM_LCG_ADVANCE();
+    transitionAge = (s32)RANDOM_LCG_DRAW() % work->period;
 
     particleEffectId = EFFECT_SPARK_FADE;
     if (work->age < transitionAge) {
         particleEffectId = EFFECT_FLASH_BURST;
     }
-    gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-    effectSpawn(particleEffectId, coord, ((gRandomLcgState >> 16) & EFFECT_HIT_SPARK_PARTICLE_SIZE_MASK) + EFFECT_HIT_SPARK_PARTICLE_MIN_SIZE, &work->move);
+    RANDOM_LCG_ADVANCE();
+    effectSpawn(particleEffectId, coord, (RANDOM_LCG_DRAW() & EFFECT_HIT_SPARK_PARTICLE_SIZE_MASK) + EFFECT_HIT_SPARK_PARTICLE_MIN_SIZE, &work->move);
 }
 
 void effectHitSparkBurstTask(Task* task)
@@ -4716,8 +4716,8 @@ void effectHitSparkBurstTask(Task* task)
             task->state         = EFFECT_DRAW_TASK_ACTIVE;
             // The previous random state shares $v1 with the identity's ONE.
             previousRandomState = gRandomLcgState;
-            gRandomLcgState     = previousRandomState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->index         = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
+            gRandomLcgState     = RANDOM_LCG_NEXT(previousRandomState);
+            work->index         = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
             requestedWidth      = task->spawnArg1.halves.low;
             work->scale         = requestedWidth;
             durationUnits       = task->spawnArg1.halves.high;
@@ -4738,8 +4738,8 @@ void effectHitSparkBurstTask(Task* task)
         emissionWidth = work->scale;
         halfWidth     = emissionWidth >> 1;
         for (particleIndex = 0; particleIndex < work->step; particleIndex++) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if (work->angle >= (s32)((gRandomLcgState >> 16) & EFFECT_HIT_SPARK_EMISSION_MASK)) {
+            RANDOM_LCG_ADVANCE();
+            if (work->angle >= (s32)(RANDOM_LCG_DRAW() & EFFECT_HIT_SPARK_EMISSION_MASK)) {
                 _effectEmitHitSparkParticle(work, coord, emissionWidth, halfWidth);
             }
         }
@@ -4806,14 +4806,14 @@ void effectSpriteTaskE0(Task* task)
             setcode(quad, EFFECT_DRAW_TEXTURED_QUAD);
             // The first visible cell chooses size and rotation; offscreen ticks still age.
             if (task->state == EFFECT_DRAW_TASK_NEW) {
-                baseSize        = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->scale     = baseSize + ((gRandomLcgState >> 16) & 0xFF);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->angle     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
-                paletteBits     = task->spawnArg1.halves.high;
-                work->step      = paletteBits;
-                task->state     = EFFECT_DRAW_TASK_ACTIVE;
+                baseSize = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
+                RANDOM_LCG_ADVANCE();
+                work->scale = baseSize + (RANDOM_LCG_DRAW() & 0xFF);
+                RANDOM_LCG_ADVANCE();
+                work->angle = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
+                paletteBits = task->spawnArg1.halves.high;
+                work->step  = paletteBits;
+                task->state = EFFECT_DRAW_TASK_ACTIVE;
             }
             quad->tpage = EFFECT_BURST_TEXTURE_PAGE;
             quad->code |= EFFECT_DRAW_RAW_TEXTURE | EFFECT_DRAW_SEMITRANSPARENT;
@@ -4834,7 +4834,7 @@ void effectSpriteTaskE0(Task* task)
             quad->v3    = textureV;
             quad->u3    = frameAge * EFFECT_BURST_CELL_SIZE + EFFECT_BURST_CELL_SIZE - 1;
             EFFECT_SET_ROTATED_SHAPE_CORNERS(scratch, quad, work->scale * (EFFECT_BURST_CELL_SIZE - 1), work->angle);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -4894,13 +4894,13 @@ void effectSpriteTaskE1(Task* task)
         projectionScratch                        = scratch;
         // Initialize before projection so offscreen ticks use the same lifetime.
         if (task->state == EFFECT_DRAW_TASK_NEW) {
-            baseSize        = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = baseSize + ((gRandomLcgState >> 16) & 0xFF);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->angle     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
-            paletteBits     = task->spawnArg1.halves.high;
-            work->step      = paletteBits;
+            baseSize = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->scale = baseSize + (RANDOM_LCG_DRAW() & 0xFF);
+            RANDOM_LCG_ADVANCE();
+            work->angle = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
+            paletteBits = task->spawnArg1.halves.high;
+            work->step  = paletteBits;
             task->state++;
         }
         actorRenderComposeCoord(coord);
@@ -4941,7 +4941,7 @@ void effectSpriteTaskE1(Task* task)
             quad->v3     = textureValue;
             quad->u3     = frameAge * EFFECT_BURST_CELL_SIZE + EFFECT_BURST_CELL_SIZE - 1;
             EFFECT_SET_ROTATED_SHAPE_CORNERS(scratch, quad, work->scale * (EFFECT_BURST_CELL_SIZE - 1), work->angle);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                     quad);
         }
         SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -4996,12 +4996,12 @@ void effectSpriteTaskE2(Task* task)
             if (task->spawnArg1.value < 0) {
                 _effectInitSparkBurstCoord(coord, work);
             }
-            baseSize        = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
-            work->step      = EFFECT_SPARK_BURST_PALETTE_ZERO;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = baseSize + ((gRandomLcgState >> 16) & EFFECT_SPARK_BURST_SIZE_JITTER_MASK);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->angle     = (gRandomLcgState >> 16) & EFFECT_DRAW_ANGLE_MASK;
+            baseSize   = (u16)task->spawnArg1.value & EFFECT_DRAW_SIZE_MASK;
+            work->step = EFFECT_SPARK_BURST_PALETTE_ZERO;
+            RANDOM_LCG_ADVANCE();
+            work->scale = baseSize + (RANDOM_LCG_DRAW() & EFFECT_SPARK_BURST_SIZE_JITTER_MASK);
+            RANDOM_LCG_ADVANCE();
+            work->angle = RANDOM_LCG_DRAW() & EFFECT_DRAW_ANGLE_MASK;
             task->state++;
         }
         actorRenderComposeCoord(coord);
@@ -5112,7 +5112,7 @@ static void _effectDrawSparkBurstBillboard(const GfxCoord* coord, u16 frame, u32
         setUV4(quad, frame * EFFECT_BURST_CELL_SIZE, EFFECT_BURST_TEXTURE_V, frame * EFFECT_BURST_CELL_SIZE + EFFECT_BURST_CELL_SIZE - 1, EFFECT_BURST_TEXTURE_V, frame * EFFECT_BURST_CELL_SIZE, EFFECT_BURST_TEXTURE_V + EFFECT_BURST_CELL_SIZE - 1,
                frame * EFFECT_BURST_CELL_SIZE + EFFECT_BURST_CELL_SIZE - 1, EFFECT_BURST_TEXTURE_V + EFFECT_BURST_CELL_SIZE - 1);
         EFFECT_SPARK_BURST_BILLBOARD_SET_CORNERS(scratch, quad, packedSizePalette * (EFFECT_BURST_CELL_SIZE - 1), angle, perpendicularAngle);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -5654,7 +5654,6 @@ void playerActorTickAnimationState(Task* task)
         PLAYER_ACTOR_ANIMATION_BOUNDARY_RETURN_TO_LOCOMOTION  = 8,
         PLAYER_ACTOR_ANIMATION_PARASITE_ENERGY_PHASE          = 9,
         PLAYER_ACTOR_ANIMATION_MARK_ACTION_COMPLETE           = 10,
-        PLAYER_ACTOR_ANIMATION_AIM_HOLD_SET                   = 9,
         PLAYER_ACTOR_ANIMATION_AIM_HOLD_BLEND_FRAMES          = 5,
         PLAYER_ACTOR_ANIMATION_RETURN_TO_AIM_BLEND_FRAMES     = 3,
         PLAYER_ACTOR_ANIMATION_PHASE_COMPLETE                 = 1000,
@@ -5680,7 +5679,7 @@ void playerActorTickAnimationState(Task* task)
                 break;
             }
             // Keep clip, blend and slot locals live across the phase update.
-            setIndex           = PLAYER_ACTOR_ANIMATION_AIM_HOLD_SET;
+            setIndex           = PLAYER_ANIMATION_AIM_IDLE;
             blendFrames        = PLAYER_ACTOR_ANIMATION_AIM_HOLD_BLEND_FRAMES;
             slotIndex          = 1;
             actor->statePhase += slotIndex;
@@ -5750,12 +5749,7 @@ static inline void _playerActorSetForwardVelocity(GameActor* actor, GfxCoord* ro
 void playerActorStepMovement(Task* task)
 {
     enum {
-        PLAYER_ACTOR_MOVEMENT_STOPPED       = 0,
-        PLAYER_ACTOR_MOVEMENT_FORWARD_WALK  = 1,
-        PLAYER_ACTOR_MOVEMENT_BACKWARD_WALK = 2,
-        PLAYER_ACTOR_MOVEMENT_RUN           = 3,
-        PLAYER_ACTOR_MOVEMENT_CIRCLING      = 4,
-        PLAYER_ACTOR_CIRCLE_HALF_TURN       = ACTOR_TRANSFORM_ANGLE_HALF_TURN,
+        PLAYER_ACTOR_CIRCLE_HALF_TURN = ACTOR_TRANSFORM_ANGLE_HALF_TURN,
         // 4096 * 1600 / (628 * radius) approximates a 16-unit arc in angle units.
         PLAYER_ACTOR_CIRCLE_ARC_NUMERATOR       = 0x640000,
         PLAYER_ACTOR_CIRCLE_CIRCUMFERENCE_SCALE = 0x274,
@@ -5768,17 +5762,17 @@ void playerActorStepMovement(Task* task)
     actor = task->work;
     coord = task->extra.tmd->coords;
     switch ((u16)actor->movementMode) {
-        case PLAYER_ACTOR_MOVEMENT_STOPPED:
+        case GAME_ACTOR_MOVEMENT_STOPPED:
             actor->velocity.vx = 0;
             actor->velocity.vy = 0;
             actor->velocity.vz = 0;
             break;
-        case PLAYER_ACTOR_MOVEMENT_FORWARD_WALK:
-        case PLAYER_ACTOR_MOVEMENT_BACKWARD_WALK:
-        case PLAYER_ACTOR_MOVEMENT_RUN:
-        case 5:
-        case 6:
-        case 7:
+        case GAME_ACTOR_MOVEMENT_WALK:
+        case GAME_ACTOR_MOVEMENT_BACKWARD_WALK:
+        case GAME_ACTOR_MOVEMENT_RUN:
+        case GAME_ACTOR_MOVEMENT_COMPANION_WALK:
+        case GAME_ACTOR_MOVEMENT_COMPANION_RUN:
+        case GAME_ACTOR_MOVEMENT_SLOW_WALK:
             if (animationGetCurrentRecord(&actor->animationContext,
                                           actor->animationSlots + 1) == NULL) {
                 actor->velocity.vx = 0;
@@ -5788,7 +5782,7 @@ void playerActorStepMovement(Task* task)
                 _playerActorSetForwardVelocity(actor, coord, block);
             }
             break;
-        case PLAYER_ACTOR_MOVEMENT_CIRCLING:
+        case GAME_ACTOR_MOVEMENT_CIRCLE:
             _playerActorSetForwardVelocity(actor, coord, block);
             coord->coord.t[0] += actor->velocity.vx;
             coord->coord.t[1] += actor->velocity.vy;
@@ -7426,9 +7420,7 @@ s32 playerActorPlace(Task* task, s32 unusedMessageId, const ActorTransform* tran
 s32 playerActorTurnToYaw(Task* task, s32 unusedMessageId, const ActorTransform* transform, s32 unusedSecondArg)
 {
     enum {
-        PLAYER_ACTOR_TURN_SCRATCH_BYTES   = 16,
-        PLAYER_ACTOR_TURN_NEGATIVE_SET    = 5,
-        PLAYER_ACTOR_TURN_NONNEGATIVE_SET = 6,
+        PLAYER_ACTOR_TURN_SCRATCH_BYTES = 16,
     };
     GameActor* actor;
     s32*       turnScratch;
@@ -7447,9 +7439,9 @@ s32 playerActorTurnToYaw(Task* task, s32 unusedMessageId, const ActorTransform* 
     turnDelta                      = playerActorShortestTurn(actor->rotation.vy, targetYaw);
     // The binary retains the turn word in this 16-byte reservation.
     turnScratch[0] = turnDelta;
-    setIndex       = PLAYER_ACTOR_TURN_NONNEGATIVE_SET;
+    setIndex       = PLAYER_ANIMATION_TURN_RIGHT;
     if (turnDelta < 0) {
-        setIndex = PLAYER_ACTOR_TURN_NEGATIVE_SET;
+        setIndex = PLAYER_ANIMATION_TURN_LEFT;
     }
     playerActorPlayChildSlots(task, setIndex, 0);
     SCRATCH_STACK_RELEASE_BYTES(PLAYER_ACTOR_TURN_SCRATCH_BYTES);
@@ -7806,17 +7798,13 @@ s32 playerActorAttachToCoord(Task* task, s32 unusedMessageId, GfxCoord* parent, 
 /// only the movement selector on the live actor and returns 0.
 static s32 _playerActorSetRunMovement(Task* task, s32 unusedMessageId, s32 runEnabled, s32 unusedSecondArg)
 {
-    enum {
-        PLAYER_ACTOR_RUN_MOVEMENT_WALK = 1,
-        PLAYER_ACTOR_RUN_MOVEMENT_RUN  = 3,
-    };
     GameActor* actor;
 
     actor = task->work;
     if (runEnabled == 0) {
-        actor->movementMode = PLAYER_ACTOR_RUN_MOVEMENT_WALK;
+        actor->movementMode = GAME_ACTOR_MOVEMENT_WALK;
     } else {
-        actor->movementMode = PLAYER_ACTOR_RUN_MOVEMENT_RUN;
+        actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
     }
     return 0;
 }
@@ -7962,7 +7950,6 @@ s32 playerActorPlayFootstepCue(Task* task)
     enum {
         PLAYER_ACTOR_FOOTSTEP_STAIR_CLIMB_MODE_STATE = (3 << 16) | GAME_ACTOR_MODE_SCRIPTED
     };
-    enum { PLAYER_ACTOR_FOOTSTEP_RUNNING_MOVEMENT_MODE = 3 };
     // The loaded surface-soundEvent bank keeps companion entries 100 slots after the player's.
     enum { PLAYER_ACTOR_FOOTSTEP_COMPANION_ENTRY_OFFSET = 100 };
 
@@ -7997,7 +7984,7 @@ s32 playerActorPlayFootstepCue(Task* task)
                 if (footstepSounds != NULL) {
                     if (*(s32*)&actor->mode == PLAYER_ACTOR_FOOTSTEP_STAIR_CLIMB_MODE_STATE) {
                         soundEvent = footstepSounds->scriptedJump;
-                    } else if ((u16)actor->movementMode == PLAYER_ACTOR_FOOTSTEP_RUNNING_MOVEMENT_MODE) {
+                    } else if ((u16)actor->movementMode == GAME_ACTOR_MOVEMENT_RUN) {
                         soundEvent = footstepSounds->run;
                         sceneLatchActionSignal(SCENE_COMBAT_ACTION_SIGNAL_FOOTSTEP);
                     } else {
@@ -8323,16 +8310,12 @@ static void _playerActorUpdateNormalLocomotion(Task* task)
 /// the clip table, starting playback or retaining a pointer.
 static inline s32 _playerActorSelectLocomotionWalkSet(GameActor* actor, s32 movementMode)
 {
-    enum {
-        PLAYER_ACTOR_LOCOMOTION_SET_WALK         = 2,
-        PLAYER_ACTOR_LOCOMOTION_SET_UNARMED_WALK = 19,
-    };
     s32 setIndex;
 
-    setIndex            = PLAYER_ACTOR_LOCOMOTION_SET_WALK;
+    setIndex            = PLAYER_ANIMATION_WALK;
     actor->movementMode = movementMode;
     if (actor->equipmentTasks[1] == NULL) {
-        setIndex = PLAYER_ACTOR_LOCOMOTION_SET_UNARMED_WALK;
+        setIndex = PLAYER_ANIMATION_UNARMED_WALK;
     }
     return setIndex;
 }
@@ -8340,20 +8323,11 @@ static inline s32 _playerActorSelectLocomotionWalkSet(GameActor* actor, s32 move
 void playerActorEnterLocomotion(Task* task, s16 resetAnimation)
 {
     enum {
-        PLAYER_ACTOR_LOCOMOTION_STATE             = 0,
-        PLAYER_ACTOR_LOCOMOTION_CONTROLLER        = 0,
-        PLAYER_ACTOR_LOCOMOTION_STOPPED           = 0,
-        PLAYER_ACTOR_LOCOMOTION_WALK              = 1,
-        PLAYER_ACTOR_LOCOMOTION_BACKWARD          = 2,
-        PLAYER_ACTOR_LOCOMOTION_RUN               = 3,
-        PLAYER_ACTOR_LOCOMOTION_TURN_MOVING       = 1,
-        PLAYER_ACTOR_LOCOMOTION_TURN_IDLE         = 3,
-        PLAYER_ACTOR_LOCOMOTION_SET_IDLE          = 1,
-        PLAYER_ACTOR_LOCOMOTION_SET_BACKWARD      = 3,
-        PLAYER_ACTOR_LOCOMOTION_SET_RUN           = 4,
-        PLAYER_ACTOR_LOCOMOTION_SET_NEGATIVE_TURN = 5,
-        PLAYER_ACTOR_LOCOMOTION_SET_POSITIVE_TURN = 6,
-        PLAYER_ACTOR_LOCOMOTION_BLEND_FRAMES      = 4,
+        PLAYER_ACTOR_LOCOMOTION_STATE        = 0,
+        PLAYER_ACTOR_LOCOMOTION_CONTROLLER   = 0,
+        PLAYER_ACTOR_LOCOMOTION_TURN_MOVING  = 1,
+        PLAYER_ACTOR_LOCOMOTION_TURN_IDLE    = 3,
+        PLAYER_ACTOR_LOCOMOTION_BLEND_FRAMES = 4,
     };
     GameActor* actor;
     s32        setIndex;
@@ -8367,36 +8341,36 @@ void playerActorEnterLocomotion(Task* task, s16 resetAnimation)
     if (movement == 0) {
         if (actor->turnSign != 0) {
             if (actor->turnSign == 1) {
-                setIndex = PLAYER_ACTOR_LOCOMOTION_SET_POSITIVE_TURN;
+                setIndex = PLAYER_ANIMATION_TURN_RIGHT;
             } else {
-                setIndex = PLAYER_ACTOR_LOCOMOTION_SET_NEGATIVE_TURN;
+                setIndex = PLAYER_ANIMATION_TURN_LEFT;
             }
         } else {
-            setIndex = PLAYER_ACTOR_LOCOMOTION_SET_IDLE;
+            setIndex = PLAYER_ANIMATION_IDLE;
         }
-        actor->movementMode  = PLAYER_ACTOR_LOCOMOTION_STOPPED;
+        actor->movementMode  = GAME_ACTOR_MOVEMENT_STOPPED;
         actor->turnRateIndex = PLAYER_ACTOR_LOCOMOTION_TURN_IDLE;
     } else if ((actor->padHeld & PAD_BUTTON_CROSS) && (movement != -1)) {
-        movement             = PLAYER_ACTOR_LOCOMOTION_WALK;
+        movement             = GAME_ACTOR_MOVEMENT_WALK; // Also the moving turn rate
         actor->turnRateIndex = movement;
-        if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.moveMode == 0 && actor->restrictRunAndAim == 0) {
-            actor->movementMode = PLAYER_ACTOR_LOCOMOTION_RUN;
-            setIndex            = PLAYER_ACTOR_LOCOMOTION_SET_RUN;
+        if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.moveMode == MEMORY_CARD_OPTION_MOVEMENT_WALK && actor->restrictRunAndAim == 0) {
+            actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
+            setIndex            = PLAYER_ANIMATION_RUN;
         } else {
             setIndex = _playerActorSelectLocomotionWalkSet(actor, movement);
         }
     } else {
         actor->turnRateIndex = PLAYER_ACTOR_LOCOMOTION_TURN_MOVING;
         if (actor->movementSign == 1) {
-            if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.moveMode != 0 && actor->restrictRunAndAim == 0) {
-                actor->movementMode = PLAYER_ACTOR_LOCOMOTION_RUN;
-                setIndex            = PLAYER_ACTOR_LOCOMOTION_SET_RUN;
+            if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.moveMode != MEMORY_CARD_OPTION_MOVEMENT_WALK && actor->restrictRunAndAim == 0) {
+                actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
+                setIndex            = PLAYER_ANIMATION_RUN;
             } else {
-                setIndex = _playerActorSelectLocomotionWalkSet(actor, PLAYER_ACTOR_LOCOMOTION_WALK);
+                setIndex = _playerActorSelectLocomotionWalkSet(actor, GAME_ACTOR_MOVEMENT_WALK);
             }
         } else {
-            actor->movementMode = PLAYER_ACTOR_LOCOMOTION_BACKWARD;
-            setIndex            = PLAYER_ACTOR_LOCOMOTION_SET_BACKWARD;
+            actor->movementMode = GAME_ACTOR_MOVEMENT_BACKWARD_WALK;
+            setIndex            = PLAYER_ANIMATION_BACKWARD_WALK;
         }
     }
     actor->mode       = GAME_ACTOR_MODE_NORMAL;
@@ -8454,7 +8428,7 @@ static inline void _playerActorEnterParalysis(Task* task, const PlayerStatus* st
     previousState         = actor->state;
     actor->mode           = GAME_ACTOR_MODE_NORMAL;
     actor->state          = PLAYER_ACTOR_NORMAL_PARALYSIS_STATE;
-    actor->movementMode   = 0;
+    actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex  = 0;
     actor->animationState = 0;
     actor->statePhase     = 0;
@@ -8626,18 +8600,12 @@ static void _playerActorNormalState5(Task* task)
         PLAYER_ACTOR_RELOAD_PHASE_WAIT_CUE           = 1,
         PLAYER_ACTOR_MONGOOSE_RELOAD_PHASE_WAIT_LOAD = 2,
         PLAYER_ACTOR_GRENADE_RELOAD_CUE_COUNT        = 2,
-        PLAYER_ACTOR_RELOAD_CANCEL_MOVEMENT_STOPPED  = 0,
-        PLAYER_ACTOR_RELOAD_CANCEL_MOVEMENT_BACKWARD = 2,
-        PLAYER_ACTOR_RELOAD_CANCEL_MOVEMENT_FORWARD  = 3,
         PLAYER_ACTOR_RELOAD_CANCEL_TURN_MOVING       = 1,
         PLAYER_ACTOR_RELOAD_CANCEL_TURN_IDLE         = 3,
         PLAYER_ACTOR_RELOAD_PHASE_LOADED             = 100,
         PLAYER_ACTOR_RELOAD_TIMER_EXPIRED            = -1,
         PLAYER_ACTOR_MONGOOSE_RELOAD_DELAY_TICKS     = 10,
         PLAYER_ACTOR_RELOAD_CANCEL_AIM_STATE         = 2,
-        PLAYER_ACTOR_RELOAD_CANCEL_IDLE_SET          = 9,
-        PLAYER_ACTOR_RELOAD_CANCEL_FORWARD_SET       = 12,
-        PLAYER_ACTOR_RELOAD_CANCEL_TURN_SET          = 13,
         PLAYER_ACTOR_RELOAD_CANCEL_BLEND_FRAMES      = 6,
         PLAYER_ACTOR_RELOAD_SOUND_WEAPON_SHIFT       = 16,
         PLAYER_ACTOR_RELOAD_SOUND_VARIANT_SHIFT      = 24,
@@ -8691,7 +8659,7 @@ static void _playerActorNormalState5(Task* task)
         aimActor                      = task->work;
         aimActor->mode                = GAME_ACTOR_MODE_NORMAL;
         aimActor->state               = PLAYER_ACTOR_RELOAD_CANCEL_AIM_STATE;
-        aimActor->movementMode        = PLAYER_ACTOR_RELOAD_CANCEL_MOVEMENT_STOPPED;
+        aimActor->movementMode        = GAME_ACTOR_MOVEMENT_STOPPED;
         if (aimActor->movementSign != 0) {
             turnRateIndex = PLAYER_ACTOR_RELOAD_CANCEL_TURN_MOVING;
         } else {
@@ -8709,17 +8677,17 @@ static void _playerActorNormalState5(Task* task)
         movementSign = aimActor->movementSign;
         if (movementSign == 0) {
             if (aimActor->turnSign != 0) {
-                setIndex = PLAYER_ACTOR_RELOAD_CANCEL_TURN_SET;
+                setIndex = PLAYER_ANIMATION_AIM_BACKWARD;
             } else {
-                setIndex = PLAYER_ACTOR_RELOAD_CANCEL_IDLE_SET;
+                setIndex = PLAYER_ANIMATION_AIM_IDLE;
             }
         } else if (movementSign == 1) {
-            setIndex                   = PLAYER_ACTOR_RELOAD_CANCEL_FORWARD_SET;
-            aimActor->movementMode     = PLAYER_ACTOR_RELOAD_CANCEL_MOVEMENT_FORWARD;
+            setIndex                   = PLAYER_ANIMATION_AIM_FORWARD;
+            aimActor->movementMode     = GAME_ACTOR_MOVEMENT_RUN;
             aimActor->aimTrackingState = movementSign;
         } else {
-            aimActor->movementMode = PLAYER_ACTOR_RELOAD_CANCEL_MOVEMENT_BACKWARD;
-            setIndex               = PLAYER_ACTOR_RELOAD_CANCEL_TURN_SET;
+            aimActor->movementMode = GAME_ACTOR_MOVEMENT_BACKWARD_WALK;
+            setIndex               = PLAYER_ANIMATION_AIM_BACKWARD;
         }
         playerActorPlayChildSlotsWithBlend(task, setIndex, 0, PLAYER_ACTOR_RELOAD_CANCEL_BLEND_FRAMES);
         return;
@@ -8937,14 +8905,8 @@ static inline void _playerActorResumeAimLocomotion(Task* task, s32 blendFrames)
     enum {
         PLAYER_ACTOR_AIM_LOCOMOTION_STATE      = 2,
         PLAYER_ACTOR_AIM_LOCOMOTION_CONTROLLER = 0,
-        PLAYER_ACTOR_AIM_LOCOMOTION_STOPPED    = 0,
-        PLAYER_ACTOR_AIM_LOCOMOTION_BACKWARD   = 2,
-        PLAYER_ACTOR_AIM_LOCOMOTION_FORWARD    = 3,
         PLAYER_ACTOR_AIM_TURN_MOVING           = 1,
         PLAYER_ACTOR_AIM_TURN_IDLE             = 3,
-        PLAYER_ACTOR_AIM_SET_IDLE              = 9,
-        PLAYER_ACTOR_AIM_SET_FORWARD           = 12,
-        PLAYER_ACTOR_AIM_SET_BACKWARD_OR_TURN  = 13,
     };
     GameActor* actor;
     s32        setIndex;
@@ -8954,7 +8916,7 @@ static inline void _playerActorResumeAimLocomotion(Task* task, s32 blendFrames)
     actor               = task->work;
     actor->mode         = GAME_ACTOR_MODE_NORMAL;
     actor->state        = PLAYER_ACTOR_AIM_LOCOMOTION_STATE;
-    actor->movementMode = PLAYER_ACTOR_AIM_LOCOMOTION_STOPPED;
+    actor->movementMode = GAME_ACTOR_MOVEMENT_STOPPED;
     if (actor->movementSign != 0) {
         turnRateIndex = PLAYER_ACTOR_AIM_TURN_MOVING;
     } else {
@@ -8972,17 +8934,17 @@ static inline void _playerActorResumeAimLocomotion(Task* task, s32 blendFrames)
     movementSign = actor->movementSign;
     if (movementSign == 0) {
         if (actor->turnSign != 0) {
-            setIndex = PLAYER_ACTOR_AIM_SET_BACKWARD_OR_TURN;
+            setIndex = PLAYER_ANIMATION_AIM_BACKWARD;
         } else {
-            setIndex = PLAYER_ACTOR_AIM_SET_IDLE;
+            setIndex = PLAYER_ANIMATION_AIM_IDLE;
         }
     } else if (movementSign == 1) {
-        setIndex                = PLAYER_ACTOR_AIM_SET_FORWARD;
-        actor->movementMode     = PLAYER_ACTOR_AIM_LOCOMOTION_FORWARD;
+        setIndex                = PLAYER_ANIMATION_AIM_FORWARD;
+        actor->movementMode     = GAME_ACTOR_MOVEMENT_RUN;
         actor->aimTrackingState = movementSign;
     } else {
-        actor->movementMode = PLAYER_ACTOR_AIM_LOCOMOTION_BACKWARD;
-        setIndex            = PLAYER_ACTOR_AIM_SET_BACKWARD_OR_TURN;
+        actor->movementMode = GAME_ACTOR_MOVEMENT_BACKWARD_WALK;
+        setIndex            = PLAYER_ANIMATION_AIM_BACKWARD;
     }
     if (blendFrames == 0) {
         playerActorResetChildSlots(task, setIndex);
@@ -9029,15 +8991,6 @@ static void _playerActorNormalState6(Task* task)
         PLAYER_ACTOR_PE_PHASE_RESUME            = 5,
         PLAYER_ACTOR_PE_ANIMATION_IDLE          = 0,
         PLAYER_ACTOR_PE_ANIMATION_ADVANCE_PHASE = 9,
-        PLAYER_ACTOR_PE_RELEASE_SET_VARIANT0    = 26,
-        PLAYER_ACTOR_PE_RELEASE_SET_VARIANT1    = 29,
-        PLAYER_ACTOR_PE_RELEASE_SET_OTHER       = 42,
-        PLAYER_ACTOR_PE_CHARGE_SET_VARIANT0     = 27,
-        PLAYER_ACTOR_PE_CHARGE_SET_VARIANT1     = 30,
-        PLAYER_ACTOR_PE_CHARGE_SET_OTHER        = 43,
-        PLAYER_ACTOR_PE_CAST_SET_VARIANT0       = 28,
-        PLAYER_ACTOR_PE_CAST_SET_VARIANT1       = 31,
-        PLAYER_ACTOR_PE_CAST_SET_OTHER          = 44,
         PLAYER_ACTOR_PE_RELEASE_BLEND_FRAMES    = 6,
         PLAYER_ACTOR_PE_PREVIOUS_LOCOMOTION     = 0,
         PLAYER_ACTOR_PE_PREVIOUS_AIM_ENTRY      = 1,
@@ -9059,14 +9012,14 @@ static void _playerActorNormalState6(Task* task)
             actor->animationState   = PLAYER_ACTOR_PE_ANIMATION_ADVANCE_PHASE;
             actor->statePhase      += 1;
             gAttachmentState.flags |= ATTACHMENT_FLAG_START_CAST;
-            setIndex                = _playerActorSelectPeSet(actor, PLAYER_ACTOR_PE_RELEASE_SET_VARIANT0, PLAYER_ACTOR_PE_RELEASE_SET_VARIANT1, PLAYER_ACTOR_PE_RELEASE_SET_OTHER);
+            setIndex                = _playerActorSelectPeSet(actor, PLAYER_ANIMATION_PARASITE_ENERGY_BEGIN_0, PLAYER_ANIMATION_PARASITE_ENERGY_BEGIN_1, PLAYER_ANIMATION_PARASITE_ENERGY_BEGIN_2);
             playerActorPlayChildSlotsWithBlend(task, setIndex, 0, PLAYER_ACTOR_PE_RELEASE_BLEND_FRAMES);
             sceneLatchActionSignal(SCENE_COMBAT_ACTION_SIGNAL_PE_ACTIVE);
             break;
         case PLAYER_ACTOR_PE_PHASE_CHARGE:
             actor->animationState = PLAYER_ACTOR_PE_ANIMATION_IDLE;
             actor->statePhase    += 1;
-            setIndex              = _playerActorSelectPeSet(actor, PLAYER_ACTOR_PE_CHARGE_SET_VARIANT0, PLAYER_ACTOR_PE_CHARGE_SET_VARIANT1, PLAYER_ACTOR_PE_CHARGE_SET_OTHER);
+            setIndex              = _playerActorSelectPeSet(actor, PLAYER_ANIMATION_PARASITE_ENERGY_CHARGE_0, PLAYER_ANIMATION_PARASITE_ENERGY_CHARGE_1, PLAYER_ANIMATION_PARASITE_ENERGY_CHARGE_2);
             playerActorResetChildSlots(task, setIndex);
             // Check the countdown on the same tick that starts the charge clip.
         case PLAYER_ACTOR_PE_PHASE_WAIT_CHARGE:
@@ -9078,7 +9031,7 @@ static void _playerActorNormalState6(Task* task)
                     actionSignal = SCENE_COMBAT_ACTION_SIGNAL_PE_CAST_OTHER;
                 }
                 sceneLatchActionSignal(actionSignal);
-                setIndex = _playerActorSelectPeSet(actor, PLAYER_ACTOR_PE_CAST_SET_VARIANT0, PLAYER_ACTOR_PE_CAST_SET_VARIANT1, PLAYER_ACTOR_PE_CAST_SET_OTHER);
+                setIndex = _playerActorSelectPeSet(actor, PLAYER_ANIMATION_PARASITE_ENERGY_CAST_0, PLAYER_ANIMATION_PARASITE_ENERGY_CAST_1, PLAYER_ANIMATION_PARASITE_ENERGY_CAST_2);
                 playerActorResetChildSlots(task, setIndex);
                 break;
             }
@@ -9190,8 +9143,6 @@ static void _playerActorTickScriptedStairClimb(Task* task)
         PLAYER_ACTOR_STAIR_ASCENT_FINISH_TICKS      = 8,
         PLAYER_ACTOR_STAIR_DESCENT_STRIDE_TICKS     = 9,
         PLAYER_ACTOR_STAIR_DESCENT_EDGE_TICKS       = 5,
-        PLAYER_ACTOR_STAIR_ASCENT_FINISH_EVEN_SET   = 38,
-        PLAYER_ACTOR_STAIR_ASCENT_FINISH_ODD_SET    = 39,
         PLAYER_ACTOR_STAIR_FINISH_BLEND_FRAMES      = 3,
         PLAYER_ACTOR_STAIR_IDLE_BLEND_FRAMES        = 5,
     };
@@ -9249,10 +9200,10 @@ static void _playerActorTickScriptedStairClimb(Task* task)
                         VectorNormalSS(&scratch->direction, &scratch->direction);
                         actor->velocity.vx = (s16)(scratch->direction.vx / PLAYER_ACTOR_STAIR_ASCENT_FINISH_DIVISOR);
                         actor->velocity.vy = (s16)(scratch->direction.vy / PLAYER_ACTOR_STAIR_ASCENT_FINISH_DIVISOR);
-                        setIndex           = PLAYER_ACTOR_STAIR_ASCENT_FINISH_EVEN_SET;
+                        setIndex           = PLAYER_ANIMATION_STAIR_ASCENT_FINISH_EVEN;
                         actor->velocity.vz = (s16)(scratch->direction.vz / PLAYER_ACTOR_STAIR_ASCENT_FINISH_DIVISOR);
                         if (actor->actionValue != 0) {
-                            setIndex = PLAYER_ACTOR_STAIR_ASCENT_FINISH_ODD_SET;
+                            setIndex = PLAYER_ANIMATION_STAIR_ASCENT_FINISH_ODD;
                         }
                         playerActorPlayChildSlotsWithBlend(task, setIndex, 0, PLAYER_ACTOR_STAIR_FINISH_BLEND_FRAMES);
                     }
@@ -9336,18 +9287,12 @@ static inline void _playerActorStepMoveToYaw(GameActor* actor, const GfxCoord* r
 void playerActorTickScriptedMoveTo(Task* task)
 {
     enum {
-        PLAYER_ACTOR_MOVE_TO_START_PHASE      = 0,
-        PLAYER_ACTOR_MOVE_TO_TURN_PHASE       = 1,
-        PLAYER_ACTOR_MOVE_TO_TRAVEL_PHASE     = 2,
-        PLAYER_ACTOR_MOVE_TO_WALK_MODE        = 1,
-        PLAYER_ACTOR_MOVE_TO_FORWARD          = 1,
-        PLAYER_ACTOR_MOVE_TO_IDLE_SET         = 1,
-        PLAYER_ACTOR_MOVE_TO_WALK_SET         = 2,
-        PLAYER_ACTOR_MOVE_TO_UNARMED_WALK_SET = 19,
-        PLAYER_ACTOR_MOVE_TO_TURN_LEFT_SET    = 5,
-        PLAYER_ACTOR_MOVE_TO_TURN_RIGHT_SET   = 6,
-        PLAYER_ACTOR_MOVE_TO_BLEND_FRAMES     = 5,
-        PLAYER_ACTOR_MOVE_TO_ARRIVAL_LIMIT    = 105,
+        PLAYER_ACTOR_MOVE_TO_START_PHASE   = 0,
+        PLAYER_ACTOR_MOVE_TO_TURN_PHASE    = 1,
+        PLAYER_ACTOR_MOVE_TO_TRAVEL_PHASE  = 2,
+        PLAYER_ACTOR_MOVE_TO_FORWARD       = 1,
+        PLAYER_ACTOR_MOVE_TO_BLEND_FRAMES  = 5,
+        PLAYER_ACTOR_MOVE_TO_ARRIVAL_LIMIT = 105,
     };
     PlayerActorApproachScratch* scratch;
     GfxCoord*                   rootCoord;
@@ -9363,20 +9308,20 @@ void playerActorTickScriptedMoveTo(Task* task)
     switch (actor->statePhase) {
         case PLAYER_ACTOR_MOVE_TO_START_PHASE:
             actor->statePhase = PLAYER_ACTOR_MOVE_TO_TURN_PHASE;
-            animationId       = PLAYER_ACTOR_MOVE_TO_TURN_RIGHT_SET;
+            animationId       = PLAYER_ANIMATION_TURN_RIGHT;
             if (scratch->turnStep < 0) {
-                animationId = PLAYER_ACTOR_MOVE_TO_TURN_LEFT_SET;
+                animationId = PLAYER_ANIMATION_TURN_LEFT;
             }
             playerActorPlayChildSlots(task, animationId, 1);
             // Continue turning on the same tick that starts the turn clip.
         case PLAYER_ACTOR_MOVE_TO_TURN_PHASE:
             if (scratch->turnStep == 0) {
-                actor->movementMode = PLAYER_ACTOR_MOVE_TO_WALK_MODE;
+                actor->movementMode = GAME_ACTOR_MOVEMENT_WALK;
                 actor->statePhase++;
                 if (actor->actionArgument == 0) {
-                    animationId = PLAYER_ACTOR_MOVE_TO_WALK_SET;
+                    animationId = PLAYER_ANIMATION_WALK;
                     if (actor->equipmentTasks[1] == NULL) {
-                        animationId = PLAYER_ACTOR_MOVE_TO_UNARMED_WALK_SET;
+                        animationId = PLAYER_ANIMATION_UNARMED_WALK;
                     }
                 } else {
                     animationId = actor->actionArgument;
@@ -9390,7 +9335,7 @@ void playerActorTickScriptedMoveTo(Task* task)
                 if (abs(rootCoord->coord.t[2] - actor->destination.vz) < PLAYER_ACTOR_MOVE_TO_ARRIVAL_LIMIT) {
                     actor->scriptedMotionPending = 0;
                     actor->state                 = PLAYER_ACTOR_SCRIPTED_ANIMATION_STATE;
-                    animationId                  = PLAYER_ACTOR_MOVE_TO_IDLE_SET;
+                    animationId                  = PLAYER_ANIMATION_IDLE;
                     if (actor->actionValue != 0) {
                         animationId = actor->actionValue;
                     }
@@ -9419,14 +9364,13 @@ static inline void _playerActorBeginScriptedAttackAimExit(Task* task, GameActor*
         PLAYER_ACTOR_SCRIPTED_ATTACK_AIM_EXIT_STATE     = 3,
         PLAYER_ACTOR_SCRIPTED_ATTACK_AIM_EXIT_TURN_RATE = 2,
         PLAYER_ACTOR_SCRIPTED_ATTACK_RETURN_CONTROLLER  = 4,
-        PLAYER_ACTOR_SCRIPTED_ATTACK_STOPPED            = 0,
         PLAYER_ACTOR_SCRIPTED_ATTACK_AIM_EXIT_BLEND     = 6,
     };
 
     actor->state          = PLAYER_ACTOR_SCRIPTED_ATTACK_AIM_EXIT_STATE;
     actor->turnRateIndex  = PLAYER_ACTOR_SCRIPTED_ATTACK_AIM_EXIT_TURN_RATE;
     actor->mode           = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode   = PLAYER_ACTOR_SCRIPTED_ATTACK_STOPPED;
+    actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->animationState = PLAYER_ACTOR_SCRIPTED_ATTACK_RETURN_CONTROLLER;
     actor->statePhase     = 0;
     playerActorPlayChildSlotsWithBlend(task, PLAYER_ANIMATION_AIM_EXIT, 0, PLAYER_ACTOR_SCRIPTED_ATTACK_AIM_EXIT_BLEND);
@@ -9652,12 +9596,8 @@ static void _playerActorTryEnterAim(Task* task)
 static void _playerActorUpdateIdleTurnAnimation(Task* task)
 {
     enum {
-        PLAYER_ACTOR_IDLE_TURN_STOPPED      = 0,
         PLAYER_ACTOR_IDLE_TURN_CONTROLLER   = 0,
         PLAYER_ACTOR_IDLE_TURN_RATE_INDEX   = 3,
-        PLAYER_ACTOR_IDLE_TURN_SET_IDLE     = 1,
-        PLAYER_ACTOR_IDLE_TURN_SET_NEGATIVE = 5,
-        PLAYER_ACTOR_IDLE_TURN_SET_POSITIVE = 6,
         PLAYER_ACTOR_IDLE_TURN_BLEND_FRAMES = 5,
     };
     GameActor* actor;
@@ -9665,17 +9605,17 @@ static void _playerActorUpdateIdleTurnAnimation(Task* task)
 
     actor                 = task->work;
     actor->mode           = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode   = PLAYER_ACTOR_IDLE_TURN_STOPPED;
+    actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex  = PLAYER_ACTOR_IDLE_TURN_RATE_INDEX;
     actor->animationState = PLAYER_ACTOR_IDLE_TURN_CONTROLLER;
     actor->statePhase     = 0;
     actor->idleTicks      = 0;
     if (actor->turnSign == 0) {
-        setIndex = PLAYER_ACTOR_IDLE_TURN_SET_IDLE;
+        setIndex = PLAYER_ANIMATION_IDLE;
     } else if (actor->turnSign == 1) {
-        setIndex = PLAYER_ACTOR_IDLE_TURN_SET_POSITIVE;
+        setIndex = PLAYER_ANIMATION_TURN_RIGHT;
     } else {
-        setIndex = PLAYER_ACTOR_IDLE_TURN_SET_NEGATIVE;
+        setIndex = PLAYER_ANIMATION_TURN_LEFT;
     }
     playerActorPlayChildSlotsWithBlend(task, setIndex, 0, PLAYER_ACTOR_IDLE_TURN_BLEND_FRAMES);
 }
@@ -9690,15 +9630,9 @@ static void _playerActorUpdateIdleTurnAnimation(Task* task)
 static void _playerActorUpdateAimTurnAnimation(Task* task)
 {
     enum {
-        PLAYER_ACTOR_AIM_TURN_STOPPED      = 0,
-        PLAYER_ACTOR_AIM_TURN_BACKWARD     = 2,
-        PLAYER_ACTOR_AIM_TURN_FORWARD      = 3,
         PLAYER_ACTOR_AIM_TURN_RATE_MOVING  = 1,
         PLAYER_ACTOR_AIM_TURN_RATE_IDLE    = 3,
         PLAYER_ACTOR_AIM_TURN_CONTROLLER   = 0,
-        PLAYER_ACTOR_AIM_TURN_SET_IDLE     = 9,
-        PLAYER_ACTOR_AIM_TURN_SET_FORWARD  = 12,
-        PLAYER_ACTOR_AIM_TURN_SET_OTHER    = 13,
         PLAYER_ACTOR_AIM_TURN_BLEND_FRAMES = 5,
     };
     GameActor* actor;
@@ -9707,26 +9641,26 @@ static void _playerActorUpdateAimTurnAnimation(Task* task)
 
     actor                 = task->work;
     actor->mode           = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode   = PLAYER_ACTOR_AIM_TURN_STOPPED;
+    actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->animationState = PLAYER_ACTOR_AIM_TURN_CONTROLLER;
     actor->statePhase     = 0;
     if (actor->movementSign != 0) {
         if (actor->movementSign == 1) {
-            movementMode = PLAYER_ACTOR_AIM_TURN_FORWARD;
+            movementMode = GAME_ACTOR_MOVEMENT_RUN;
         } else {
-            movementMode = PLAYER_ACTOR_AIM_TURN_BACKWARD;
+            movementMode = GAME_ACTOR_MOVEMENT_BACKWARD_WALK;
         }
-        setIndex             = PLAYER_ACTOR_AIM_TURN_SET_OTHER;
+        setIndex             = PLAYER_ANIMATION_AIM_BACKWARD;
         actor->movementMode  = movementMode;
         actor->turnRateIndex = PLAYER_ACTOR_AIM_TURN_RATE_MOVING;
         if (actor->movementSign == 1) {
-            setIndex = PLAYER_ACTOR_AIM_TURN_SET_FORWARD;
+            setIndex = PLAYER_ANIMATION_AIM_FORWARD;
         }
     } else {
-        setIndex             = PLAYER_ACTOR_AIM_TURN_SET_OTHER;
+        setIndex             = PLAYER_ANIMATION_AIM_BACKWARD;
         actor->turnRateIndex = PLAYER_ACTOR_AIM_TURN_RATE_IDLE;
         if (actor->turnSign == 0) {
-            setIndex = PLAYER_ACTOR_AIM_TURN_SET_IDLE;
+            setIndex = PLAYER_ANIMATION_AIM_IDLE;
         }
     }
     playerActorPlayChildSlotsWithBlend(task, setIndex, 0, PLAYER_ACTOR_AIM_TURN_BLEND_FRAMES);
@@ -9737,7 +9671,6 @@ void playerActorEnterAim(Task* task, s32 blendFrames)
     enum {
         PLAYER_ACTOR_AIM_ENTRY_STATE         = 1,
         PLAYER_ACTOR_AIM_ENTRY_CONTROLLER    = 2,
-        PLAYER_ACTOR_AIM_ENTRY_STOPPED       = 0,
         PLAYER_ACTOR_AIM_ENTRY_TURN_DISABLED = 0,
     };
     GameActor* actor;
@@ -9745,7 +9678,7 @@ void playerActorEnterAim(Task* task, s32 blendFrames)
     actor                              = task->work;
     actor->state                       = PLAYER_ACTOR_AIM_ENTRY_STATE;
     actor->mode                        = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode                = PLAYER_ACTOR_AIM_ENTRY_STOPPED;
+    actor->movementMode                = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex               = PLAYER_ACTOR_AIM_ENTRY_TURN_DISABLED;
     actor->animationState              = PLAYER_ACTOR_AIM_ENTRY_CONTROLLER;
     actor->statePhase                  = 0;
@@ -9770,14 +9703,8 @@ static void _playerActorEnterAimLocomotion(Task* task, s32 blendFrames)
     enum {
         PLAYER_ACTOR_AIM_LOCOMOTION_STATE      = 2,
         PLAYER_ACTOR_AIM_LOCOMOTION_CONTROLLER = 0,
-        PLAYER_ACTOR_AIM_LOCOMOTION_STOPPED    = 0,
-        PLAYER_ACTOR_AIM_LOCOMOTION_BACKWARD   = 2,
-        PLAYER_ACTOR_AIM_LOCOMOTION_FORWARD    = 3,
         PLAYER_ACTOR_AIM_TURN_MOVING           = 1,
         PLAYER_ACTOR_AIM_TURN_IDLE             = 3,
-        PLAYER_ACTOR_AIM_SET_IDLE              = 9,
-        PLAYER_ACTOR_AIM_SET_FORWARD           = 12,
-        PLAYER_ACTOR_AIM_SET_BACKWARD_OR_TURN  = 13,
     };
     GameActor* actor;
     s32        setIndex;
@@ -9787,7 +9714,7 @@ static void _playerActorEnterAimLocomotion(Task* task, s32 blendFrames)
     actor               = task->work;
     actor->mode         = GAME_ACTOR_MODE_NORMAL;
     actor->state        = PLAYER_ACTOR_AIM_LOCOMOTION_STATE;
-    actor->movementMode = PLAYER_ACTOR_AIM_LOCOMOTION_STOPPED;
+    actor->movementMode = GAME_ACTOR_MOVEMENT_STOPPED;
     if (actor->movementSign != 0) {
         turnRateIndex = PLAYER_ACTOR_AIM_TURN_MOVING;
     } else {
@@ -9806,17 +9733,17 @@ static void _playerActorEnterAimLocomotion(Task* task, s32 blendFrames)
     movementSign = actor->movementSign;
     if (movementSign == 0) {
         if (actor->turnSign != 0) {
-            setIndex = PLAYER_ACTOR_AIM_SET_BACKWARD_OR_TURN;
+            setIndex = PLAYER_ANIMATION_AIM_BACKWARD;
         } else {
-            setIndex = PLAYER_ACTOR_AIM_SET_IDLE;
+            setIndex = PLAYER_ANIMATION_AIM_IDLE;
         }
     } else if (movementSign == 1) {
-        setIndex                = PLAYER_ACTOR_AIM_SET_FORWARD;
-        actor->movementMode     = PLAYER_ACTOR_AIM_LOCOMOTION_FORWARD;
+        setIndex                = PLAYER_ANIMATION_AIM_FORWARD;
+        actor->movementMode     = GAME_ACTOR_MOVEMENT_RUN;
         actor->aimTrackingState = movementSign;
     } else {
-        actor->movementMode = PLAYER_ACTOR_AIM_LOCOMOTION_BACKWARD;
-        setIndex            = PLAYER_ACTOR_AIM_SET_BACKWARD_OR_TURN;
+        actor->movementMode = GAME_ACTOR_MOVEMENT_BACKWARD_WALK;
+        setIndex            = PLAYER_ANIMATION_AIM_BACKWARD;
     }
     if (blendFrames == 0) {
         playerActorResetChildSlots(task, setIndex);
@@ -9829,7 +9756,6 @@ void playerActorExitAim(Task* task)
 {
     enum {
         PLAYER_ACTOR_AIM_EXIT_STATE        = 3,
-        PLAYER_ACTOR_AIM_EXIT_STOPPED      = 0,
         PLAYER_ACTOR_AIM_EXIT_TURN_RATE    = 2,
         PLAYER_ACTOR_AIM_EXIT_CONTROLLER   = 4,
         PLAYER_ACTOR_AIM_EXIT_BLEND_FRAMES = 6,
@@ -9839,7 +9765,7 @@ void playerActorExitAim(Task* task)
     actor                 = task->work;
     actor->state          = PLAYER_ACTOR_AIM_EXIT_STATE;
     actor->mode           = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode   = PLAYER_ACTOR_AIM_EXIT_STOPPED;
+    actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex  = PLAYER_ACTOR_AIM_EXIT_TURN_RATE;
     actor->animationState = PLAYER_ACTOR_AIM_EXIT_CONTROLLER;
     actor->statePhase     = 0;
@@ -9853,8 +9779,6 @@ void playerActorEnterReload(Task* task, s32 loadSelection, s32 reloadSource)
         PLAYER_ACTOR_RELOAD_STATE                    = 5,
         PLAYER_ACTOR_RELOAD_RETURN_TO_AIM_CONTROLLER = 5,
         PLAYER_ACTOR_RELOAD_FINISH_CONTROLLER        = 10,
-        PLAYER_ACTOR_RELOAD_SET_PRIMARY              = 14,
-        PLAYER_ACTOR_RELOAD_SET_BATTLE_END           = 20,
         PLAYER_ACTOR_RELOAD_BLEND_FRAMES             = 3,
         PLAYER_ACTOR_RELOAD_PHASE_COMPLETE           = 1000,
     };
@@ -9870,7 +9794,7 @@ void playerActorEnterReload(Task* task, s32 loadSelection, s32 reloadSource)
             }
         }
         actor->animationState = PLAYER_ACTOR_RELOAD_FINISH_CONTROLLER;
-        setIndex              = PLAYER_ACTOR_RELOAD_SET_BATTLE_END;
+        setIndex              = PLAYER_ANIMATION_RELOAD_BATTLE_END;
         if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.companionType == 1) {
             actor800100EnterReload(gameGetTaskSlot(GAME_TASK_SLOT_COMPANION), 0);
         }
@@ -9881,13 +9805,13 @@ void playerActorEnterReload(Task* task, s32 loadSelection, s32 reloadSource)
             }
         }
         actor->animationState = PLAYER_ACTOR_RELOAD_RETURN_TO_AIM_CONTROLLER;
-        setIndex              = loadSelection + PLAYER_ACTOR_RELOAD_SET_PRIMARY;
+        setIndex              = loadSelection + PLAYER_ANIMATION_RELOAD;
     }
 
     // State 5 applies the selected load when its weapon-specific cue completes.
     actor->state         = PLAYER_ACTOR_RELOAD_STATE;
     actor->mode          = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode  = 0;
+    actor->movementMode  = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex = 0;
     actor->statePhase    = 0;
     actor->stateAux      = loadSelection;
@@ -9952,7 +9876,7 @@ static void _playerActorEnterPeAction(Task* task)
     actor->state            = PLAYER_ACTOR_PE_ENTRY_STATE;
     actor->aimTrackingState = GAME_ACTOR_AIM_TRACKING_DECAY;
     actor->mode             = GAME_ACTOR_MODE_NORMAL;
-    actor->movementMode     = 0;
+    actor->movementMode     = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex    = 0;
     actor->animationState   = 0;
     actor->statePhase       = 0;
@@ -9981,7 +9905,7 @@ static void _playerActorStartParalysis(Task* task)
     previousState         = actor->state;
     actor->mode           = GAME_ACTOR_MODE_NORMAL;
     actor->state          = PLAYER_ACTOR_NORMAL_PARALYSIS_STATE;
-    actor->movementMode   = 0;
+    actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex  = 0;
     actor->animationState = 0;
     actor->statePhase     = 0;
@@ -10013,7 +9937,6 @@ void playerActorMode2State2(Task* task)
 {
     enum {
         PLAYER_ACTOR_SCRIPTED_TURN_STEP       = 0x40,
-        PLAYER_ACTOR_SCRIPTED_TURN_IDLE_SET   = 1,
         PLAYER_ACTOR_SCRIPTED_TURN_IDLE_BLEND = 5,
     };
     GameActor* actor;
@@ -10035,7 +9958,7 @@ void playerActorMode2State2(Task* task)
     }
     // Check the stored target and its lower one-turn image before stepping.
     if (yawDistance < PLAYER_ACTOR_SCRIPTED_TURN_STEP + 1 || (wrappedTargetYaw = targetYaw - ACTOR_TRANSFORM_ANGLE_TURN, yawDistance = currentYaw - wrappedTargetYaw, yawDistance = ABS(yawDistance), yawDistance < PLAYER_ACTOR_SCRIPTED_TURN_STEP + 1)) {
-        idleStateAndSet              = PLAYER_ACTOR_SCRIPTED_TURN_IDLE_SET;
+        idleStateAndSet              = PLAYER_ANIMATION_IDLE;
         actor->rotation.vy           = storedTargetYaw;
         actor->scriptedMotionPending = 0;
         actor->state                 = idleStateAndSet;
@@ -10062,12 +9985,10 @@ void playerActorMode2State2(Task* task)
 static void _playerActorTickScriptedRunTo(Task* task)
 {
     enum {
-        PLAYER_ACTOR_RUN_TO_START_PHASE   = 0,
-        PLAYER_ACTOR_RUN_TO_TURN_PHASE    = 1,
-        PLAYER_ACTOR_RUN_TO_TRAVEL_PHASE  = 2,
-        PLAYER_ACTOR_RUN_TO_MOVEMENT_MODE = 3,
-        PLAYER_ACTOR_RUN_TO_SET           = 4,
-        PLAYER_ACTOR_RUN_TO_BLEND_FRAMES  = 5,
+        PLAYER_ACTOR_RUN_TO_START_PHASE  = 0,
+        PLAYER_ACTOR_RUN_TO_TURN_PHASE   = 1,
+        PLAYER_ACTOR_RUN_TO_TRAVEL_PHASE = 2,
+        PLAYER_ACTOR_RUN_TO_BLEND_FRAMES = 5,
     };
     GameActor* actor;
     s32        setIndex;
@@ -10078,8 +9999,8 @@ static void _playerActorTickScriptedRunTo(Task* task)
         case PLAYER_ACTOR_RUN_TO_TURN_PHASE:
             playerActorTickScriptedMoveTo(task);
             if (actor->statePhase == PLAYER_ACTOR_RUN_TO_TRAVEL_PHASE) {
-                actor->movementMode = PLAYER_ACTOR_RUN_TO_MOVEMENT_MODE;
-                setIndex            = PLAYER_ACTOR_RUN_TO_SET;
+                actor->movementMode = GAME_ACTOR_MOVEMENT_RUN;
+                setIndex            = PLAYER_ANIMATION_RUN;
                 if (actor->actionArgument != 0) {
                     setIndex = actor->actionArgument;
                 }
@@ -10330,11 +10251,6 @@ static void _playerActorNormalState4(Task* task)
 /// in the enclosing damage-mode dispatcher.
 static void _playerActorTickDamageReaction(Task* task)
 {
-    enum {
-        GAME_ACTOR_REACTION_HIT_FLASHES     = 5,
-        GAME_ACTOR_REACTION_BODY_BLAST      = 6,
-        GAME_ACTOR_REACTION_SPARK_AND_PUFFS = 7,
-    };
     GameActor* actor;
     u8         reaction;
 
@@ -10432,7 +10348,6 @@ static s32 _playerActorTryEnterPeAction(Task* task)
 {
     enum {
         PLAYER_ACTOR_PE_ENTRY_STATE              = 6,
-        PLAYER_ACTOR_PE_ENTRY_STOPPED            = 0,
         PLAYER_ACTOR_PE_ENTRY_TURN_DISABLED      = 0,
         PLAYER_ACTOR_PE_ENTRY_CONTROLLER         = 0,
         PLAYER_ACTOR_PE_CLIP_FAMILY0             = 0,
@@ -10453,7 +10368,7 @@ static s32 _playerActorTryEnterPeAction(Task* task)
         previousState           = actor->state;
         actor->state            = PLAYER_ACTOR_PE_ENTRY_STATE;
         actor->mode             = GAME_ACTOR_MODE_NORMAL;
-        actor->movementMode     = PLAYER_ACTOR_PE_ENTRY_STOPPED;
+        actor->movementMode     = GAME_ACTOR_MOVEMENT_STOPPED;
         actor->turnRateIndex    = PLAYER_ACTOR_PE_ENTRY_TURN_DISABLED;
         actor->animationState   = PLAYER_ACTOR_PE_ENTRY_CONTROLLER;
         actor->statePhase       = 0;
@@ -10538,8 +10453,6 @@ static void _playerActorTickScriptedWalkSteps(Task* task)
         PLAYER_ACTOR_WALK_STEPS_START_PHASE = 0,
         PLAYER_ACTOR_WALK_STEPS_WALK_PHASE  = 1,
         PLAYER_ACTOR_WALK_STEPS_FORWARD     = 1,
-        PLAYER_ACTOR_WALK_STEPS_WALK_SET    = 2,
-        PLAYER_ACTOR_WALK_STEPS_UNARMED_SET = 19,
         PLAYER_ACTOR_WALK_STEPS_IDLE_BLEND  = 5,
     };
     GameActor* actor;
@@ -10550,12 +10463,12 @@ static void _playerActorTickScriptedWalkSteps(Task* task)
     actor = task->work;
     switch (actor->statePhase) {
         case PLAYER_ACTOR_WALK_STEPS_START_PHASE:
-            setIndex            = PLAYER_ACTOR_WALK_STEPS_WALK_SET;
+            setIndex            = PLAYER_ANIMATION_WALK;
             walkingPhaseAndMode = PLAYER_ACTOR_WALK_STEPS_WALK_PHASE;
             actor->statePhase   = walkingPhaseAndMode;
             actor->movementMode = walkingPhaseAndMode;
             if (actor->equipmentTasks[1] == NULL) {
-                setIndex = PLAYER_ACTOR_WALK_STEPS_UNARMED_SET;
+                setIndex = PLAYER_ANIMATION_UNARMED_WALK;
             }
             unusedPlaybackArgument = 1;
             if (actor->stateTimer == 0) {
@@ -10631,8 +10544,6 @@ static void _playerActorTickScriptedPresentation(Task* task)
     enum {
         PLAYER_ACTOR_PRESENTATION_START_PHASE = 0,
         PLAYER_ACTOR_PRESENTATION_PLAY_PHASE  = 1,
-        PLAYER_ACTOR_PRESENTATION_ZERO_SET    = 32,
-        PLAYER_ACTOR_PRESENTATION_NONZERO_SET = 33,
     };
     GameActor* actor;
     s32        setIndex;
@@ -10641,11 +10552,11 @@ static void _playerActorTickScriptedPresentation(Task* task)
     actor = task->work;
     switch (actor->statePhase) {
         case PLAYER_ACTOR_PRESENTATION_START_PHASE:
-            setIndex          = PLAYER_ACTOR_PRESENTATION_ZERO_SET;
+            setIndex          = PLAYER_ANIMATION_EXAMINE_ENTER;
             playbackPhase     = PLAYER_ACTOR_PRESENTATION_PLAY_PHASE;
             actor->statePhase = playbackPhase;
             if (actor->stateTimer != 0) {
-                setIndex = PLAYER_ACTOR_PRESENTATION_NONZERO_SET;
+                setIndex = PLAYER_ANIMATION_EXAMINE_EXIT;
             }
             playerActorPlayChildSlots(task, setIndex, 1);
             // Advance the new clip on the entry tick as well as later ticks.
@@ -10730,7 +10641,6 @@ static void _playerActorUpdateTurnYawOffset(Task* task)
 static void _playerActorEnterWeaponAttack(Task* task)
 {
     enum {
-        PLAYER_ACTOR_ATTACK_MOVEMENT_STOPPED         = 0,
         PLAYER_ACTOR_ATTACK_TURN_DISABLED            = 0,
         PLAYER_ACTOR_ATTACK_RETURN_TO_AIM_CONTROLLER = 5,
         PLAYER_ACTOR_ATTACK_PHASE_START              = 0,
@@ -10740,7 +10650,7 @@ static void _playerActorEnterWeaponAttack(Task* task)
     actor                 = task->work;
     actor->mode           = GAME_ACTOR_MODE_NORMAL;
     actor->state          = PLAYER_ACTOR_STATE_ATTACK;
-    actor->movementMode   = PLAYER_ACTOR_ATTACK_MOVEMENT_STOPPED;
+    actor->movementMode   = GAME_ACTOR_MOVEMENT_STOPPED;
     actor->turnRateIndex  = PLAYER_ACTOR_ATTACK_TURN_DISABLED;
     actor->animationState = PLAYER_ACTOR_ATTACK_RETURN_TO_AIM_CONTROLLER;
     actor->statePhase     = PLAYER_ACTOR_ATTACK_PHASE_START;

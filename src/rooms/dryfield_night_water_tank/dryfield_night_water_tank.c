@@ -7,7 +7,7 @@
 #include "common.h"
 
 #include "actors/actor_146300.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01500.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -59,9 +59,6 @@ static s32  _dryfieldNightWaterTankResolveRoomEvent(Task* unusedTask, s32 unused
 static s32  _dryfieldNightWaterTankCommandMessage(Task* unusedTask, s32 messageId, s32 commandId, s32 unusedSecondArg);
 static s32  _dryfieldNightWaterTankRoomActionMessage(Task* unusedTask, s32 messageId, const DirectionActionRequest* request, s32 unusedSecondArg);
 static void _dryfieldNightWaterTankBattleAftermathTask(Task* task);
-
-/// Inventory's request to use a collected key item in this room.
-enum { DRYFIELD_NIGHT_WATER_TANK_MESSAGE_USE_KEY_ITEM = 0x13F1 };
 
 enum {
     DRYFIELD_NIGHT_WATER_TANK_PLAYER_IDLE_ANIMATION = 1,
@@ -146,7 +143,7 @@ static EvsCommand _gDryfieldNightWaterTankRelocateToView3Script[11] = {
 /// the table and its callbacks for its lifetime in the loaded room overlay.
 static TaskMessageEntry _gDryfieldNightWaterTankRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _dryfieldNightWaterTankResolveRoomEvent },
-    { DRYFIELD_NIGHT_WATER_TANK_MESSAGE_USE_KEY_ITEM, _dryfieldNightWaterTankRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldNightWaterTankRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldNightWaterTankRoomActionMessage },
     { ROOM_MESSAGE_COMMAND, _dryfieldNightWaterTankCommandMessage },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -154,10 +151,10 @@ static TaskMessageEntry _gDryfieldNightWaterTankRoomMessages[5] = {
 
 /// Bodyless battle-aftermath controller recipe for placement variant 10.
 ///
-/// Entry 0 runs at priority 32; TASK_DESC_END follows. Spawning consumes the
+/// Entry 0 runs at priority `TASK_PRIORITY_SCENE`; TASK_DESC_END follows. Spawning consumes the
 /// descriptor synchronously, and the callback stays loaded through teardown.
 static TaskDesc _gDryfieldNightWaterTankBattleAftermathTasks[2] = {
-    { .header = { .fields = { TASK_BODY_NONE, 32 } }, .callback = _dryfieldNightWaterTankBattleAftermathTask, .data = { .value = 0 } },
+    { .header = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, .callback = _dryfieldNightWaterTankBattleAftermathTask, .data = { .value = 0 } },
     { .header = { .fields = { TASK_DESC_END, 0 } }, .callback = NULL, .data = { .model = NULL } },
 };
 
@@ -253,7 +250,7 @@ static TmdSource _gDryfieldNightWaterTankModel00FF8 = {
 /// Entry 0 attaches the one-part TMD at priority 192. Its borrowed geometry and
 /// callback must stay loaded for the spawned task's lifetime.
 static TaskDesc _gDryfieldNightWaterTankSwayTasks[2] = {
-    { .header = { .fields = { TASK_BODY_TMD, 192 } }, .callback = waterTankSwayTask, .data = { .model = &_gDryfieldNightWaterTankModel00FF8 } },
+    { .header = { .fields = { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, .callback = waterTankSwayTask, .data = { .model = &_gDryfieldNightWaterTankModel00FF8 } },
     { .header = { .fields = { TASK_DESC_END, 0 } }, .callback = NULL, .data = { .model = NULL } },
 };
 
@@ -865,9 +862,7 @@ static void _dryfieldNightWaterTankBattleAftermathTask(Task* task)
 /// Returns 0 so the inventory displays its refusal message. No item is consumed.
 static s32 _dryfieldNightWaterTankRejectKeyItemUse(Task* unusedTask, s32 unusedMessageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_NIGHT_WATER_TANK_KEY_ITEM_USE_REJECTED = 0 };
-
-    return DRYFIELD_NIGHT_WATER_TANK_KEY_ITEM_USE_REJECTED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Allows a room transition with the requested destination unchanged.

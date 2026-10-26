@@ -12,6 +12,7 @@
 #include "gameplay/sound.h"
 
 #include "main/display.h"
+#include "main/event_flags.h"
 #include "main/gameflag.h"
 #include "main/gfx.h"
 #include "main/mc.h"
@@ -40,10 +41,10 @@ extern RoomEventReq gRoomEventReq;
 
 /// Bodyless transition-task recipe shared by this overlay's gate and event task.
 ///
-/// Runs at priority 32 with zero spawn payloads and unused metadata. The gate
+/// Runs at priority `TASK_PRIORITY_SCENE` with zero spawn payloads and unused metadata. The gate
 /// reads the recipe synchronously after latching the request and destination;
 /// keep those snapshots and the room callback code live through session reload.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Spawn recipe for the operator-panel session's polling owner, followed by TASK_DESC_END.
 ///
@@ -51,7 +52,7 @@ static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIO
 /// panel and polls its exit. It borrows the room-owned panel-task slot; the
 /// terminal entry is retained but is never spawned by the command handler.
 static TaskDesc _gFactoryPanelSessionDesc[2] = {
-    { { { TASK_BODY_NONE, FACTORY_PANEL_SESSION_PRIORITY } }, factoryPanelSpawn, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, factoryPanelSpawn, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -131,7 +132,7 @@ s32 roomVariantFactoryMsg(Task* unusedTask, s32 unusedMessageId, const RoomEvent
     }
     if (request->areaId == GAME_AREA_DRYFIELD_GARAGE) {
         if (request->queryOnly == ROOM_EVENT_EXECUTE) {
-            if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) < FACTORY_GARAGE_FINAL_CHAPTER) {
+            if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) < FACTORY_GARAGE_FINAL_CHAPTER) {
                 reply->roomState = FACTORY_GARAGE_EARLY_ROOM;
             } else {
                 reply->roomState = FACTORY_GARAGE_LATE_ROOM;
@@ -257,7 +258,7 @@ s32 factoryRoomAction(Task* unusedTask, s32 unusedMessageId, const DirectionActi
     if ((request->actionId == FACTORY_ACTION_START_SCENE) && (gameFlagGetNibble(GAME_FLAG_02C) == 0)) {
         capSpawnEventIfIdle(FACTORY_START_SCENE_CAP, CAP_EVENT_PAUSE_ACTORS);
         gameFlagSetNibble(GAME_FLAG_02C, 1);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, FACTORY_START_SCENE_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, FACTORY_START_SCENE_OBJECTIVE);
         sndEvtRequestScriptStart(FACTORY_DAY_SOUND(FACTORY_SOUND_START_SCENE), 0, 0);
     }
     return 0;

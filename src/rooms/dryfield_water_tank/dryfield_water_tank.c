@@ -28,7 +28,7 @@ static Task* _gDryfieldWaterTankPropSceneTask;
 
 #include "dryfield_water_tank_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_120400.h"
 
 #include "gameplay/animation.h"
 #include "gameplay/area.h"
@@ -144,7 +144,6 @@ enum {
     DRYFIELD_WATER_TANK_PLAYER_EVENT_CLIP65             = ANIMATION_BANK_BASE_SET_COUNT + 18,
     DRYFIELD_WATER_TANK_PLAYER_EVENT_BLEND_FRAMES       = 20,
     DRYFIELD_WATER_TANK_PLAYER_EVENT_SHORT_BLEND_FRAMES = 3,
-    DRYFIELD_WATER_TANK_PLAYER_PATH_PRIORITY            = 192,
 };
 
 /// Player-path clips, extended ids 47..65; 47 is NULL.
@@ -604,8 +603,8 @@ static ActorTransform _gDryfieldWaterTankKylePathSceneForwardPlacement = { .pos 
 static ActorTransform _gDryfieldWaterTankKylePathSceneWalkTarget = { .pos = { 2530, -12000, 10000, 0 }, .rot = { 0, 0, 0, 0 } };
 
 TaskDesc gDryfieldWaterTankPlayerPathTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_PLAYER_PATH_PRIORITY } }, dryfieldWaterTankMovePlayerFirstLegTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_WATER_TANK_PLAYER_PATH_PRIORITY } }, dryfieldWaterTankMovePlayerSecondLegTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, dryfieldWaterTankMovePlayerFirstLegTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, dryfieldWaterTankMovePlayerSecondLegTask, { .value = 0 } },
 };
 
 /// Selectors and timing of the CAP-cued player/Kyle path scene.
@@ -833,15 +832,13 @@ static TmdSource _gDryfieldWaterTankDryfieldNightWaterTankModel00FF8 = {
     _gDryfieldWaterTankDryfieldNightWaterTankModel00FF8Stream,
 };
 
-enum { DRYFIELD_WATER_TANK_SWAY_TASK_PRIORITY = 192 };
-
 /// Spawn recipe for the room's swaying tank model, followed by TASK_DESC_END.
 ///
-/// Entry 0 uses a TMD body at priority 192 and the shared waterTank sway task.
+/// Entry 0 uses a TMD body at priority `TASK_PRIORITY_CONTROL` and the shared waterTank sway task.
 /// Room initialization spawns it with zero arguments; the task borrows the
 /// room's one-part model geometry until teardown. Never spawn the final row.
 static TaskDesc _gDryfieldWaterTankSwayTaskDescs[2] = {
-    { { { TASK_BODY_TMD, DRYFIELD_WATER_TANK_SWAY_TASK_PRIORITY } }, waterTankSwayTask, { .model = &_gDryfieldWaterTankDryfieldNightWaterTankModel00FF8 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, waterTankSwayTask, { .model = &_gDryfieldWaterTankDryfieldNightWaterTankModel00FF8 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -1637,7 +1634,7 @@ s32 dryfieldWaterTankHandleRoomAction(Task* task, s32 messageId, const Direction
     }
     if ((request->actionId == DRYFIELD_WATER_TANK_ACTION_PLAYER_PATH_SCENE) && (gameFlagGetNibble(GAME_FLAG_WATER_TANK_SCENE_SEEN) == 0)) {
         gameFlagSetNibble(GAME_FLAG_WATER_TANK_SCENE_SEEN, 1);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_WATER_TANK_PLAYER_PATH_SCENE_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, DRYFIELD_WATER_TANK_PLAYER_PATH_SCENE_OBJECTIVE);
         gameFlagSetNibble(EVENT_FLAG_TELEPHONE_DIALOGUE_COUNTER, EVENT_FLAG_TELEPHONE_DIALOGUE_UNHEARD);
         gameFlagSetNibble(EVENT_FLAG_STORY_DIALOGUE_INDEX, DRYFIELD_WATER_TANK_PLAYER_PATH_SCENE_DIALOGUE);
         areaApplySavedUpdates(_gDryfieldWaterTankPlayerPathSceneAreaUpdates);
@@ -1906,7 +1903,7 @@ static inline void _dryfieldWaterTankStartPropSlide(const _DryfieldWaterTankProp
     ActorCommand slideCommand;
 
     taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE, 0);
-    taskMessageDispatch(work->propTask, ACTOR_MESSAGE_SET_MODEL_DRAW, true, 0);
+    taskMessageDispatch(work->propTask, ACTOR_MESSAGE_SET_MODEL_DRAW, ACTOR_MESSAGE_DRAW_SHOW, 0);
     slideCommand.command = DRYFIELD_WATER_TANK_PROP_STATE_SLIDING;
     TASK_MESSAGE_DISPATCH_POINTER(work->propTask, ACTOR_COMMAND_MESSAGE_APPLY, &slideCommand, 0);
 }
@@ -1963,7 +1960,7 @@ void dryfieldWaterTankPropSceneTask(Task* task)
         case DRYFIELD_WATER_TANK_PROP_SCENE_REQUEST_SHOW_PLAYER:
             gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.view = viewFindLogicalIndex(DRYFIELD_WATER_TANK_PROP_SCENE_RESTORE_VIEW);
             gGameSession->viewDirty                                = 1;
-            taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, true, 0);
+            taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO, 0);
             break;
         case DRYFIELD_WATER_TANK_PROP_SCENE_REQUEST_PLAY_SOUNDS:
             sndEvtRequestScriptStart(SOUND_AREA(GAME_STAGE_DRYFIELD, GAME_AREA_DRYFIELD_WATER_TANK, DRYFIELD_WATER_TANK_PROP_SCENE_SLIDE_SOUND), 0, 0);
@@ -2020,7 +2017,7 @@ void dryfieldWaterTankSkipPropScene(void)
 
     work                                                   = _gDryfieldWaterTankPropSceneTask->work;
     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.view = viewFindLogicalIndex(DRYFIELD_WATER_TANK_PROP_SCENE_RESTORE_VIEW);
-    taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, true, 0);
+    taskMessageDispatch(work->playerTask, GAME_ACTOR_MESSAGE_SET_MODEL_DRAW, PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO, 0);
     gGameSession->viewDirty = 1;
     sndEvtRequestScriptStop(SOUND_AREA(GAME_STAGE_DRYFIELD, GAME_AREA_DRYFIELD_WATER_TANK, DRYFIELD_WATER_TANK_PROP_SCENE_SOUND_ENTRY), DRYFIELD_WATER_TANK_PROP_SCENE_SKIP_FADE_TICKS);
 }

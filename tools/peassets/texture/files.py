@@ -117,14 +117,25 @@ def stray(words: bytes) -> str | None:
 
 
 def embedded_palettes(texture: str, assets: dict, assets_root: Path) -> dict[str, list[int]]:
-    """A texture's variants that an executable uploads: its `palettes_from` palette, cut into them in order."""
+    """A texture's variants that an executable uploads: its `palettes_from` palette, cut into them in order, or the
+    variants its table names, each its own palette."""
     import struct
 
     import asset_data
+
+    def colors_of(source: str) -> list[int]:
+        data = (assets_root / asset_schema.raw_rel(source, asset_data.EMBEDDED_ASSETS[source])).read_bytes()
+        return list(struct.unpack(f"<{len(data) // 2}H", data))
+
     source = assets[texture]["palettes_from"]
-    data = (assets_root / asset_schema.raw_rel(source, asset_data.EMBEDDED_ASSETS[source])).read_bytes()
-    colors = list(struct.unpack(f"<{len(data) // 2}H", data))
     n = PALETTE_ENTRIES[assets[texture]["bpp"]]
+    if isinstance(source, dict):
+        out = {v: colors_of(s) for v, s in source.items()}
+        for v, colors in out.items():
+            if len(colors) != n:
+                raise SystemExit(f"{texture}.{v}: {source[v]} holds {len(colors)} colors, not {n}")
+        return out
+    colors = colors_of(source)
     variants = assets[texture]["variants"]
     if len(colors) != n * len(variants):
         raise SystemExit(f"{texture}: {source} holds {len(colors)} colors, {len(variants)} variants need {n * len(variants)}")
@@ -259,6 +270,20 @@ def decode_file(name: str, assets: dict, assets_root: Path) -> list[Path]:
             stored[e["chunk"]] = pages
     palettes: dict[tuple[str, str], list[int]] = {}
     written = []
+
+    def recoloring(texture: str, variant: str) -> list[int] | None:
+        """A variant another file uploads the palette of, for a page this one uploads (a resident page that rooms
+        recolor: the effect atlas's fireball palettes are the landing pad's)."""
+        for other in assets.values():
+            if other.get("type") != "file" or other is assets[name]:
+                continue
+            for o in other.get("contents", ()):
+                for p in (o.get("palettes", ()) if "pages" not in o else ()):
+                    if p.get("texture") == texture and p.get("variant") == variant:
+                        block = palette_block(chunk_path(assets_root, assets, o["chunk"]).read_bytes())
+                        return palette_at([block], place_at(p, assets), PALETTE_ENTRIES[assets[texture]["bpp"]])
+        return None
+
     for e in [*contents, *borrowed]:
         for p in e.get("palettes", ()):
             if e in borrowed and "texture" not in p:
@@ -299,6 +324,7 @@ def decode_file(name: str, assets: dict, assets_root: Path) -> list[Path]:
                     path = variant_path(assets_root, assets, texture, variant)
                     path.parent.mkdir(parents=True, exist_ok=True)
                     write_variant(path, texels, tex, from_exe.get(variant) or palettes.get((texture, variant))
+                                  or recoloring(texture, variant)
                                   or (gray_ramp(tex["bpp"]) if tex.get("no_palette") else None))
                     written.append(path)
     for e in contents:
@@ -357,11 +383,17 @@ def encode_file(name: str, assets: dict, assets_root: Path) -> dict[str, bytes]:
         elif "palettes" in e:
             block = assets[chunk]                 # the rectangle its palettes span (declaration.chunk_records)
             colors = [0] * (block["w"] * block["h"])
-            for p in e["palettes"]:
+            placed = [None] * len(colors)          # the palette that set each color, where one inside another
+            for p in sorted(e["palettes"], key=lambda p: -len(palette_colors(p, chunk))):   # the larger first
                 c = palette_colors(p, chunk)
                 px, py = place_at(p, assets)
                 at = (py - block["y"]) * block["w"] + px - block["x"]
-                colors[at:at + len(c)] = c
+                for i, color in enumerate(c):
+                    if placed[at + i] is not None and colors[at + i] != color:
+                        raise ValueError(f"{chunk}: {p.get('texture', p.get('name'))}.{p.get('variant', '')} differs from "
+                                         f"{placed[at + i]}, the palette it lies inside, at entry {i}")
+                    if placed[at + i] is None:
+                        colors[at + i], placed[at + i] = color, f"{p.get('texture', p.get('name'))}.{p.get('variant', '')}"
             out[chunk] = encode_palette(block["x"], block["y"], block["w"], block["h"], colors)
     return out
 
@@ -402,10 +434,11 @@ def check_file(name: str, assets: dict, assets_root: Path) -> list[str]:
         problems += cell_problems(texture, assets, assets_root)
     for texture in sorted(t for t in textures if "palettes_from" in assets[t]):
         stored = embedded_palettes(texture, assets, assets_root)
-        for v in assets[texture]["variants"]:
+        for v in stored:
             _texels, colors = read_variant(variant_path(assets_root, assets, texture, v), assets[texture])
             if colors != stored[v]:
-                problems.append(f"{texture}.{v}: its palette differs from {assets[texture]['palettes_from']}'s")
+                source = assets[texture]["palettes_from"]
+                problems.append(f"{texture}.{v}: its palette differs from {source[v] if isinstance(source, dict) else source}'s")
     for chunk, data in encode_file(name, assets, assets_root).items():
         stored = chunk_path(assets_root, assets, chunk).read_bytes()
         if assets[chunk]["type"] == "pe2img":

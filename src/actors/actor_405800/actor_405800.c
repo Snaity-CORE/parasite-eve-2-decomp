@@ -389,19 +389,17 @@ static TaskMessageEntry _gActor405800Messages[3] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-enum { ACTOR_405800_ARM_TASK_PRIORITY = 96 };
-
 /// Left and right Ivory Stalker child-arm model recipes, with no terminator.
 ///
 /// Slots `ACTOR_405800_ARM_LEFT` and `ACTOR_405800_ARM_RIGHT` select the two
 /// models. Spawned tasks borrow their sources and body-owned coordinates and
 /// lighting; both child spawns must succeed before binding them to the body.
 static TaskDesc _gActor405800ArmTaskDescs[2] = {
-    { { { TASK_BODY_TMD, ACTOR_405800_ARM_TASK_PRIORITY } }, _actor405800LeftArmTask, { .model = &_gStalkerIvoryBurstArmLeft } },
-    { { { TASK_BODY_TMD, ACTOR_405800_ARM_TASK_PRIORITY } }, _actor405800RightArmTask, { .model = &_gStalkerIvoryBurstArmRight } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor405800LeftArmTask, { .model = &_gStalkerIvoryBurstArmLeft } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor405800RightArmTask, { .model = &_gStalkerIvoryBurstArmRight } },
 };
 
-TaskDesc gActor405800IvoryStalkerTaskDesc = { { { TASK_BODY_TMD, 96 } }, _actor405800Task, { .model = &_gStalkerIvoryBody } };
+TaskDesc gActor405800IvoryStalkerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor405800Task, { .model = &_gStalkerIvoryBody } };
 
 /// Grounded-death clip selected from the requested body pose, indexed 0..34.
 ///
@@ -1068,7 +1066,7 @@ static void _actor405800InitEnemy(Task* task)
     work->spawnX              = rootCoord->coord.t[0];
     work->floorY              = rootCoord->coord.t[1];
     work->spawnZ              = rootCoord->coord.t[2];
-    randomState               = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+    randomState               = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState           = randomState;
     work->frameCount          = randomState >> ACTOR_405800_SPAWN_RANDOM_HIGH_SHIFT;
     work->shadowHeight        = work->floorY;
@@ -1866,7 +1864,7 @@ static void _actor405800TickIdle(Task* task)
         remainingTicks   = work->idleFrames - 1;
         work->idleFrames = remainingTicks;
         if (remainingTicks == 0) {
-            randomState             = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            randomState             = RANDOM_LCG_NEXT(gRandomLcgState);
             work->hideCooldownReset = ((randomState >> ACTOR_405800_IDLE_RANDOM_HIGH_SHIFT) & ACTOR_405800_IDLE_COOLDOWN_SPREAD_MASK) + ACTOR_405800_IDLE_COOLDOWN_BASE_TICKS;
             gRandomLcgState         = randomState;
             _actor405800RequestShow(task);
@@ -2532,7 +2530,7 @@ static s32 _actor405800TrySelectAttack(Task* task)
     work      = task->work;
     rootCoord = task->extra.tmd->coords;
     // Draw once even while the attack timer is still running.
-    nextRandom      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+    nextRandom      = RANDOM_LCG_NEXT(gRandomLcgState);
     attackRandom    = nextRandom >> 0x10;
     gRandomLcgState = nextRandom;
     if (work->timer == 0) {
@@ -3371,7 +3369,7 @@ static void _actor405800TickWalk(Task* task)
     work        = task->work;
     minimumRate = ANIMATION_RATE_ONE;
     if (work->playerDistance > ACTOR_405800_WALK_HURRY_DISTANCE && work->walkHurried == 0) {
-        randomState     = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+        randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = randomState;
         if ((randomState >> 0x10) & 1) {
             minimumRate = ACTOR_405800_WALK_FAST_RATE;
@@ -3839,7 +3837,7 @@ static void _actor405800StartIdle(Task* task)
     u32                           randomState;
 
     _actor405800SetBlendRequest(task, ACTOR_405800_CLIP_IDLE, ANIMATION_RATE_ONE, 4);
-    randomState      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+    randomState      = RANDOM_LCG_NEXT(gRandomLcgState);
     gRandomLcgState  = randomState;
     work->idleFrames = ((randomState >> ACTOR_405800_IDLE_RANDOM_HIGH_SHIFT) & ACTOR_405800_IDLE_DURATION_SPREAD_MASK) + ACTOR_405800_IDLE_DURATION_BASE_TICKS;
     work->subState   = work->subState + 1;

@@ -9,7 +9,10 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_136100.h"
+#include "actors/actor_300700.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -114,7 +117,7 @@ enum {
 ///
 /// Captures `gRandomLcgState`; multiplication and addition wrap modulo 2^32.
 /// Each invocation consumes one draw, so callers must preserve draw order.
-#define DRYFIELD_NIGHT_MAIN_STREET_RAND() ((gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT) >> 16)
+#define DRYFIELD_NIGHT_MAIN_STREET_RAND() ((RANDOM_LCG_ADVANCE()) >> 16)
 
 /// The room effect mode of each view, indexed by view - 1.
 
@@ -143,9 +146,6 @@ static void _dryfieldNightMainStreetRestoreSectionSpriteVisibility(void);
 static s32 _dryfieldNightMainStreetRejectKeyItemUse(Task* task, s32 messageId, s32 keyItemId, s32 unusedSecondArg);
 static s32 _dryfieldNightMainStreetIgnoreRoomAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedSecondArg);
 
-/// Requests use of a collected key item; the room replies with the item-menu result.
-enum { DRYFIELD_NIGHT_MAIN_STREET_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static WorldCollisionGrid    _gDryfieldNightMainStreetRoom1CollisionGrid;
 static WorldCollisionGrid    _gDryfieldNightMainStreetRooms2And3CollisionGrid;
 static WorldCollisionTrigger _gDryfieldNightMainStreetViewBoundaryTriggers[26];
@@ -154,13 +154,11 @@ static WorldCollisionTrigger _gDryfieldNightMainStreetRoom1ActionTriggers[12];
 static WorldCoordRoomAmbientEntry _gDryfieldNightMainStreetRoomAmbientTable[25];
 static WorldCoordRoomLights       _gDryfieldNightMainStreetRoomLights;
 
-enum { MAIN_STREET_EVENT_TASK_PRIORITY = 32 };
-
 /// Bodyless staged motel-scene recipe, using the room's latched event and destination.
 ///
-/// Priority 32; spawn payloads and metadata are unused. Spawn reads the recipe
+/// Priority `TASK_PRIORITY_SCENE`; spawn payloads and metadata are unused. Spawn reads the recipe
 /// synchronously, and the callback and singleton snapshots stay live through reload.
-static TaskDesc _gMainStreetStagedSceneTaskDescriptor = { { { TASK_BODY_NONE, MAIN_STREET_EVENT_TASK_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gMainStreetStagedSceneTaskDescriptor = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Bodyless transition task spawned by this room's event gate at priority 32.
 ///
@@ -168,13 +166,13 @@ static TaskDesc _gMainStreetStagedSceneTaskDescriptor = { { { TASK_BODY_NONE, MA
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Bodyless Ice Bag handover-completion recipe at priority 32.
 ///
 /// Waits for CAP to become idle, then updates the saved timer and water-bag
 /// possession. Spawn payloads and metadata are unused; keep callback code loaded.
-static TaskDesc _gMainStreetIceBagCompletionTaskDescriptor = { { { TASK_BODY_NONE, MAIN_STREET_EVENT_TASK_PRIORITY } }, _mainStreetFinishIceBagEvent, { .value = 0 } };
+static TaskDesc _gMainStreetIceBagCompletionTaskDescriptor = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _mainStreetFinishIceBagEvent, { .value = 0 } };
 
 /// Room-task message interface, borrowed from this overlay until receiver teardown.
 ///
@@ -182,7 +180,7 @@ static TaskDesc _gMainStreetIceBagCompletionTaskDescriptor = { { { TASK_BODY_NON
 /// The final `TASK_MESSAGE_TABLE_END` record terminates dispatch; it is not a handler.
 static const TaskMessageEntry _gDryfieldNightMainStreetMessageTable[6] SECTION(".data") = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _mainStreetResolveMessage },
-    { DRYFIELD_NIGHT_MAIN_STREET_MESSAGE_USE_KEY_ITEM, _dryfieldNightMainStreetRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldNightMainStreetRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldNightMainStreetIgnoreRoomAction },
     { ROOM_MESSAGE_COMMAND, _mainStreetTalkMessage },
     { ROOM_MESSAGE_SOUND, _mainStreetCapSoundCue },
@@ -1914,9 +1912,7 @@ static const TaskFuncTable3 _gDryfieldNightMainStreetRoomTaskStates = {
 /// without consuming an item or changing the room.
 static s32 _dryfieldNightMainStreetRejectKeyItemUse(Task* task, s32 messageId, s32 keyItemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_NIGHT_MAIN_STREET_KEY_ITEM_REFUSED = 0 };
-
-    return DRYFIELD_NIGHT_MAIN_STREET_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Ignores room-specific trigger actions in the nighttime main street.

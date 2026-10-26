@@ -94,11 +94,9 @@ static void _neoArkSubmarineTunnelSetEventSeen(s32 seenValue);
 
 enum { NEO_ARK_SUBMARINE_TUNNEL_EVENT_SEEN = 1 };
 
-enum { NEO_ARK_SUBMARINE_TUNNEL_WATER_REFRACTION_TASK_PRIORITY = 192 };
-
 TaskDesc gNeoArkSubmarineTunnelWaterRefractionTaskDesc[2] = {
-    { { { TASK_BODY_NONE, NEO_ARK_SUBMARINE_TUNNEL_WATER_REFRACTION_TASK_PRIORITY } }, waterRefractionTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, NEO_ARK_SUBMARINE_TUNNEL_WATER_REFRACTION_TASK_PRIORITY } }, waterDistortBandTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterRefractionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterDistortBandTask, { .value = 0 } },
 };
 
 static AnimationPackedPose _gNeoArkSubmarineTunnelAnimation03EE0Bank1[6] = {
@@ -147,11 +145,11 @@ static AnimationSet _gNeoArkSubmarineTunnelAnimation0444C = {
 
 /// Bodyless screen-wave recipe in slot 0, followed by TASK_DESC_END.
 ///
-/// Runs at priority 192 and borrows a ScreenWaveCtx through spawnArg2.
+/// Runs at priority `TASK_PRIORITY_CONTROL` and borrows a ScreenWaveCtx through spawnArg2.
 /// Only one wave may be active; its context and this carrier's code/storage
 /// must remain live through the final draw. The spawner copies the recipe.
 static TaskDesc _gScreenWaveTaskDescs[2] = {
-    { { { TASK_BODY_NONE, 192 } }, _screenWaveTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -365,7 +363,7 @@ static s32 _neoArkSubmarineTunnelHandleRoomAction(Task* unusedTask, s32 unusedMe
     // Advance the staged variant-3 story without changing the entry latch.
     actionId = request->actionId;
     if ((actionId == ACTION_ADVANCE_PROGRESS) && (gameFlagGetNibble(GAME_FLAG_SUBMARINE_TUNNEL_PROGRESS) == actionId) && (gGameSession->location.variant == PROGRESS_VARIANT)) {
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_AFTER_PROGRESS);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, OBJECTIVE_AFTER_PROGRESS);
         gameFlagSetNibble(GAME_FLAG_SUBMARINE_TUNNEL_PROGRESS, PROGRESS_ADVANCED);
         gameFlagSetNibble(GAME_FLAG_SCENE_MUSIC_OVERRIDE, SCENE_MUSIC_OVERRIDE_ENABLED);
         gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.sceneEvent = PROGRESS_SCENE_EVENT;

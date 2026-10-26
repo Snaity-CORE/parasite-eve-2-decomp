@@ -177,6 +177,15 @@ first used, a speaker plate after the glyphs of the first line showing it;
 left to right, a new row 14 pixels down when an item would pass x = 256.
 All other pixels are 0.
 
+A second layout tool wrote two dialogues, MIST room 21 (an earlier take of the parking lot's talk with Pierce) and
+Dryfield r04. It numbers glyph cells from 0 instead of 25 and has no speaker plates: a title draws the glyph cell it
+names, as `_capDrawTextStream` always does. Its glyphs are a bolder face (`dialogue/font_bold`, with r04's in
+Japanese), and its atlas carries a ▼ at (242, 242) that no cell reaches. A decoded dialogue states this in `atlas`:
+`face`, `first_glyph`, and `marks` (glyphs of the face by position). Dryfield r04's cells were laid out for other
+text over a Japanese page that was never redrawn, so they slice across its glyphs; the game draws those slices,
+and the decode keeps them as `stored_cells`, its text referring to them as `{cell n}`. Its page is an image of its
+own (`dryfield_r04_glyph_page`), not one the dialogue generates.
+
 ## 10. Retail invariants
 
 Over the 166 distinct dialogues (213 in bundles). Each makes a field derivable.
@@ -248,4 +257,3 @@ an unseen glyph or plate, or two cells with one character.
 | flag `0x01` | no reader |
 | flag `0x10` (`CAP_SEQUENCE_TITLE_BANK`) | on 96 lines, 92 without a speaker; passed to both caption renderers, ignored by both |
 | atlas layout | the cast: a cell table lays out a plate for every speaker of some cast, at positions on its glyphs and on each other, not where the atlas was drawn - the layout that placed them is not known, so `cast` keeps them as stored; 18 atlases place cells off the rule (`placed`) |
-| atlases not on the disc | `acropolis_security_room_dialogue_0`, `dryfield_r04_dialogue_0`, `mist_r21_dialogue_0`, `shelter_b1_armory_dialogue_0` draw glyphs from a page no image on the disc holds, at any position, in any page of a multi-page image |

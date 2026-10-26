@@ -13,11 +13,14 @@ and an 8-bit portrait among 4-bit sprites), and its page stores zero outside the
 the file says where it is uploaded and places the sprites' palettes. An image chunk may store palettes in its pages
 too, placed by its entry's `palettes` (the credits font's eight, the last two rows of its page), and a page may hold
 nothing else (the credits logos' palette image). A texture whose palettes an executable uploads names that embedded palette as `palettes_from`, its
-variants in order (the UI font's fill and outlines, ui/font/glyph_palettes in main); one nothing is found to draw
+variants in order (the UI font's fill and outlines, ui/font/glyph_palettes in main), or a table naming each such variant's
+own palette where the others come from its file (the security room's lamps, lit by palettes its code blends); one nothing is found to draw
 states `no_palette` and is written with a gray ramp. A texture's `cells` name the parts its code samples one at a
 time (animation frames, icons): a `grid` of [w, h] read row by row, with `names` or numbered, or named [x, y, w, h].
 A font's texture takes its cells from its fonts instead (`font` records, font/), each glyph's record one cell. A palette chunk may also place colors no known texture is drawn
-with, by `name` and `entries` (the dialogue's text palettes, one only dead code selects). A palette chunk stores the rectangle its palettes span, or the whole region its
+with, by `name` and `entries` (the dialogue's text palettes, one only dead code selects). A palette may lie inside
+another: a model's 8-bit palette is a whole row whose 16-color slices other textures are drawn with (the cafeteria's
+loose props and its container); the slices are the same colors, and encoding requires them to agree. A palette chunk stores the rectangle its palettes span, or the whole region its
 entry names as `upload` (the title's palette chunk clears six rows and fills one), zero where no palette is placed.
 
 A file declares its image and palette chunks itself (the sha1 of the stored bytes and what each uploads where), so
@@ -307,8 +310,12 @@ def check_texture(key: str, rec: dict[str, Any]) -> list[str]:
         problems.append(f"{key}: height must be 1..256 rows")
     if "no_palette" in rec and not (rec["no_palette"] is True and rec.get("variants") == ["default"] and bpp in PALETTE_ENTRIES):
         problems.append(f"{key}: no_palette is true, on an indexed texture whose one variant is default")
-    if "palettes_from" in rec and not (isinstance(rec["palettes_from"], str) and bpp in PALETTE_ENTRIES):
-        problems.append(f"{key}: palettes_from names the embedded palette its variants are, in order, at 4 or 8 bits")
+    source = rec.get("palettes_from")
+    if source is not None and not (bpp in PALETTE_ENTRIES and (isinstance(source, str) or (
+            isinstance(source, dict) and source and all(isinstance(p, str) for p in source.values())
+            and set(source) <= set(rec.get("variants") or ())))):
+        problems.append(f"{key}: palettes_from names the embedded palette its variants are, in order, or a table of "
+                        "variants and their own, at 4 or 8 bits")
     if "cells" in rec:
         problems += [f"{key}: {p}" for p in check_cells(rec["cells"], width, height)]
     variants = rec.get("variants")
@@ -330,8 +337,11 @@ def check_file(key: str, rec: dict[str, Any], assets: dict[str, dict[str, Any]])
                 continue                        # a palette its image chunk stores in this page
             if inside and other.startswith("page ") and (x, y) >= (ox, oy) and x + w <= ox + ow and y + h <= oy + oh:
                 continue
-            if (x, y, w, h) == (ox, oy, ow, oh) and what.startswith("palette") and other.startswith("palette"):
-                continue                        # one palette several textures are drawn with (the title chrome's pages)
+            if what.startswith("palette") and other.startswith("palette") and (
+                    (ox <= x and x + w <= ox + ow and oy <= y and y + h <= oy + oh)
+                    or (x <= ox and ox + ow <= x + w and y <= oy and oy + oh <= y + h)):
+                continue                        # one palette several textures are drawn with (the title chrome's
+                                                # pages), or one inside another: a 4-bit palette in an 8-bit one's row
             if x < ox + ow and ox < x + w and y < oy + oh and oy < y + h:
                 problems.append(f"{key}: {what} overlaps {other}")
         rects.append((what, (x, y, w, h)))
@@ -433,11 +443,16 @@ def check_file(key: str, rec: dict[str, Any], assets: dict[str, dict[str, Any]])
     listed = {(p["texture"], p["variant"]) for e in entries
               for p in (e.get("palettes") or (declared(e.get("chunk"), "palettes") if not is_chunk_entry(e) else ()))
               if "texture" in p}
+    # A variant another file uploads the palette of recolors a page this one uploads.
+    elsewhere = {(p["texture"], p["variant"]) for other_key, other in assets.items()
+                 if other.get("type") == "file" and other_key != key
+                 for e in other.get("contents", ()) if "pages" not in e
+                 for p in (e.get("palettes") or ()) if "texture" in p}
     for name in sorted(paged):
         tex = assets.get(name, {})
-        if tex.get("bpp") not in PALETTE_ENTRIES or "palettes_from" in tex or tex.get("no_palette"):
+        if tex.get("bpp") not in PALETTE_ENTRIES or isinstance(tex.get("palettes_from"), str) or tex.get("no_palette"):
             continue
         for variant in tex.get("variants", ()):
-            if (name, variant) not in listed:
+            if (name, variant) not in listed | elsewhere and variant not in tex.get("palettes_from", {}):
                 problems.append(f"{key}: uploads no palette for {name}.{variant}")
     return problems

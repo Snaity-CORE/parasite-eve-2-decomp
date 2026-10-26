@@ -1,20 +1,6 @@
 /* Part of the screen fade library; see screen_fade.h. */
 
-/// Advances a fade-out ramp by the task's unsigned 16-bit intensity increment.
-///
-/// Requires writable `fade` and readable `task` storage. The low halfword of
-/// `task->spawnArg1` is 0..65535 intensity units per update; the high halfword
-/// is ignored. Red, green and blue are updated in that order, each reading the
-/// rate separately. Additions promote to int, then narrow to signed 16 bits
-/// without clamping: values can wrap negative, and zero preserves them.
-/// The caller draws before stepping and tests the stored red value afterwards;
-/// this helper neither draws nor ends the task and leaves other storage intact.
-static inline void _screenFadeStepUp(ScreenFadeWork* fade, const Task* task)
-{
-    fade->r += task->spawnArg1.halves.low;
-    fade->g += task->spawnArg1.halves.low;
-    fade->b += task->spawnArg1.halves.low;
-}
+#include "screen_fade_step_up.inc.c"
 
 /// Darkens the screen by increasing a subtractive full-screen overlay each update.
 ///
@@ -32,7 +18,6 @@ static void _screenFadeOutTask(Task* task)
     enum {
         SCREEN_FADE_OUT_STATE_INITIALIZE = 0,
         SCREEN_FADE_OUT_STATE_RAMP       = 1,
-        SCREEN_FADE_OUT_END_INTENSITY    = 256,
     };
     ScreenFadeWork* fade;
     ScreenFadeWork* allocatedFade;
@@ -56,7 +41,7 @@ static void _screenFadeOutTask(Task* task)
         case SCREEN_FADE_OUT_STATE_RAMP:
             fadeDrawOverlay(fade->r, fade->g, fade->r, GPU_BLEND_SUBTRACT);
             _screenFadeStepUp(fade, task);
-            if (fade->r >= SCREEN_FADE_OUT_END_INTENSITY) {
+            if (fade->r >= SCREEN_FADE_OUT_COMPLETE) {
                 taskKill(task);
             }
             break;

@@ -56,8 +56,6 @@
 
 #include "mapui/map_shelter.h"
 
-#include "rooms/akropolis_square.h"
-
 #include "rooms/room.h"
 
 #include "rooms/room_common.h"
@@ -142,8 +140,8 @@ static void                       _mineRefugeCutscenePromptTask(Task* task);
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -167,7 +165,7 @@ static const TaskMessageEntry _gMineRefugeRoomMessages[6] SECTION(".data") = {
 /// Direct spawns must exclude entry 2. Callback code and the prompt's saved
 /// view remain room-owned until those tasks finish.
 static TaskDesc _gMineRefugeSceneTaskDescs[3] = {
-    { { { TASK_BODY_NONE, 32 } }, _mineRefugeCircuitPanelTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _mineRefugeCircuitPanelTask, { .value = 0 } },
     { { { TASK_BODY_NONE, 31 } }, _mineRefugeCutscenePromptTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
@@ -1028,7 +1026,7 @@ static void _mineRefugeDrawPulsingCyanStar(const SVECTOR* worldPoint, s32 pulseR
             quad->y0     = screenY;
             verticalSide = partIndex * 2;
             quad->y1     = (scratchBlock->screenY - scratchBlock->screenExtent) + (scratchBlock->screenExtent * verticalSide);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratchBlock->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratchBlock->depth),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratchBlock->depth);
             partIndex++;
@@ -1119,7 +1117,7 @@ static void _mineRefugeDrawPulsingCyanBurst(const SVECTOR* worldPoint, s32 pulse
             quad->y2    = scratchBlock->screenY;
             quad->x3    = scratchBlock->screenX + ((scratchBlock->extent.burst.outer * rsin(endAngle)) >> GLOW_TRIG_SHIFT);
             quad->y3    = scratchBlock->screenY + ((scratchBlock->extent.burst.outer * rcos(endAngle)) >> GLOW_TRIG_SHIFT);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratchBlock->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratchBlock->depth),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratchBlock->depth);
 
@@ -1135,7 +1133,7 @@ static void _mineRefugeDrawPulsingCyanBurst(const SVECTOR* worldPoint, s32 pulse
             quad->x3 = scratchBlock->screenX + ((scratchBlock->extent.burst.outer * rsin(endAngle)) >> (GLOW_TRIG_SHIFT + 1));
             quad->y3 = scratchBlock->screenY + ((scratchBlock->extent.burst.outer * rcos(endAngle)) >> (GLOW_TRIG_SHIFT + 1));
             angle    = endAngle;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratchBlock->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratchBlock->depth),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratchBlock->depth);
         } while (angle < GLOW_FULL_TURN);
@@ -1157,7 +1155,7 @@ static void _mineRefugeDrawPulsingCyanBurst(const SVECTOR* worldPoint, s32 pulse
             quad->y2 = scratchBlock->screenY;
             quad->x3 = scratchBlock->screenX + ((scratchBlock->extent.burst.inner * rsin(rimAngle)) >> (GLOW_TRIG_SHIFT + 1));
             quad->y3 = scratchBlock->screenY + ((scratchBlock->extent.burst.inner * rcos(rimAngle)) >> (GLOW_TRIG_SHIFT + 1));
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratchBlock->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratchBlock->depth),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratchBlock->depth);
 
@@ -1174,7 +1172,7 @@ static void _mineRefugeDrawPulsingCyanBurst(const SVECTOR* worldPoint, s32 pulse
             quad->x3 = scratchBlock->screenX + ((scratchBlock->extent.burst.inner * rsin(rimAngle)) >> GLOW_TRIG_SHIFT);
             quad->y3 = scratchBlock->screenY + ((scratchBlock->extent.burst.inner * rcos(rimAngle)) >> GLOW_TRIG_SHIFT);
             angle    = rimAngle;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratchBlock->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratchBlock->depth),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratchBlock->depth);
         } while (angle < GLOW_FULL_TURN);
@@ -1257,7 +1255,7 @@ static void _mineRefugeDrawLayeredGlow(const SVECTOR* worldPoint, s32 radiusScal
                 quad->x3    = scratchBlock->sx + ((scratchBlock->radius * rsin(endAngle)) >> GLOW_TRIG_SHIFT);
                 quad->y3    = scratchBlock->sy + ((scratchBlock->radius * rcos(endAngle)) >> GLOW_TRIG_SHIFT);
                 angle       = endAngle;
-                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratchBlock->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+                addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratchBlock->otz),
                         quad);
                 gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, scratchBlock->otz);
             } while (angle < GLOW_FULL_TURN);

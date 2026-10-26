@@ -11,7 +11,9 @@
 #include "common.h"
 
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_07000.h"
+#include "actors/actor_207200.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/actor_render.h"
@@ -95,16 +97,11 @@ static s32  _shelterB4WaterSupplyHandleSound(Task* task, s32 messageId, s32 soun
 static void _shelterB4WaterSupplyFirstValveDepartureTask(Task* task);
 static void _shelterB4WaterSupplyWaterTask(Task* task);
 
-enum {
-    SHELTER_B4_WATER_SUPPLY_DEPARTURE_PRIORITY = 32,
-    SHELTER_B4_WATER_SUPPLY_WATER_PRIORITY     = 96,
-};
-
 /// Bodyless Water Hole departure recipe, borrowing the staged `gRoomDeparture`.
 ///
 /// Both spawn arguments are unused. The room and staging must outlive the task;
 /// the descriptor itself is read only during spawning.
-static TaskDesc _gShelterB4WaterSupplyWaterHoleDepartureTaskDesc = { { { TASK_BODY_NONE, SHELTER_B4_WATER_SUPPLY_DEPARTURE_PRIORITY } }, roomEventDepartureTask, { .value = 0 } };
+static TaskDesc _gShelterB4WaterSupplyWaterHoleDepartureTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventDepartureTask, { .value = 0 } };
 
 /// Synchronous message handlers borrowed by the initialized room receiver.
 ///
@@ -127,8 +124,8 @@ static TaskMessageEntry _gShelterB4WaterSupplyRoomMessages[] = {
 /// the first spawn word and borrows the staged upper-sewer destination.
 /// The second spawn word is unused. These are indexed entries with no terminator.
 static TaskDesc _gShelterB4WaterSupplyDepartureTaskDescs[] = {
-    { { { TASK_BODY_NONE, SHELTER_B4_WATER_SUPPLY_DEPARTURE_PRIORITY } }, _shelterB4WaterSupplyFirstValveDepartureTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_B4_WATER_SUPPLY_DEPARTURE_PRIORITY } }, _shelterB4WaterSupplyUpperSewerDepartureTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4WaterSupplyFirstValveDepartureTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB4WaterSupplyUpperSewerDepartureTask, { .value = 0 } },
 };
 
 /// Undisplaced Y of both water rectangles in signed world units, published to the session.
@@ -138,7 +135,7 @@ static s16 _gShelterB4WaterSupplyWaterY = -2500;
 ///
 /// Spawn arguments are unused; the task borrows this room's water geometry and
 /// an actor-load packet arena until room teardown.
-static TaskDesc _gShelterB4WaterSupplyWaterTaskDesc = { { { TASK_BODY_NONE, SHELTER_B4_WATER_SUPPLY_WATER_PRIORITY } }, _shelterB4WaterSupplyWaterTask, { .value = 0 } };
+static TaskDesc _gShelterB4WaterSupplyWaterTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_ACTOR } }, _shelterB4WaterSupplyWaterTask, { .value = 0 } };
 
 /// The Z-running water rectangle, followed by the compact descriptor's list end.
 static RoomCompactWaterSurface _gShelterB4WaterSupplyWaterWaveSurfaces[] = {
@@ -1357,12 +1354,12 @@ static void _shelterB4WaterSupplyDrawXWaveStrips(Task* task)
     /// quad is a completed POLY_G4 already reserved by the caller. The macro
     /// reserves a full 12-byte DR_MODE but submits one command word; the spare
     /// word is untouched. Both packets share the unbiased projected depth.
-#define SHELTER_B4_WATER_SUPPLY_QUEUE_WATER_QUAD()                                                                                                    \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), quad); \
-    drawMode                                = (DR_MODE*)_gShelterB4WaterSupplyWaterPacketCursor;                                                      \
-    _gShelterB4WaterSupplyWaterPacketCursor = (u8*)(drawMode + 1);                                                                                    \
-    setDrawTPage(drawMode, 0, 0, getTPage(0, GPU_BLEND_SUBTRACT, 640, 0));                                                                            \
-    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), drawMode)
+#define SHELTER_B4_WATER_SUPPLY_QUEUE_WATER_QUAD()                                               \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(depth), quad);                                     \
+    drawMode                                = (DR_MODE*)_gShelterB4WaterSupplyWaterPacketCursor; \
+    _gShelterB4WaterSupplyWaterPacketCursor = (u8*)(drawMode + 1);                               \
+    setDrawTPage(drawMode, 0, 0, getTPage(0, GPU_BLEND_SUBTRACT, 640, 0));                       \
+    addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(depth), drawMode)
 
     surface                    = _gShelterB4WaterSupplyXWaterWaveSurfaces;
     gGfxViewCoord.composeStamp = GRAPHICS_COORD_DIRTY;
@@ -1570,12 +1567,12 @@ static inline void _shelterB4WaterSupplyEmitPartSplashes(EffectWork* controllerW
     surfaceCoord.coord.t[1]   = gGameSession->waterY;
     surfaceCoord.composeStamp = GRAPHICS_COORD_DIRTY;
     actorRenderComposeCoord(&surfaceCoord);
-    randomRoll = (gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT);
+    randomRoll = (RANDOM_LCG_ADVANCE());
     if ((s32)((randomRoll >> SPLASH_ROLL_SHIFT) & SPLASH_ROLL_MASK) < controllerWork->angle) {
         effectSpawn(gRoomEffectWaterRippleId, &surfaceCoord, RIPPLE_HALF_SIDE, NULL);
     }
     controllerWork->angle -= RIPPLE_ODDS_BIAS;
-    randomRoll             = (gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT);
+    randomRoll             = (RANDOM_LCG_ADVANCE());
     if ((s32)((randomRoll >> SPLASH_ROLL_SHIFT) & SPLASH_ROLL_MASK) < controllerWork->angle) {
         effectSpawn(gRoomEffectWaterSprayId, &surfaceCoord, SPRAY_SPAWN_ARG, NULL);
     }

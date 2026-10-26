@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
 
 #include "main/task_types.h"
 #include "../../shared/effects/glow_draw.h"
@@ -132,13 +132,10 @@ static void                  _dryfieldGasStationRestorePlayerAndShow(void);
 /// Fade-in callback slot in the cutscene task descriptor table.
 enum { DRYFIELD_GAS_STATION_CUTSCENE_TASK_FADE_IN = 1 };
 
-/// Execution priority shared by the arrival, movie, cutscene and fade recipes.
-enum { DRYFIELD_GAS_STATION_ARRIVAL_TASK_PRIORITY = 192 };
-
 TaskDesc gDryfieldGasStationArrivalTaskDescs[3] = {
-    { { { TASK_BODY_NONE, DRYFIELD_GAS_STATION_ARRIVAL_TASK_PRIORITY } }, dryfieldGasStationArrivalTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_GAS_STATION_ARRIVAL_TASK_PRIORITY } }, dryfieldGasStationArrivalMovieTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_GAS_STATION_ARRIVAL_TASK_PRIORITY } }, screenFadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, dryfieldGasStationArrivalTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, dryfieldGasStationArrivalMovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, screenFadeInTask, { .value = 0 } },
 };
 
 static AnimationPackedPose _gDryfieldGasStationAnimation04A70Bank1[2] = {
@@ -308,8 +305,8 @@ static EvsCommand _gDryfieldGasStationArrivalSkipScript[10] = {
 };
 
 TaskDesc gDryfieldGasStationArrivalCutsceneTaskDescs[2] = {
-    { { { TASK_BODY_NONE, DRYFIELD_GAS_STATION_ARRIVAL_TASK_PRIORITY } }, _dryfieldGasStationArrivalCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, DRYFIELD_GAS_STATION_ARRIVAL_TASK_PRIORITY } }, _screenFadeInTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldGasStationArrivalCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenFadeInTask, { .value = 0 } },
 };
 
 /// Fixed cyan-glow centre in the effect coordinate's local game units.
@@ -1051,7 +1048,6 @@ static void _dryfieldGasStationArrivalCutsceneTask(Task* task)
     enum {
         DRYFIELD_GAS_STATION_ARRIVAL_CUTSCENE_INIT = 0,
         DRYFIELD_GAS_STATION_ARRIVAL_CUTSCENE_RUN  = 1,
-        DRYFIELD_GAS_STATION_ARRIVAL_OBJECTIVE     = 9
     };
 
     _DryfieldGasStationCutsceneWork* work;
@@ -1069,7 +1065,7 @@ static void _dryfieldGasStationArrivalCutsceneTask(Task* task)
                     _gDryfieldGasStationArrivalCutsceneTask = task;
                 }
                 _dryfieldGasStationInstallInitialPlayerAnimation(task);
-                gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_GAS_STATION_ARRIVAL_OBJECTIVE);
+                gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, EVENT_FLAG_OBJECTIVE_DRYFIELD_ARRIVED);
                 evsStartScriptWithSkip(_gDryfieldGasStationArrivalScript, EVENT_SCRIPT_HUD_HIDE_RESTORE,
                                        _gDryfieldGasStationArrivalSkipScript);
                 task->state = task->state + 1;

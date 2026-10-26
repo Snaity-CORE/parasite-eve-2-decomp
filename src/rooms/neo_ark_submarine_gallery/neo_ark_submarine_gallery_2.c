@@ -12,7 +12,7 @@
 #include "neo_ark_submarine_gallery_private.h"
 
 #include "actors/actor_00400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_206100.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -60,15 +60,9 @@ enum { NEO_ARK_SUBMARINE_GALLERY_PRISM_FIRST_VERTEX = 32 };
 static void _neoArkSubmarineGalleryDrawLightPrism(const GfxCoord* coord, s16 firstVertex);
 static void _glowDrawCapsule(const SVECTOR worldPoints[2], s32 radiusScale, s32 packedColor);
 
-enum {
-    NEO_ARK_SUBMARINE_GALLERY_WATER_TASK_PRIORITY     = 192,
-    NEO_ARK_SUBMARINE_GALLERY_DEPARTURE_TASK_PRIORITY = 32,
-    NEO_ARK_SUBMARINE_GALLERY_RED_DISC_TASK_PRIORITY  = 96,
-};
-
 TaskDesc gNeoArkSubmarineGalleryWaterTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, NEO_ARK_SUBMARINE_GALLERY_WATER_TASK_PRIORITY } }, waterRefractionTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, NEO_ARK_SUBMARINE_GALLERY_WATER_TASK_PRIORITY } }, waterDistortBandTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterRefractionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, waterDistortBandTask, { .value = 0 } },
 };
 
 TaskMessageEntry gNeoArkSubmarineGalleryRoomMessages[5] = {
@@ -79,11 +73,11 @@ TaskMessageEntry gNeoArkSubmarineGalleryRoomMessages[5] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-TaskDesc gNeoArkSubmarineGalleryIslandDepartureTaskDesc = { { { TASK_BODY_NONE, NEO_ARK_SUBMARINE_GALLERY_DEPARTURE_TASK_PRIORITY } }, neoArkSubmarineGalleryDepartToIslandTask, { .value = 0 } };
+TaskDesc gNeoArkSubmarineGalleryIslandDepartureTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, neoArkSubmarineGalleryDepartToIslandTask, { .value = 0 } };
 
 s16 gNeoArkSubmarineGallerySeaDiverAwaitingArrival = NEO_ARK_SUBMARINE_GALLERY_SEA_DIVER_ARRIVAL_NOT_PENDING;
 
-TaskDesc gNeoArkSubmarineGalleryRedDiscTaskDesc = { { { TASK_BODY_COORD, NEO_ARK_SUBMARINE_GALLERY_RED_DISC_TASK_PRIORITY } }, neoArkSubmarineGalleryRedDiscTask, { .value = 0 } };
+TaskDesc gNeoArkSubmarineGalleryRedDiscTaskDesc = { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, neoArkSubmarineGalleryRedDiscTask, { .value = 0 } };
 
 /// Fixed capsule endpoints, disc centres and prism corners for the gallery lights.
 ///
@@ -1325,7 +1319,7 @@ static void _neoArkSubmarineGalleryDrawLightPrism(const GfxCoord* coord, s16 fir
             setRGB1(quad, intensity, intensity, intensity);
             setRGB2(quad, 0, 0, 0);
             setRGB3(quad, 0, 0, 0);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth),
                     quad);
             quad->x0 = quadScratch->screenCorners[0].vx;
             quad->y0 = quadScratch->screenCorners[0].vy;
@@ -1365,7 +1359,7 @@ static void _neoArkSubmarineGalleryDrawLightPrism(const GfxCoord* coord, s16 fir
         quad->y2 = quadScratch->screenCorners[2].vy;
         quad->x3 = quadScratch->screenCorners[3].vx;
         quad->y3 = quadScratch->screenCorners[3].vy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(quadScratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), quad);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(quadScratch->depth), quad);
         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, quadScratch->depth);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectQuadScratch);

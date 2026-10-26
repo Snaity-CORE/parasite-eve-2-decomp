@@ -16,25 +16,114 @@ chunk = "dialogue_0_atlas"
 [[file.contents]]
 chunk = "palette"
 sha1 = "8185f05dc401ff3c20eefa98bb339ba00a7e3b56"
-palettes = [
-    { name = "unread_261_0", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00000, 0x00000] },
-    { name = "unread_261_16", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00010, 0x00000] },
-    { name = "unread_261_32", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00020, 0x00000] },
-    { name = "unread_261_48", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00030, 0x00000] },
-    { name = "unread_261_64", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00040, 0x00000] },
-    { name = "unread_261_80", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00050, 0x00000] },
-    { name = "unread_261_96", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00060, 0x00000] },
-    { name = "unread_261_112", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00070, 0x00000] },
-    { name = "unread_261_128", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00080, 0x00000] },
-    { name = "unread_261_144", entries = 16, region = "engine/vram/effect_palettes", offset = [0x00090, 0x00000] },
-    { name = "unread_261_160", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000A0, 0x00000] },
-    { texture = "container", variant = "default", region = "engine/vram/effect_palettes", offset = [0x000B0, 0x00000] },
-    { name = "unread_261_192", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000C0, 0x00000] },
-    { name = "unread_261_208", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000D0, 0x00000] },
-    { name = "unread_261_224", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000E0, 0x00000] },
-    { name = "unread_261_240", entries = 16, region = "engine/vram/effect_palettes", offset = [0x000F0, 0x00000] },
-    { name = "unread_row_262", entries = 256, region = "engine/vram/effect_palettes", offset = [0x00000, 0x00001] },
-]
+
+[[file.contents.palettes]]
+texture = "model"
+variant = "loose_prop"
+region = "engine/vram/effect_palettes"
+offset = [0x00000, 0x00000]
+
+[[file.contents.palettes]]
+texture = "container"
+variant = "pain_reliever"
+region = "engine/vram/effect_palettes"
+offset = [0x00000, 0x00000]
+
+[[file.contents.palettes]]
+texture = "container"
+variant = "stim"
+region = "engine/vram/effect_palettes"
+offset = [0x00010, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_32"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00020, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_48"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00030, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_64"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00040, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_80"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00050, 0x00000]
+
+[[file.contents.palettes]]
+texture = "container"
+variant = "ammunition"
+region = "engine/vram/effect_palettes"
+offset = [0x00060, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_112"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00070, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_128"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00080, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_144"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x00090, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_160"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x000A0, 0x00000]
+
+[[file.contents.palettes]]
+texture = "container"
+variant = "default"
+region = "engine/vram/effect_palettes"
+offset = [0x000B0, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_192"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x000C0, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_208"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x000D0, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_224"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x000E0, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_261_240"
+entries = 16
+region = "engine/vram/effect_palettes"
+offset = [0x000F0, 0x00000]
+
+[[file.contents.palettes]]
+name = "unread_row_262"
+entries = 256
+region = "engine/vram/effect_palettes"
+offset = [0x00000, 0x00001]
 
 [[file.contents]]
 chunk = "image"
@@ -117,7 +206,7 @@ puff_row_2_4 = [192, 48, 48, 48]
 type = "texture"
 bpp = 8
 height = 256
-variants = ["default"]
+variants = ["default", "loose_prop"]
 width = 128
 
 [bundle]
@@ -152,9 +241,9 @@ resources = [
 sha1 = "b7283539bb95856fe65b35796f55b891941cb839"
 
 [rupert]
-type = "pe2pkg"
+type = "package"
 embedded = [
-    { name = "player_cafeteria_follow_up_start", offset = 0x00ED8, size = 0x3C2C, address = 0x80162CF8 },
+    { name = "player_follow_up_start", offset = 0x00ED8, size = 0x3C2C, address = 0x80162CF8 },
     { asset = "characters/rupert/mongoose", offset = 0x0A9FC, size = 0x558, address = 0x8016C81C },
     { name = "rupert_shoot", offset = 0x0AF54, size = 0x3784, address = 0x8016CD74 },
     { name = "rupert_arrive", offset = 0x0E6D8, size = 0x4D4, address = 0x801704F8 },
@@ -162,24 +251,29 @@ embedded = [
     { name = "rupert_depart", offset = 0x15690, size = 0x217C, address = 0x801774B0 },
     { name = "rupert_bank", offset = 0x1780C, size = 0x14, address = 0x8017962C },
 ]
+exports = { tasks = { at = 0x17884, symbol = "gActor310600RupertBroderickTasks" } }
+load = { slot = "actor_3" }
 package_name = "actor_310600"
 required = true
+requires = ["gameplay"]
 sha1 = "6dc5ccea0c7b5f38c42bd34dbdcacadb368602c5"
 
 [package]
-type = "room"
+type = "package"
 embedded = [
-    { name = "acropolis_cafeteria_follow_up_player_anim_01", offset = 0x06BDC, size = 0xB50, address = 0x8018419C },
-    { name = "acropolis_cafeteria_model_077D8", offset = 0x07740, size = 0x180, address = 0x80184D00 },
-    "acropolis_cafeteria_model_07CA8",
-    "acropolis_cafeteria_model_08638",
-    "acropolis_cafeteria_model_09090",
-    "acropolis_cafeteria_model_09A20",
-    "acropolis_cafeteria_model_0F7A4",
-    { name = "acropolis_cafeteria_model_0FDFC", offset = 0x0FC94, size = 0x34C, address = 0x8018D254 },
+    { name = "follow_up_player", offset = 0x06BDC, size = 0xB50, address = 0x8018419C },
+    { name = "wandering_creature", offset = 0x07740, size = 0x180, address = 0x80184D00 },
+    { name = "loose_prop_1", offset = 0x078D0, size = 0xA58, address = 0x80184E90 },
+    { name = "loose_prop_2", offset = 0x08328, size = 0x998, address = 0x801858E8 },
+    { name = "loose_prop_3", offset = 0x08CC0, size = 0xA50, address = 0x80186280 },
+    { name = "loose_prop_4", offset = 0x09710, size = 0x86C, address = 0x80186CD0 },
+    { name = "stim_pickup", offset = 0x0F48C, size = 0x808, address = 0x8018CA4C },
+    { name = "mendel_journal", offset = 0x0FC94, size = 0x34C, address = 0x8018D254 },
 ]
-package_name = "acropolis_cafeteria"
+load = { slot = "room" }
+package_name = "akropolis_cafeteria"
 required = true
+requires = ["gameplay", "rooms/akropolis/stage"]
 sha1 = "0a43c68c82490299076973953db45213ed28437d"
 
 [package.entries]
@@ -190,6 +284,15 @@ scripts = [0x058B4, 0x05BFC, 0x05D4C, 0x05F14, 0x0607C, 0x067FC, 0x068EC, 0x0697
 spare_batches = [0x0DDC4, 0x0ED28]
 transforms = [0x05654]
 updates = [0x0F414]
+
+[package.slots]
+golem_rook_grenade_launcher_1 = "enemies/golem/rook/grenade_launcher/package_1"
+stranger_odd_4 = "enemies/stranger/odd/package_4"
+suckler_bone_1 = "enemies/suckler/bone/package_1"
+anmc_woman = "rooms/akropolis/cafeteria/anmc_woman"
+boss_stranger = "rooms/akropolis/cafeteria/boss_stranger"
+rupert = "rooms/akropolis/cafeteria/rupert"
+stranger = "rooms/akropolis/cafeteria/stranger"
 
 [sounds_0]
 type = "sound_bank"
@@ -260,10 +363,10 @@ post_battle_scene = 12
 woman_cue = 13
 
 [stranger]
-type = "pe2pkg"
+type = "package"
 embedded = [
-    { name = "player_cafeteria_rupert_talk", offset = 0x03108, size = 0x4E14, address = 0x8014CF28 },
-    { name = "player_cafeteria_follow_up_end", offset = 0x07F1C, size = 0x215C, address = 0x80151D3C },
+    { name = "player_rupert_talk", offset = 0x03108, size = 0x4E14, address = 0x8014CF28 },
+    { name = "player_follow_up_end", offset = 0x07F1C, size = 0x215C, address = 0x80151D3C },
     { name = "grinning_stranger_appear", offset = 0x0F6DC, size = 0xF9C, address = 0x801594FC },
     { name = "grinning_stranger_bank", offset = 0x10694, size = 0x18, address = 0x8015A4B4 },
     { name = "boss_stranger_collapse", offset = 0x106D8, size = 0x18AC, address = 0x8015A4F8 },
@@ -272,8 +375,11 @@ embedded = [
     { name = "extra_anim_6", offset = 0x12B58, size = 0x5DC, address = 0x8015C978 },
     { name = "extra_anim_7", offset = 0x13134, size = 0x3BC, address = 0x8015CF54 },
 ]
+exports = { tasks = { at = 0x106CC, symbol = "gActor210600GrinningStrangerTaskDesc" } }
+load = { slot = "actor_2" }
 package_name = "actor_210600"
 required = true
+requires = ["gameplay"]
 sha1 = "367774e983c09e4c9e372851335e0290d5505211"
 
 [unused_1]
@@ -288,7 +394,7 @@ sha1 = "5197b3538c40c9ed3da0ec52ce10308450459cbb"
 type = "texture"
 bpp = 4
 height = 256
-variants = ["default"]
+variants = ["default", "stim", "pain_reliever", "ammunition"]
 width = 256
 
 [woman_cue]
@@ -296,17 +402,20 @@ type = "sound"
 sha1 = "70ec17f614d59bea372533411cc00473ced3905b"
 
 [anmc_woman]
-type = "pe2pkg"
+type = "package"
 embedded = [
-    { name = "player_cafeteria_opening", offset = 0x0068C, size = 0x5A34, address = 0x8014A4AC },
+    { name = "player_opening", offset = 0x0068C, size = 0x5A34, address = 0x8014A4AC },
     { asset = "characters/anmc_woman_2/body", offset = 0x060C0, size = 0x5AEC, address = 0x8014FEE0 },
     { asset = "characters/anmc_woman_2/glasses", offset = 0x0BBAC, size = 0x1A0, address = 0x801559CC },
     { name = "woman_opening", offset = 0x0BD4C, size = 0x1090, address = 0x80155B6C },
     { name = "woman_idle", offset = 0x0CDDC, size = 0x210, address = 0x80156BFC },
     { name = "woman_bank", offset = 0x0D01C, size = 0x18, address = 0x80156E3C },
 ]
+exports = { tasks = { at = 0x0D004, symbol = "gActor202900WomanTaskDescriptors" } }
+load = { slot = "actor_2" }
 package_name = "actor_202900"
 required = true
+requires = ["gameplay"]
 sha1 = "50d3502915840cf76757c4f7abed9cc944321754"
 
 [dialogue_0]
@@ -526,6 +635,12 @@ shoot = "rooms/akropolis/cafeteria/rupert_shoot"
 arrive = "rooms/akropolis/cafeteria/rupert_arrive"
 reload = "rooms/akropolis/cafeteria/rupert_reload"
 depart = "rooms/akropolis/cafeteria/rupert_depart"
+
+[stim_pickup]
+type = "model"
+slots = ["model"]
+symbol = "gAkropolisCafeteriaStimPickupModel"
+sha1 = "fbbeaad538775e565e8cc338ae5ea030c460042b"
 
 [view11_file]
 type = "file"
@@ -1047,6 +1162,30 @@ type = "clip"
 rig = "enemies/stranger/rig"
 symbol = "gAkropolisCafeteriaExtraAnim7Clip"
 
+[loose_prop_1]
+type = "model"
+slots = ["model"]
+symbol = "gAkropolisCafeteriaLooseProp1Model"
+sha1 = "c213b2bafe2920fcc4639defd0443336e7f9fe64"
+
+[loose_prop_2]
+type = "model"
+slots = ["model"]
+symbol = "gAkropolisCafeteriaLooseProp2Model"
+sha1 = "56a76af06757aa9d933255d19d21029247e90fd3"
+
+[loose_prop_3]
+type = "model"
+slots = ["model"]
+symbol = "gAkropolisCafeteriaLooseProp3Model"
+sha1 = "3057c541b0af97896974d1c83d7148894a5d8892"
+
+[loose_prop_4]
+type = "model"
+slots = ["model"]
+symbol = "gAkropolisCafeteriaLooseProp4Model"
+sha1 = "66a4cd2b07f9c5de87c2310b33a48859e2d00bc2"
+
 [rupert_shoot]
 type = "clip"
 rig = "characters/rupert/rig"
@@ -1098,13 +1237,36 @@ type = "animation_schema"
 slots = ["", "opening", "", "", "idle"]
 
 [boss_stranger]
-type = "pe2pkg"
+type = "package"
 embedded = [
     { name = "boss_stranger_body", offset = 0x07138, size = 0x5568, address = 0x80138F58 },
-    "actor_110600_animation_0C6A0",
+    { asset = "enemies/stranger/strike", offset = 0x0C6A0, size = 0xFC4, address = 0x8013E4C0 },
+    { asset = "rooms/akropolis/patio/stranger_wait_1", offset = 0x0D664, size = 0x1028, address = 0x8013F484 },
+    { asset = "enemies/stranger/odd/slide", offset = 0x0E68C, size = 0xA70, address = 0x801404AC },
+    { asset = "enemies/stranger/odd/flinch", offset = 0x0F0FC, size = 0x5E0, address = 0x80140F1C },
+    { asset = "enemies/stranger/odd/down_front", offset = 0x0F6DC, size = 0x5E4, address = 0x801414FC },
+    { name = "boss_stranger_anim_13", offset = 0x0FCC0, size = 0x5F8, address = 0x80141AE0 },
+    { asset = "enemies/stranger/odd/dormant_fidget", offset = 0x102B8, size = 0xA54, address = 0x801420D8 },
+    { asset = "enemies/stranger/odd/b_rise_back", offset = 0x10D0C, size = 0xD44, address = 0x80142B2C },
+    { asset = "enemies/stranger/odd/rise_front", offset = 0x11A50, size = 0x870, address = 0x80143870 },
+    { name = "boss_stranger_command_9", offset = 0x122C0, size = 0x1DC, address = 0x801440E0 },
+    { name = "boss_stranger_anim_18", offset = 0x1249C, size = 0x190, address = 0x801442BC },
+    { asset = "enemies/stranger/odd/refall_front", offset = 0x1262C, size = 0x390, address = 0x8014444C },
+    { asset = "enemies/stranger/odd/alert", offset = 0x129BC, size = 0x838, address = 0x801447DC },
+    { asset = "enemies/stranger/odd/back_off", offset = 0x131F4, size = 0x550, address = 0x80145014 },
+    { name = "boss_stranger_anim_27", offset = 0x13744, size = 0x1E0, address = 0x80145564 },
+    { asset = "enemies/stranger/odd/fall_back", offset = 0x13924, size = 0x3A4, address = 0x80145744 },
+    { asset = "enemies/stranger/down_back", offset = 0x13CC8, size = 0x3B4, address = 0x80145AE8 },
+    { name = "boss_stranger_anim_31", offset = 0x1407C, size = 0x250, address = 0x80145E9C },
+    { name = "boss_stranger_anim_32", offset = 0x142CC, size = 0x25C, address = 0x801460EC },
+    { name = "boss_stranger_walk", offset = 0x14528, size = 0x19D8, address = 0x80146348 },
+    { name = "boss_stranger_bank", offset = 0x166EC, size = 0xB8, address = 0x8014850C },
 ]
-package_name = "actor_110600"
+exports = { tasks = { at = 0x16850, symbol = "gCafeteriaBossStrangerTaskDesc" } }
+load = { slot = "actor_1" }
+package_name = "cafeteria_boss_stranger"
 required = true
+requires = ["gameplay"]
 sha1 = "74f1ae3aafbb1b7d92790dc2afab1a15becb8a25"
 
 [rupert_arrive]
@@ -1190,6 +1352,17 @@ width = 128
 type = "clip"
 rig = "characters/anmc_woman_2/rig"
 
+[mendel_journal]
+type = "model"
+slots = ["model"]
+symbol = "gAkropolisCafeteriaMendelJournalModel"
+sha1 = "477fb43fb413da624ac5ba84065755ccfa50fc5a"
+
+[player_opening]
+type = "clip"
+rig = "characters/aya/rig"
+symbol = "gAkropolisCafeteriaPlayerOpeningClip"
+
 [run_surface_3_1]
 type = "sound"
 sha1 = "85fef7c50dedd805c86faa806b010771d06c4daa"
@@ -1207,6 +1380,10 @@ w = 64
 x = 384
 y = 0
 sha1 = "87a5562b992863c3184e193b91f1c01beff9633b"
+
+[follow_up_player]
+type = "clip"
+rig = "characters/aya/rig"
 
 [view1_background]
 type = "bs"
@@ -1332,6 +1509,39 @@ sha1 = "ec3bf89d88ca12799b45baeff4bc22b98ac997cf"
 type = "bs"
 sha1 = "0416ecee056d7b047cb5a61e368cff3bc14950cf"
 
+[boss_stranger_bank]
+type = "animation_bank"
+borrows = ["actor_210600"]
+schema = "rooms/akropolis/cafeteria/boss_stranger_schema"
+symbol = "_gCafeteriaBossStrangerAnimationSets"
+
+[boss_stranger_bank.clips]
+walk = "rooms/akropolis/cafeteria/boss_stranger_walk"
+enraged_attack = "enemies/stranger/strike"
+attack = "rooms/akropolis/patio/stranger_wait_1"
+slide = "enemies/stranger/odd/slide"
+hit_reaction = "enemies/stranger/odd/flinch"
+fall = "enemies/stranger/odd/down_front"
+slot_13 = "rooms/akropolis/cafeteria/boss_stranger_anim_13"
+rise_back = "enemies/stranger/odd/b_rise_back"
+rise = "enemies/stranger/odd/rise_front"
+command_9 = "rooms/akropolis/cafeteria/boss_stranger_command_9"
+slot_18 = "rooms/akropolis/cafeteria/boss_stranger_anim_18"
+alert = "enemies/stranger/odd/alert"
+thrash = "enemies/stranger/odd/back_off"
+slot_27 = "rooms/akropolis/cafeteria/boss_stranger_anim_27"
+fall_back = "enemies/stranger/odd/fall_back"
+fall_back_end = "enemies/stranger/down_back"
+slot_31 = "rooms/akropolis/cafeteria/boss_stranger_anim_31"
+slot_32 = "rooms/akropolis/cafeteria/boss_stranger_anim_32"
+scripted_0 = "rooms/akropolis/cafeteria/boss_stranger_collapse"
+scripted_1 = "enemies/stranger/lesser/idle"
+scripted_2 = "rooms/akropolis/cafeteria/boss_stranger_follow_up_3"
+scripted_3 = "rooms/akropolis/cafeteria/extra_anim_6"
+down_back = "enemies/stranger/down_back"
+refall_front = "enemies/stranger/odd/refall_front"
+scripted_4 = "rooms/akropolis/cafeteria/extra_anim_7"
+
 [boss_stranger_body]
 type = "model"
 rig = "enemies/stranger/rig"
@@ -1384,6 +1594,21 @@ height = 256
 variants = ["default"]
 width = 128
 
+[boss_stranger_walk]
+type = "clip"
+rig = "enemies/stranger/rig"
+
+[player_rupert_talk]
+type = "clip"
+rig = "characters/aya/rig"
+symbol = "gAkropolisCafeteriaPlayerRupertTalkClip"
+
+[wandering_creature]
+type = "model"
+slots = ["puff"]
+symbol = "gAkropolisCafeteriaWanderingCreatureModel"
+sha1 = "891eb5d56aaae937caa7a7b80a74f403cee8123d"
+
 [boss_stranger_alert]
 type = "sound"
 sha1 = "d2a97ab93570e8da7e7e6f3446c757fc883ec3ce"
@@ -1408,6 +1633,62 @@ sha1 = "9be70d0862a70e88cdde2921f3824d922ca94bb4"
 type = "sound"
 sha1 = "b2b275fb041d16738ddae4f2365bf2bea160c620"
 
+[stim_pickup_binding]
+type = "binding"
+model = "rooms/akropolis/cafeteria/stim_pickup"
+textures = { model = "rooms/akropolis/cafeteria/container.stim" }
+
+[boss_stranger_schema]
+type = "animation_schema"
+slots = [
+    "",
+    "",
+    "walk",
+    "run",
+    "enraged_attack",
+    "attack",
+    "",
+    "",
+    "",
+    "",
+    "slide",
+    "hit_reaction",
+    "fall",
+    "slot_13",
+    "idle_variation",
+    "rise_back",
+    "rise",
+    "command_9",
+    "slot_18",
+    "",
+    "",
+    "alert",
+    "thrash",
+    "",
+    "idle",
+    "",
+    "",
+    "slot_27",
+    "",
+    "fall_back",
+    "fall_back_end",
+    "slot_31",
+    "slot_32",
+    "thrash_end",
+    "scripted_0",
+    "scripted_1",
+    "scripted_2",
+    "scripted_3",
+    "down_back",
+    "refall_front",
+    "scripted_4",
+    "",
+    "",
+    "",
+    "",
+    "",
+]
+
 [boss_stranger_sounds]
 type = "sound_bank"
 samples = [
@@ -1430,6 +1711,51 @@ alert = 6
 hurt = 7
 strike = 12
 attack_hit = 13
+
+[loose_prop_1_binding]
+type = "binding"
+model = "rooms/akropolis/cafeteria/loose_prop_1"
+textures = { model = "rooms/akropolis/cafeteria/model.loose_prop" }
+
+[loose_prop_2_binding]
+type = "binding"
+model = "rooms/akropolis/cafeteria/loose_prop_2"
+textures = { model = "rooms/akropolis/cafeteria/model.loose_prop" }
+
+[loose_prop_3_binding]
+type = "binding"
+model = "rooms/akropolis/cafeteria/loose_prop_3"
+textures = { model = "rooms/akropolis/cafeteria/model.loose_prop" }
+
+[loose_prop_4_binding]
+type = "binding"
+model = "rooms/akropolis/cafeteria/loose_prop_4"
+textures = { model = "rooms/akropolis/cafeteria/model.loose_prop" }
+
+[player_follow_up_end]
+type = "clip"
+rig = "characters/aya/rig"
+symbol = "gAkropolisCafeteriaPlayerFollowUpEndClip"
+
+[boss_stranger_anim_13]
+type = "clip"
+rig = "enemies/stranger/rig"
+
+[boss_stranger_anim_18]
+type = "clip"
+rig = "enemies/stranger/rig"
+
+[boss_stranger_anim_27]
+type = "clip"
+rig = "enemies/stranger/rig"
+
+[boss_stranger_anim_31]
+type = "clip"
+rig = "enemies/stranger/rig"
+
+[boss_stranger_anim_32]
+type = "clip"
+rig = "enemies/stranger/rig"
 
 [hallway_door_a_arrive]
 type = "sound"
@@ -1466,6 +1792,20 @@ clips = { appear = "rooms/akropolis/cafeteria/grinning_stranger_appear" }
 schema = "rooms/akropolis/cafeteria/grinning_stranger_schema"
 symbol = "_gActor210600GrinningStrangerAnimationSets"
 
+[mendel_journal_binding]
+type = "binding"
+model = "rooms/akropolis/cafeteria/mendel_journal"
+textures = { model = "rooms/akropolis/cafeteria/model.default" }
+
+[player_follow_up_start]
+type = "clip"
+rig = "characters/aya/rig"
+symbol = "gAkropolisCafeteriaPlayerFollowUpStartClip"
+
+[boss_stranger_command_9]
+type = "clip"
+rig = "enemies/stranger/rig"
+
 [grinning_stranger_appear]
 type = "clip"
 rig = "enemies/stranger/rig"
@@ -1473,11 +1813,6 @@ rig = "enemies/stranger/rig"
 [grinning_stranger_schema]
 type = "animation_schema"
 slots = ["", "appear"]
-
-[player_cafeteria_opening]
-type = "clip"
-rig = "characters/aya/rig"
-symbol = "gAkropolisCafeteriaPlayerCafeteriaOpeningClip"
 
 [boss_stranger_follow_up_3]
 type = "clip"
@@ -1500,6 +1835,11 @@ model = "rooms/akropolis/cafeteria/boss_stranger_body"
 boss_stranger_texture_page_1 = "rooms/akropolis/cafeteria/boss_stranger_texture_page_1.default"
 boss_stranger_texture_page_2 = "rooms/akropolis/cafeteria/boss_stranger_texture_page_2.default"
 
+[wandering_creature_binding]
+type = "binding"
+model = "rooms/akropolis/cafeteria/wandering_creature"
+textures = { puff = "rooms/akropolis/cafeteria/puff.default" }
+
 [boss_stranger_texture_page_1]
 type = "texture"
 bpp = 8
@@ -1513,44 +1853,3 @@ bpp = 8
 height = 256
 variants = ["default"]
 width = 128
-
-[player_cafeteria_rupert_talk]
-type = "clip"
-rig = "characters/aya/rig"
-symbol = "gAkropolisCafeteriaPlayerCafeteriaRupertTalkClip"
-
-[player_cafeteria_follow_up_end]
-type = "clip"
-rig = "characters/aya/rig"
-symbol = "gAkropolisCafeteriaPlayerCafeteriaFollowUpEndClip"
-
-[acropolis_cafeteria_model_077D8]
-type = "model"
-slots = ["puff"]
-symbol = "gAkropolisCafeteriaAcropolisCafeteriaModel077D8"
-sha1 = "891eb5d56aaae937caa7a7b80a74f403cee8123d"
-
-[acropolis_cafeteria_model_0FDFC]
-type = "model"
-slots = ["model"]
-symbol = "gAkropolisCafeteriaAcropolisCafeteriaModel0FDFC"
-sha1 = "477fb43fb413da624ac5ba84065755ccfa50fc5a"
-
-[player_cafeteria_follow_up_start]
-type = "clip"
-rig = "characters/aya/rig"
-symbol = "gAkropolisCafeteriaPlayerCafeteriaFollowUpStartClip"
-
-[acropolis_cafeteria_model_077D8_binding]
-type = "binding"
-model = "rooms/akropolis/cafeteria/acropolis_cafeteria_model_077D8"
-textures = { puff = "rooms/akropolis/cafeteria/puff.default" }
-
-[acropolis_cafeteria_model_0FDFC_binding]
-type = "binding"
-model = "rooms/akropolis/cafeteria/acropolis_cafeteria_model_0FDFC"
-textures = { model = "rooms/akropolis/cafeteria/model.default" }
-
-[acropolis_cafeteria_follow_up_player_anim_01]
-type = "clip"
-rig = "characters/aya/rig"

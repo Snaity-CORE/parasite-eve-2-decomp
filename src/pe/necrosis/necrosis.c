@@ -378,12 +378,12 @@ void necrosisTrailPuffTask(Task* task)
 
     effect->age = effect->age + 1;
     if (task->state == NECROSIS_TRAIL_INITIALIZE) {
-        effect->scale   = task->spawnArg1.value & NECROSIS_TRAIL_SIZE_ANGLE_MASK;
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        effect->angle   = (gRandomLcgState >> 16) & NECROSIS_TRAIL_SIZE_ANGLE_MASK;
-        effect->period  = effect->scale - NECROSIS_TRAIL_MIST_SIZE_OFFSET;
-        effect->step    = effect->scale >> NECROSIS_TRAIL_SHRINK_FRACTION_BITS;
-        task->state     = NECROSIS_TRAIL_SHRINKING;
+        effect->scale = task->spawnArg1.value & NECROSIS_TRAIL_SIZE_ANGLE_MASK;
+        RANDOM_LCG_ADVANCE();
+        effect->angle  = RANDOM_LCG_DRAW() & NECROSIS_TRAIL_SIZE_ANGLE_MASK;
+        effect->period = effect->scale - NECROSIS_TRAIL_MIST_SIZE_OFFSET;
+        effect->step   = effect->scale >> NECROSIS_TRAIL_SHRINK_FRACTION_BITS;
+        task->state    = NECROSIS_TRAIL_SHRINKING;
     }
     actorRenderComposeCoord(coord);
     spriteQuadDraw(coord, effect->age % NECROSIS_TRAIL_TEXTURE_FRAMES, effect->scale, effect->angle);
@@ -454,17 +454,17 @@ void necrosisMistPuffTask(Task* task)
             effect->age     = 0;
             spawnSizeBits   = task->spawnArg1.value;
             effect->period  = spawnSizeBits & NECROSIS_PUFF_SPAWN_SIZE_MASK;
-            bearingRoll     = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            bearingRoll     = RANDOM_LCG_NEXT(gRandomLcgState);
             effect->scale   = ((u32)bearingRoll >> 16) & NECROSIS_PUFF_ANGLE_MASK;
             gRandomLcgState = bearingRoll;
             effect->angle   = effect->period / NECROSIS_PUFF_SIZE_TO_DRIFT_DIVISOR;
             effect->move.vx = (rsin(effect->scale) * effect->angle) >> NECROSIS_PUFF_TRIG_FRACTION_BITS;
             verticalProduct = rcos(effect->scale) * effect->angle;
-            depthRoll       = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            depthRoll       = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = depthRoll;
             effect->move.vy = verticalProduct >> NECROSIS_PUFF_TRIG_FRACTION_BITS;
             effect->move.vz = (rsin(((u32)depthRoll >> 16) & NECROSIS_PUFF_ANGLE_MASK) * effect->move.vx) >> NECROSIS_PUFF_TRIG_FRACTION_BITS;
-            blendRoll       = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            blendRoll       = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = blendRoll;
             // The spawner clears step; only selected puffs switch to additive blending.
             if ((s32)(((u32)blendRoll >> 16) & NECROSIS_PUFF_BLEND_RANDOM_MASK) < ((u16)(gAttachmentState.attachId % 10U) - 1)) {
@@ -559,7 +559,7 @@ static void _necrosisDrawMistPuff(const GfxCoord* coord, s16 frameAndBlend, s16 
                uEnd, NECROSIS_PUFF_TOP_V + (NECROSIS_PUFF_SMALL_CELL_WIDTH - 1));
         // Scale the rotated corners by projection depth, then queue the raw textured quad.
         _necrosisSetMistPuffCorners(scratch, quad, size, angle);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
@@ -619,7 +619,7 @@ static void _necrosisDrawLargeMistPuff(const GfxCoord* coord, s16 frameAndBlend,
                uEnd, NECROSIS_PUFF_TOP_V + (NECROSIS_PUFF_LARGE_CELL_WIDTH - 1));
         // Scale the rotated corners by projection depth, then queue the raw textured quad.
         _necrosisSetLargeMistPuffCorners(scratch, quad, size, angle);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);

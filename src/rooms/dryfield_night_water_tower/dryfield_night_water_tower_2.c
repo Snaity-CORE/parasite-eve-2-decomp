@@ -11,7 +11,10 @@
 #include "dryfield_night_water_tower_private.h"
 
 #include "actors/actor_04400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01600.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_300700.h"
+#include "actors/actor_400600.h"
 
 #include "gameplay/area.h"
 #include "gameplay/collision.h"
@@ -64,7 +67,7 @@ static WorldCollisionTrigger _gDryfieldNightWaterTowerViewBoundaryTriggers[14];
 static WorldCollisionTrigger _gDryfieldNightWaterTowerActionTriggers[9];
 static WorldCoordRoomLights  _gDryfieldNightWaterTowerRoomLights;
 
-TaskDesc gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+TaskDesc gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 TaskMessageEntry gDryfieldNightWaterTowerRoomMessages[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, roomVariantWaterTowerMsg },

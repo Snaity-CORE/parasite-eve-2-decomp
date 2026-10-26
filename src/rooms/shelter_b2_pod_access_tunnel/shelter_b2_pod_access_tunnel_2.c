@@ -11,7 +11,13 @@
 
 #include "shelter_b2_pod_access_tunnel_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_00300.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_02600.h"
+#include "actors/actor_05600.h"
+#include "actors/actor_403900.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -63,11 +69,8 @@ static WorldCollisionTrigger  _gShelterB2PodAccessTunnelRoom1ActionTriggers[3];
 static WorldCollisionTrigger  _gShelterB2PodAccessTunnelRoom2ActionTriggers[3];
 static WorldCoordRoomLights   _gShelterB2PodAccessTunnelLightCollection;
 
-/// Execution priority shared by the room's two departure-event tasks.
-enum { SHELTER_B2_POD_ACCESS_TUNNEL_EVENT_TASK_PRIORITY = 32 };
-
 TaskDesc gShelterB2PodAccessTunnelStagedEventTaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B2_POD_ACCESS_TUNNEL_EVENT_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = roomEventStagedTask,
     .data     = { .value = 0 },
 };
@@ -82,7 +85,7 @@ TaskMessageEntry gShelterB2PodAccessTunnelRoomMessages[6] = {
 };
 
 TaskDesc gShelterB2PodAccessTunnelRideToB1TaskDesc = {
-    .header   = { .fields = { TASK_BODY_NONE, SHELTER_B2_POD_ACCESS_TUNNEL_EVENT_TASK_PRIORITY } },
+    .header   = { .fields = { TASK_BODY_NONE, TASK_PRIORITY_SCENE } },
     .callback = shelterB2PodAccessTunnelRideToB1Task,
     .data     = { .value = 0 },
 };

@@ -11,7 +11,10 @@
 
 #include "shelter_b3_garbage_incinerator_private.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_07000.h"
+#include "actors/actor_341900.h"
+#include "actors/actor_342400.h"
+#include "actors/actor_444000.h"
 
 #include "gameplay/display.h"
 #include "gameplay/area.h"
@@ -101,12 +104,11 @@ typedef struct {
 } _ShelterB3GarbageIncineratorWallEdge;
 STATIC_ASSERT_SIZEOF(_ShelterB3GarbageIncineratorWallEdge, 8);
 
-/// Indices and byte priority of the room-owned bodyless resource recipes.
+/// Indices of the room-owned bodyless resource recipes.
 enum {
     SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_ENTRANCE = 0,
     SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_DISCARD  = 1,
     SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_COUNT    = 2,
-    SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_PRIORITY = 192,
 };
 
 /// Resource-entry keys and populated area-placement variants.
@@ -2301,17 +2303,17 @@ AreaVariant gShelterB3GarbageIncineratorAreaVariants[13] = {
 /// Bodyless task recipes for the incinerator's Glutton entrance resources.
 ///
 /// Resource entry 103 selects the entrance controller at index 0; entry 44
-/// selects immediate teardown at index 1. Both run at byte priority 192
+/// selects immediate teardown at index 1. Both run at byte priority `TASK_PRIORITY_CONTROL`
 /// without an attached body. The two-entry table has no terminator and
 /// borrows this overlay's lifetime during area spawning.
 static TaskDesc _gShelterB3GarbageIncineratorResourceTaskDescs[SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_COUNT] = {
     [SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_ENTRANCE] = {
-        .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _shelterB3GarbageIncineratorGluttonEntranceTask,
         .data     = { .value = 0 },
     },
     [SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_DISCARD] = {
-        .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = SHELTER_B3_GARBAGE_INCINERATOR_RESOURCE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _shelterB3GarbageIncineratorKillTask,
         .data     = { .value = 0 },
     },
@@ -2902,7 +2904,7 @@ static void _shelterB3GarbageIncineratorDrawPulsingDisc(const SVECTOR* worldPoin
             wedge->x3     = block->sx + ((block->radius * rsin(nextAngle)) >> GLOW_TRIG_SHIFT);
             wedge->y3     = block->sy + ((block->radius * rcos(nextAngle)) >> GLOW_TRIG_SHIFT);
             angle         = nextAngle;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                     wedge);
             gpuSetPrimitiveBlendMode(wedge, GPU_BLEND_ADD, block->otz);
         } while (angle < GLOW_FULL_TURN);
@@ -3016,7 +3018,7 @@ static void _shelterB3GarbageIncineratorDrawLayeredGlow(const SVECTOR* worldPoin
             wedge->y2     = block->sy;
             wedge->x3     = block->sx + ((block->outerRadius * rsin(nextAngle)) >> GLOW_TRIG_SHIFT);
             wedge->y3     = block->sy + ((block->outerRadius * rcos(nextAngle)) >> GLOW_TRIG_SHIFT);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                     wedge);
             gpuSetPrimitiveBlendMode(wedge, GPU_BLEND_ADD, block->otz);
 
@@ -3031,7 +3033,7 @@ static void _shelterB3GarbageIncineratorDrawLayeredGlow(const SVECTOR* worldPoin
             wedge->y2 = block->sy;
             wedge->x3 = block->sx + ((block->outerRadius * rsin(nextAngle)) >> (GLOW_TRIG_SHIFT + 1));
             wedge->y3 = block->sy + ((block->outerRadius * rcos(nextAngle)) >> (GLOW_TRIG_SHIFT + 1));
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                     wedge);
             gpuSetPrimitiveBlendMode(wedge, GPU_BLEND_ADD, block->otz);
         }
@@ -3054,7 +3056,7 @@ static void _shelterB3GarbageIncineratorDrawLayeredGlow(const SVECTOR* worldPoin
             wedge->y2      = block->sy;
             wedge->x3      = block->sx + ((block->innerRadius * rsin(nextBladeAngle)) >> (GLOW_TRIG_SHIFT + 1));
             wedge->y3      = block->sy + ((block->innerRadius * rcos(nextBladeAngle)) >> (GLOW_TRIG_SHIFT + 1));
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                     wedge);
             gpuSetPrimitiveBlendMode(wedge, GPU_BLEND_ADD, block->otz);
 
@@ -3070,7 +3072,7 @@ static void _shelterB3GarbageIncineratorDrawLayeredGlow(const SVECTOR* worldPoin
             wedge->y2          = block->sy;
             wedge->x3          = block->sx + ((block->innerRadius * rsin(oppositeBladeAngle)) >> GLOW_TRIG_SHIFT);
             wedge->y3          = block->sy + ((block->innerRadius * rcos(oppositeBladeAngle)) >> GLOW_TRIG_SHIFT);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                     wedge);
             gpuSetPrimitiveBlendMode(wedge, GPU_BLEND_ADD, block->otz);
         }

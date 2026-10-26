@@ -9,7 +9,8 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02000.h"
+#include "actors/actor_05700.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -37,6 +38,7 @@
 #include "main/coord.h"
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/gameflag.h"
 #include "main/gamemain.h"
 #include "main/gfx.h"
@@ -117,7 +119,7 @@ TmdSource gShelter1fVehicularAirlockModel03A58 = {
 /// Bodyless priority-32 task recipe for a latched departure's CAP, sound and reload.
 ///
 /// Borrows the room's singleton event records and fade storage until reload.
-static TaskDesc _gShelter1fVehicularAirlockStagedEventTaskDesc = { { { TASK_BODY_NONE, 32 } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gShelter1fVehicularAirlockStagedEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Room receiver's transition, key-item, direction-action and CAP-command handlers.
 ///
@@ -531,7 +533,7 @@ static s32 _shelter1fVehicularAirlockHandleRoomCommand(Task* task, s32 messageId
         RESPONSE_LATE_CAP_EVENT = 5
     };
     if (commandId == COMMAND_RESPONSE) {
-        if (areaGetCurrentObjectState(RESPONSE_OBJECT_FLAG) == RESPONSE_OBJECT_STATE && gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) >= RESPONSE_LATE_CHAPTER) {
+        if (areaGetCurrentObjectState(RESPONSE_OBJECT_FLAG) == RESPONSE_OBJECT_STATE && gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) >= RESPONSE_LATE_CHAPTER) {
             commandId = RESPONSE_LATE_CAP_EVENT;
         }
         capSpawnEventIfIdle(commandId, CAP_EVENT_NO_FLAGS);
@@ -720,7 +722,7 @@ static void _shelter1fVehicularAirlockDrawPulsingLight(const SVECTOR* worldPoint
             diamond->y0    = centerYBits;
             diamondYFactor = segmentIndex * 2;
             diamond->y1    = (projection->screenPos.vy - projection->halfExtent) + (projection->halfExtent * diamondYFactor);
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->otz),
                     diamond);
             gpuSetPrimitiveBlendMode(diamond, GPU_BLEND_ADD, projection->otz);
             segmentIndex++;

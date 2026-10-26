@@ -6,7 +6,8 @@
 #include "common.h"
 
 #include "actors/actor_120300.h"
-#include "actors/task_tables.h"
+#include "actors/actor_00100.h"
+#include "actors/actor_01500.h"
 
 #include "gameplay/area.h"
 #include "gameplay/area_flags.h"
@@ -73,8 +74,6 @@ typedef struct {
 } _DryfieldGarageDoorSceneStorage;
 STATIC_ASSERT_SIZEOF(_DryfieldGarageDoorSceneStorage, 8);
 
-enum { DRYFIELD_GARAGE_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 static s32  _dryfieldGarageRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg);
 static void _dryfieldGarageInitRoomTask(Task* task);
 static void _dryfieldGarageIdleRoomTask(Task* unusedTask);
@@ -95,7 +94,7 @@ static void                             _dryfieldGarageJunkYardRefusalTask(Task*
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// The room receiver's five message handlers and unsupported-message terminator.
 ///
@@ -103,7 +102,7 @@ static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIO
 /// their message-specific integer or pointer payloads through the 32-bit task ABI.
 static const TaskMessageEntry _gDryfieldGarageMessageTable[6] SECTION(".data") = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _dryfieldGarageResolveRoomEventMessage },
-    { DRYFIELD_GARAGE_MESSAGE_USE_KEY_ITEM, _dryfieldGarageRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldGarageRejectKeyItemUse },
     { ROOM_MESSAGE_SOUND, _garageSoundMsg },
     { ROOM_MESSAGE_COMMAND, _dryfieldGarageHandleRoomCommand },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldGarageHandleRoomAction },
@@ -115,7 +114,7 @@ static const TaskMessageEntry _gDryfieldGarageMessageTable[6] SECTION(".data") =
 /// Only slot 0 is spawnable; the second record ends the descriptor table.
 /// The wrapper starts Gary's scene task independently and then releases itself.
 static TaskDesc _gDryfieldGarageJunkYardRefusalTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, 32 } }, _dryfieldGarageJunkYardRefusalTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _dryfieldGarageJunkYardRefusalTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -874,9 +873,7 @@ static const TaskFuncTable3 _gDryfieldGarageRoomTaskStates = {
 /// notice without consuming an item or starting a room event.
 static s32 _dryfieldGarageRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_GARAGE_KEY_ITEM_REFUSED = 0 };
-
-    return DRYFIELD_GARAGE_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Resolves factory rooms and gates junk-yard departure on the water-tank scene.

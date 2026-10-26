@@ -68,10 +68,10 @@ extern AnimationSet gGolemSwordSwingClip;
 static AnimationSet _gGolemRookScreamChargeClip;
 extern AnimationSet gGolemScreamReleaseClip;
 extern AnimationSet gGolemStaggerClip;
-static AnimationSet _gGolemRecoilFrontClip;
-static AnimationSet _gGolemRecoilBehindClip;
-static AnimationSet _gGolemBuildupClip;
-static AnimationSet _gGolemScreamRecoverClip;
+extern AnimationSet gGolemRecoilFrontClip;
+extern AnimationSet gGolemRecoilBehindClip;
+extern AnimationSet gGolemBuildupClip;
+extern AnimationSet gGolemScreamRecoverClip;
 static AnimationSet _gGolemFallBehindClip;
 static AnimationSet _gGolemDownedHitBehindClip;
 static AnimationSet _gGolemWritheBehindClip;
@@ -140,8 +140,8 @@ static s16 _gGolemPawnRookAnimBlendFrames[32] = {
 /// 3 is the grenade and 4 is the launcher strike. Unused weapon rows remain
 /// present so every carrier uses the same attack indices.
 static DamageAttack _gGolemPawnRookAttacks[5] = {
-    { 28, 5 },
-    { 24, 5 },
+    { 28, GAME_ACTOR_REACTION_HIT_FLASHES },
+    { 24, GAME_ACTOR_REACTION_HIT_FLASHES },
     { 0, GAME_ACTOR_REACTION_SILENCE },
     { 15, GAME_ACTOR_REACTION_PARALYSIS },
     { 5, GAME_ACTOR_REACTION_ORDINARY },
@@ -579,9 +579,9 @@ static const u16* _gActor02300StageAreaSoundSets[GAME_STAGE_SHELTER_NEO_ARK + 1]
 };
 
 TaskDesc gActor02300RookGolemTasks[3] = {
-    { { { TASK_BODY_TMD, 96 } }, _actor02300BodyTask, { .model = &_gGolemRookBody } },
-    { { { TASK_BODY_TMD, 96 } }, _actor02300SwordTask, { .model = &_gGolemBeamSword } },
-    { { { TASK_BODY_TMD, 96 } }, _actor02300ShieldTask, { .model = &_gGolemRookShield } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor02300BodyTask, { .model = &_gGolemRookBody } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor02300SwordTask, { .model = &_gGolemBeamSword } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor02300ShieldTask, { .model = &_gGolemRookShield } },
 };
 
 /// Beam Sword Rook GOLEM body animation-set directory.
@@ -768,7 +768,7 @@ static void _actor02300SpawnBody(Enemy* enemy, Task* actor)
             work->sightCapsule.ends[1].vy   = 0;
             work->sightCapsule.ends[1].vz   = 0;
             work->sightCapsule.contacts     = work->sightContacts;
-            randomDraw                      = (gRandomLcgState * RANDOM_LCG_MULTIPLIER) + RANDOM_LCG_INCREMENT;
+            randomDraw                      = RANDOM_LCG_NEXT(gRandomLcgState);
             work->screamCharges             = ((randomDraw >> 16) & 1) + 1;
             gRandomLcgState                 = randomDraw;
             sightCoords                     = actor->extra.tmd->coords;

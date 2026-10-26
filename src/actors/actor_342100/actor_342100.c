@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_342100.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -58,13 +58,6 @@
 enum {
     ACTOR_342100_BLAZE_SCENE_START   = 0, // Not started; the next update installs the clips and the event script
     ACTOR_342100_BLAZE_SCENE_RUNNING = 1, // Event script playing; the scene ends when the session's event state clears
-};
-
-/// Weapon-bank selectors computed from the saved character and equipped weapon.
-enum {
-    ACTOR_342100_BLAZE_PRIMARY_CHARACTER      = 1,
-    ACTOR_342100_BLAZE_PRIMARY_BANK_OFFSET    = 1,
-    ACTOR_342100_BLAZE_OTHER_CHARACTER_OFFSET = 0x22,
 };
 
 /// Fade phases selected by this package's burn script.
@@ -150,15 +143,13 @@ static void _actor342100EncounterBlazeControllerTask(Task* task);
 
 #include "assets/rooms/shelter/b3_dumping_hole/blaze_scene_clips.inc"
 
-enum { ACTOR_342100_HEAT_HAZE_TASK_PRIORITY = 192 };
-
 /// Bodyless captured-frame heat-haze task for the blaze scene, followed by its end marker.
 ///
 /// Spawn slot 0 with a live writable ScreenWaveCtx; the grid task borrows
 /// that context through its final draw. Only one wave may be active in this
 /// package because it shares the prebuilt grid and oscillator storage.
 static TaskDesc _gActor342100BlazeHeatHazeTaskDescs[2] = {
-    { { { TASK_BODY_NONE, ACTOR_342100_HEAT_HAZE_TASK_PRIORITY } }, _screenWaveGridTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _screenWaveGridTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -310,11 +301,11 @@ static EvsCommand _gActor342100BlazeScript[18] = {
 };
 
 TaskDesc gActor342100EncounterBlazeTaskDescriptors[5] = {
-    { { { TASK_BODY_NONE, 192 } }, _actor342100EncounterBlazeControllerTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, taskKill, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _blazeFadeTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _blazeBodyFireTask, { .value = 0 } },
-    { { { TASK_BODY_COORD, 192 } }, _actor342100BlazeFireEmitterTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _actor342100EncounterBlazeControllerTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _blazeFadeTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _blazeBodyFireTask, { .value = 0 } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_CONTROL } }, _actor342100BlazeFireEmitterTask, { .value = 0 } },
 };
 
 /// Borrowed context of this renderer's active wave task.
@@ -382,7 +373,7 @@ static s32 _actor342100AdvanceBlazeAnimation(Task* controller)
                 animationId  = _gActor342100BlazeClipSuccessors[work->animationId - ANIMATION_BANK_BASE_SET_COUNT] + ANIMATION_BANK_BASE_SET_COUNT;
                 dispatchWork = controller->work;
                 weaponId     = gPlayerStatus.weapon;
-                bankIndex    = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_342100_BLAZE_PRIMARY_CHARACTER) ? weaponId + ACTOR_342100_BLAZE_PRIMARY_BANK_OFFSET : weaponId + ACTOR_342100_BLAZE_OTHER_CHARACTER_OFFSET;
+                bankIndex    = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
                 ACTOR_342100_SEND_BLAZE_ANIMATION(dispatchWork, request, animationId, bankIndex, ACTOR_342100_BLAZE_CHAIN_BLEND_FRAMES);
             }
         }
@@ -401,19 +392,19 @@ static s32 _actor342100AdvanceBlazeAnimation(Task* controller)
     {                                                                                            \
         enum { ACTOR_342100_FIRE_EMITTER_OFFSET_MASK = 63 };                                     \
         s32 xMagnitudeRoll, zMagnitudeRoll, xOffset, zOffset;                                    \
-        xMagnitudeRoll  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;        \
+        xMagnitudeRoll  = RANDOM_LCG_NEXT(gRandomLcgState);                                      \
         xOffset         = ((u32)xMagnitudeRoll >> 16) & ACTOR_342100_FIRE_EMITTER_OFFSET_MASK;   \
-        gRandomLcgState = xMagnitudeRoll * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;         \
-        if ((gRandomLcgState >> 16) & 1) {                                                       \
+        gRandomLcgState = RANDOM_LCG_NEXT(xMagnitudeRoll);                                       \
+        if (RANDOM_LCG_DRAW() & 1) {                                                             \
             xOffset = -xOffset;                                                                  \
         }                                                                                        \
-        gRandomLcgState   = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;      \
+        RANDOM_LCG_ADVANCE();                                                                    \
         (offsetValue)->vx = xOffset;                                                             \
-        (offsetValue)->vy = -((gRandomLcgState >> 16) & ACTOR_342100_FIRE_EMITTER_OFFSET_MASK);  \
-        zMagnitudeRoll    = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;      \
+        (offsetValue)->vy = -(RANDOM_LCG_DRAW() & ACTOR_342100_FIRE_EMITTER_OFFSET_MASK);        \
+        zMagnitudeRoll    = RANDOM_LCG_NEXT(gRandomLcgState);                                    \
         zOffset           = ((u32)zMagnitudeRoll >> 16) & ACTOR_342100_FIRE_EMITTER_OFFSET_MASK; \
-        gRandomLcgState   = zMagnitudeRoll * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;       \
-        if ((gRandomLcgState >> 16) & 1) {                                                       \
+        gRandomLcgState   = RANDOM_LCG_NEXT(zMagnitudeRoll);                                     \
+        if (RANDOM_LCG_DRAW() & 1) {                                                             \
             zOffset = -zOffset;                                                                  \
         }                                                                                        \
         (offsetValue)->vz = zOffset;                                                             \
@@ -530,7 +521,7 @@ static void _actor342100SpawnBlazeFireEmitters(void)
             break;
     }
     while (placement->vx != 0) {
-        delayRoll       = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+        delayRoll       = RANDOM_LCG_NEXT(gRandomLcgState);
         gRandomLcgState = delayRoll;
         emitter         = taskSpawnFromTable(gActor342100EncounterBlazeTaskDescriptors, ACTOR_342100_BLAZE_FIRE_EMITTER_DESCRIPTOR, (delayRoll >> 16) & ACTOR_342100_BLAZE_FIRE_DELAY_MASK, 0);
         coord           = emitter->extra.coordBody->coord;
@@ -742,7 +733,7 @@ static void _actor342100PlayBlazeAnimation(s32 clipIndex)
     work        = _gActor342100BlazeControllerTask->work;
     animationId = clipIndex + ANIMATION_BANK_BASE_SET_COUNT;
     weaponId    = gPlayerStatus.weapon;
-    bankIndex   = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == ACTOR_342100_BLAZE_PRIMARY_CHARACTER) ? weaponId + ACTOR_342100_BLAZE_PRIMARY_BANK_OFFSET : weaponId + ACTOR_342100_BLAZE_OTHER_CHARACTER_OFFSET;
+    bankIndex   = PLAYER_ACTOR_SCENE_WEAPON_BANK(weaponId);
     ACTOR_342100_SEND_BLAZE_ANIMATION(work, request, animationId, bankIndex, ACTOR_342100_BLAZE_SCRIPT_BLEND_FRAMES);
 }
 

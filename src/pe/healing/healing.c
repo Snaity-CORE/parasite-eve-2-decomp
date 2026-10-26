@@ -169,13 +169,13 @@ void healingAuraTask(Task* task)
             coord->composeStamp = GRAPHICS_COORD_DIRTY;
             actorRenderComposeCoord(coord);
             // Scatter the next child in the spinning aura's local frame.
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             spawnAngle      = ((u32)randomState >> 16) & HEALING_AURA_ANGLE_MASK;
             gRandomLcgState = randomState;
             work->step      = spawnAngle;
             work->move.vx   = (rcos(spawnAngle) * (work->angle * 3 / 2)) >> HEALING_AURA_TRIG_FRACTION_BITS;
             verticalProduct = rsin(work->step) * (work->angle * 3 / 2);
-            randomState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState     = RANDOM_LCG_NEXT(gRandomLcgState);
             gRandomLcgState = randomState;
             work->move.vy   = verticalProduct >> HEALING_AURA_TRIG_FRACTION_BITS;
             work->move.vz   = (rsin(((u32)randomState >> 16) & HEALING_AURA_ANGLE_MASK) * work->move.vx) >> HEALING_AURA_TRIG_FRACTION_BITS;
@@ -392,7 +392,7 @@ static void _healingDrawSparkle(const GfxCoord* coord, s16 frame, s16 sizeFactor
         quad->v1              = 0;
         scratch->screenExtent = (sizeFactor * HEALING_SPARKLE_UV_SPAN) / scratch->depth;
         _healingSetSparkleScreenBounds(quad, scratch);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
 
         // The glow shares the centre and depth, but halves size and modulation.
@@ -410,7 +410,7 @@ static void _healingDrawSparkle(const GfxCoord* coord, s16 frame, s16 sizeFactor
                HEALING_SPARKLE_GLOW_LEFT_U + HEALING_SPARKLE_GLOW_UV_SPAN, HEALING_SPARKLE_GLOW_TOP_V + HEALING_SPARKLE_GLOW_UV_SPAN);
         scratch->screenExtent = ((sizeFactor >> 1) * HEALING_SPARKLE_GLOW_UV_SPAN) / scratch->depth;
         _healingSetSparkleScreenBounds(quad, scratch);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)scratch->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(scratch->depth),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectCentreScratch);

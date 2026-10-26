@@ -10,7 +10,7 @@
 #include "gte.h"
 
 #include "actors/actor_450800.h"
-#include "actors/task_tables.h"
+#include "actors/actor_450800.h"
 
 #include "gameplay/direction_input.h"
 #include "gameplay/display.h"
@@ -65,8 +65,6 @@
 #include "main/ui_types.h"
 
 #include "mapui/map_neo_ark.h"
-
-#include "rooms/akropolis_square.h"
 
 #include "rooms/room.h"
 
@@ -174,20 +172,17 @@ static void _shelterB6NurseryAmbienceTask(Task* task);
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
-
-/// Execution priority of the nursery's bodyless positional sound task.
-enum { SHELTER_B6_NURSERY_AMBIENCE_TASK_PRIORITY = 32 };
 
 /// Single spawn recipe for nursery ambience, with no body or resource payload.
 ///
 /// Only index zero is valid; this is not a terminated descriptor list. Spawning
 /// copies the recipe. The nursery callback must remain loaded until teardown.
 static TaskDesc _gShelterB6NurseryAmbienceTaskDesc = {
-    { { TASK_BODY_NONE, SHELTER_B6_NURSERY_AMBIENCE_TASK_PRIORITY } }, _shelterB6NurseryAmbienceTask, { .value = 0 }
+    { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB6NurseryAmbienceTask, { .value = 0 }
 };
 
 /// Values shared by nursery entry and command-driven story progression.
@@ -1085,7 +1080,7 @@ static s32 _shelterB6NurseryHandleRoomCommand(Task* unusedTask, s32 messageId, s
             if (gameFlagGetNibble(GAME_FLAG_083) != 0) {
                 areaSetObjectState(SHELTER_B6_NURSERY_PROGRESS_OBJECT_ID, SHELTER_B6_NURSERY_PROGRESS_OBJECT_STATE, GAME_STAGE_MINE_SHELTER);
             }
-            gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_B6_NURSERY_OBJECTIVE_AFTER_COMMAND);
+            gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_B6_NURSERY_OBJECTIVE_AFTER_COMMAND);
             gameFlagSetNibble(GAME_FLAG_B6_NURSERY_PROGRESS, SHELTER_B6_NURSERY_PROGRESS_ADVANCED);
             _shelterB6NurseryStartCommandScene(&_gShelterB6NurseryCutsceneRec.rec,
                                                SHELTER_B6_NURSERY_INITIAL_SCENE_CAP_SLOT,
@@ -1183,9 +1178,7 @@ static void _shelterB6NurseryAmbienceTask(Task* task)
 /// Refuses every key-item-use request to this room, returning 0 without consuming the item.
 static s32 _shelterB6NurseryRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unused)
 {
-    enum { KEY_ITEM_USE_REFUSED = 0 };
-
-    return KEY_ITEM_USE_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Resolves nursery departures and requests their CAP transition on execution.
@@ -1246,7 +1239,7 @@ static void _shelterB6NurseryInitializeRoomTask(Task* task)
         gameFlagSetNibble(GAME_FLAG_B6_NURSERY_PROGRESS, SHELTER_B6_NURSERY_PROGRESS_ENTERED);
         evsStartScriptWithSkip(gActor450800NurseryIntroScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor450800NurseryIntroSkipScript);
         gameFlagSetNibble(EVENT_FLAG_TELEPHONE_DIALOGUE_COUNTER, EVENT_FLAG_TELEPHONE_DIALOGUE_UNHEARD);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_B6_NURSERY_OBJECTIVE_ON_ENTRY);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_B6_NURSERY_OBJECTIVE_ON_ENTRY);
     } else if (gameFlagGetNibble(GAME_FLAG_B6_NURSERY_PROGRESS) == SHELTER_B6_NURSERY_PROGRESS_ENTERED) {
         evsStartScript(gActor450800NurseryReentryScript, EVENT_SCRIPT_HUD_KEEP);
     } else {
@@ -1362,17 +1355,17 @@ void shelterB6NurseryViewEffectsTask(Task* task)
             if (_gShelterB6NurseryEffectCues.sparkShowerScale != 0) {
                 // Consume one cue as sixteen scaled shards; retain the identical Y/Z sine offsets.
                 for (shardIndex = 0; shardIndex < SPARK_SHOWER_SHARD_COUNT; shardIndex++) {
-                    angleRandom                                          = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                    spreadRandom                                         = angleRandom * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    angleRandom                                          = RANDOM_LCG_NEXT(gRandomLcgState);
+                    spreadRandom                                         = RANDOM_LCG_NEXT(angleRandom);
                     angle                                                = (angleRandom >> 16) & ACTOR_TRANSFORM_ANGLE_MASK;
                     gRandomLcgState                                      = spreadRandom;
                     spread                                               = ((spreadRandom >> 16) & 0xFF) * _gShelterB6NurseryEffectCues.sparkShowerScale;
                     _gShelterB6NurseryEffectAnchors.sparkShowerOrigin.vx = 0x1C20;
                     _gShelterB6NurseryEffectAnchors.sparkShowerOrigin.vy = ((spread * rsin(angle)) >> SPARK_SHOWER_Q12_SHIFT) - 0x6D6;
                     _gShelterB6NurseryEffectAnchors.sparkShowerOrigin.vz = ((spread * rsin(angle)) >> SPARK_SHOWER_Q12_SHIFT) + 0x7D0;
-                    gRandomLcgState                                      = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+                    RANDOM_LCG_ADVANCE();
                     effectSpawn(EFFECT_SHELTER_B6_NURSERY_SPARK_SHOWER, NULL,
-                                (((gRandomLcgState >> 16) & 0x1F) + 8) * _gShelterB6NurseryEffectCues.sparkShowerScale,
+                                ((RANDOM_LCG_DRAW() & 0x1F) + 8) * _gShelterB6NurseryEffectCues.sparkShowerScale,
                                 &_gShelterB6NurseryEffectAnchors.sparkShowerOrigin);
                 }
                 _gShelterB6NurseryEffectCues.fastGlintPulse   = 0;
@@ -1381,31 +1374,31 @@ void shelterB6NurseryViewEffectsTask(Task* task)
             break;
         case 15:
             if (!(gDisplayState.animFrame & 1)) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_1A4, NULL, ((gRandomLcgState >> 16) & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.view15ParticleOrigin);
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_1A4, NULL, (RANDOM_LCG_DRAW() & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.view15ParticleOrigin);
             }
             break;
         case 17:
             glintPoint = &_gShelterB6NurseryEffectAnchors.glint;
             _glowDrawDiamond(glintPoint, GLINT_PULSE_IDLE, GLINT_RADIUS_SCALE);
             if (!(gDisplayState.animFrame & 1)) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_1A4, NULL, ((gRandomLcgState >> 16) & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.view17And18ParticleOrigin);
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_1A4, NULL, (RANDOM_LCG_DRAW() & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.view17And18ParticleOrigin);
             }
             break;
         case 18:
             if (!(gDisplayState.animFrame & 1)) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_1A4, NULL, ((gRandomLcgState >> 16) & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.view17And18ParticleOrigin);
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_1A4, NULL, (RANDOM_LCG_DRAW() & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.view17And18ParticleOrigin);
             }
             break;
     }
     // Visiting view 13 latches these two emitters for the rest of the task.
     if (task->state == VIEW_EFFECT_SHOWER_ANCHORS_ACTIVE && !(gDisplayState.animFrame & 1)) {
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        effectSpawn(EFFECT_1A4, NULL, ((gRandomLcgState >> 16) & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.latchedParticleOrigins[0]);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        effectSpawn(EFFECT_1A4, NULL, ((gRandomLcgState >> 16) & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.latchedParticleOrigins[1]);
+        RANDOM_LCG_ADVANCE();
+        effectSpawn(EFFECT_1A4, NULL, (RANDOM_LCG_DRAW() & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.latchedParticleOrigins[0]);
+        RANDOM_LCG_ADVANCE();
+        effectSpawn(EFFECT_1A4, NULL, (RANDOM_LCG_DRAW() & AMBIENT_PARTICLE_RANDOM_MASK) + AMBIENT_PARTICLE_SPAWN_BASE, &_gShelterB6NurseryEffectAnchors.latchedParticleOrigins[1]);
     }
 }
 
@@ -1469,20 +1462,20 @@ void shelterB6NurseryDebrisChunkTask(Task* task)
     } else {
         actorRenderComposeCoord(coord);
         if (task->state == DEBRIS_INITIALIZE) {
-            model->flags   &= (u16)~TMD_OBJECT_SKIP_ACTIVE_DRAW;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vx   = ((gRandomLcgState >> 16) & 0x3F) + 0x60;
-            work->move.vy   = 0;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vz   = ((gRandomLcgState >> 16) & 0x3F) + 0x20;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = ((gRandomLcgState >> 16) & 0x3F) + 0x40;
+            model->flags &= (u16)~TMD_OBJECT_SKIP_ACTIVE_DRAW;
+            RANDOM_LCG_ADVANCE();
+            work->move.vx = (RANDOM_LCG_DRAW() & 0x3F) + 0x60;
+            work->move.vy = 0;
+            RANDOM_LCG_ADVANCE();
+            work->move.vz = (RANDOM_LCG_DRAW() & 0x3F) + 0x20;
+            RANDOM_LCG_ADVANCE();
+            work->scale = (RANDOM_LCG_DRAW() & 0x3F) + 0x40;
             VectorNormalSS(&work->move, &work->move);
-            work->pos.vy        = 0;
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vx        = -((gRandomLcgState >> 16) & 0x3F);
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vz        = 0x40 - ((gRandomLcgState >> 16) & 0x7F);
+            work->pos.vy = 0;
+            RANDOM_LCG_ADVANCE();
+            work->pos.vx = -(RANDOM_LCG_DRAW() & 0x3F);
+            RANDOM_LCG_ADVANCE();
+            work->pos.vz        = 0x40 - (RANDOM_LCG_DRAW() & 0x7F);
             coord->composeStamp = GRAPHICS_COORD_DIRTY;
             task->state++;
             return;
@@ -1520,11 +1513,11 @@ void shelterB6NurseryDebrisChunkTask(Task* task)
         // Alternate active frames emit a particle; age selects its strip and launch parameters.
         if (work->age & 1) {
             if (work->age > DEBRIS_LATE_TRAIL_AGE) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_1A4, coord, ((gRandomLcgState >> 16) & DEBRIS_LATE_PARTICLE_RANDOM_MASK) + DEBRIS_LATE_PARTICLE_SPAWN_BASE, NULL);
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_1A4, coord, (RANDOM_LCG_DRAW() & DEBRIS_LATE_PARTICLE_RANDOM_MASK) + DEBRIS_LATE_PARTICLE_SPAWN_BASE, NULL);
             } else {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_1A4, coord, ((gRandomLcgState >> 16) & DEBRIS_EARLY_PARTICLE_RANDOM_MASK) + DEBRIS_EARLY_PARTICLE_SPAWN_BASE, NULL);
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_1A4, coord, (RANDOM_LCG_DRAW() & DEBRIS_EARLY_PARTICLE_RANDOM_MASK) + DEBRIS_EARLY_PARTICLE_SPAWN_BASE, NULL);
             }
         }
         work->age++;
@@ -1600,9 +1593,9 @@ void shelterB6NurseryAnimatedParticleTask(Task* task)
     switch (task->state) {
         case PARTICLE_INITIALIZE:
             // Decode the two texture strips, frame cadence and initial motion from the spawn word.
-            work->scale     = task->spawnArg1.value & PARTICLE_HALF_DIAGONAL_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->angle     = (gRandomLcgState >> 16) & ACTOR_TRANSFORM_ANGLE_MASK;
+            work->scale = task->spawnArg1.value & PARTICLE_HALF_DIAGONAL_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->angle = RANDOM_LCG_DRAW() & ACTOR_TRANSFORM_ANGLE_MASK;
             if (task->spawnArg1.value & PARTICLE_PERIOD_SELECT_MASK) {
                 framePeriod = (task->spawnArg1.value >> PARTICLE_PERIOD_SHIFT) & PARTICLE_PERIOD_MASK;
             } else {
@@ -1623,28 +1616,28 @@ void shelterB6NurseryAnimatedParticleTask(Task* task)
                         work->step = 0;
                         break;
                     case PARTICLE_MOTION_NEGATIVE_Y_FAN:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = 0xFFC0 - ((gRandomLcgState >> 16) & 0x7F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = 0xFFC0 - (RANDOM_LCG_DRAW() & 0x7F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
                         break;
                     case PARTICLE_MOTION_SCATTER:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
                         break;
                     case PARTICLE_MOTION_NEGATIVE_Y_JET:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = -((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = -(RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
                         break;
                     case PARTICLE_MOTION_SPAWN_VECTOR:
                         work->move.vx = work->pos.vx;
@@ -1652,19 +1645,19 @@ void shelterB6NurseryAnimatedParticleTask(Task* task)
                         work->move.vz = work->pos.vz;
                         break;
                     case PARTICLE_MOTION_XZ_SCATTER:
-                        work->move.vy   = 0;
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
+                        work->move.vy = 0;
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
                         break;
                     case PARTICLE_MOTION_PARENT_JET:
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vx   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vy   = 0x10 - ((gRandomLcgState >> 16) & 0x1F);
-                        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                        work->move.vz   = (gRandomLcgState >> 16) & 0xFF;
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vx = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vy = 0x10 - (RANDOM_LCG_DRAW() & 0x1F);
+                        RANDOM_LCG_ADVANCE();
+                        work->move.vz = RANDOM_LCG_DRAW() & 0xFF;
                         gte_SetRotMatrix(&work->parent->coord);
                         gte_ldv0(&work->move);
                         gte_rtv0();
@@ -1792,7 +1785,7 @@ static void _shelterB6NurseryDrawParticleFrame(const GfxCoord* coord, u16 animat
             quad->x2 = projection->screenX - (u16)projection->extent.corner.x;
             quad->y1 = projection->screenY - (u16)projection->extent.corner.y;
             quad->y2 = projection->screenY + (u16)projection->extent.corner.y;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)projection->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->depth),
                     quad);
         }
     }
@@ -1878,24 +1871,24 @@ void shelterB6NurserySparkShowerShardTask(Task* task)
         }
     } else {
         if (task->state == SHARD_INITIALIZE) {
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vx   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vy   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->move.vz   = 0x80 - ((gRandomLcgState >> 16) & 0xFF);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = ((gRandomLcgState >> 16) & 0x3F) + 0x40;
-            work->angle     = task->spawnArg1.value & SHARD_RADIUS_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->period    = ((gRandomLcgState >> 16) & 0x7F) + 0x40;
+            RANDOM_LCG_ADVANCE();
+            work->move.vx = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+            RANDOM_LCG_ADVANCE();
+            work->move.vy = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+            RANDOM_LCG_ADVANCE();
+            work->move.vz = 0x80 - (RANDOM_LCG_DRAW() & 0xFF);
+            RANDOM_LCG_ADVANCE();
+            work->scale = (RANDOM_LCG_DRAW() & 0x3F) + 0x40;
+            work->angle = task->spawnArg1.value & SHARD_RADIUS_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->period = (RANDOM_LCG_DRAW() & 0x7F) + 0x40;
             VectorNormalSS(&work->move, &work->move);
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vx        = 0x100 - ((gRandomLcgState >> 16) & 0x1FF);
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vy        = 0x100 - ((gRandomLcgState >> 16) & 0x1FF);
-            gRandomLcgState     = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vz        = 0x100 - ((gRandomLcgState >> 16) & 0x1FF);
+            RANDOM_LCG_ADVANCE();
+            work->pos.vx = 0x100 - (RANDOM_LCG_DRAW() & 0x1FF);
+            RANDOM_LCG_ADVANCE();
+            work->pos.vy = 0x100 - (RANDOM_LCG_DRAW() & 0x1FF);
+            RANDOM_LCG_ADVANCE();
+            work->pos.vz        = 0x100 - (RANDOM_LCG_DRAW() & 0x1FF);
             coord->composeStamp = GRAPHICS_COORD_DIRTY;
             task->state++;
             return;
@@ -1980,10 +1973,10 @@ static void _shelterB6NurseryDrawSparkShowerShard(const GfxCoord* coord, s16 rad
     if (projection->projectionFlags >= 0) {
         gte_stszotz(&projection->otz);
         setRGB0(triangle, shade, shade, shade);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET((((u32)(projection->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(projection->otz),
                 triangle);
-        gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-        gpuSetPrimitiveBlendMode(triangle, (gRandomLcgState >> 16) & 1, projection->otz);
+        RANDOM_LCG_ADVANCE();
+        gpuSetPrimitiveBlendMode(triangle, RANDOM_LCG_DRAW() & 1, projection->otz);
     }
     SCRATCH_STACK_RELEASE_BLOCK(_ShelterB6NurseryTriScratch);
 }

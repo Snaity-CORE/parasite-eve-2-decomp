@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_213100.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -79,18 +79,16 @@ static AnimationSet** const _gActorMotionAnimBanks19[1] SECTION(".data") = {
     _gActor213100BodyAnimSets,
 };
 
-enum { ACTOR_213100_JODIE_TASK_PRIORITY = 192 };
-
 TaskDesc gActor213100JodieBouquetTaskDescriptors[2] = {
     // 0: body.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_213100_JODIE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor213100BodyTask,
         .data     = { .model = &_gJodieBody },
     },
     // 1: held model.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_213100_JODIE_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor213100HeldModelTask,
         .data     = { .model = &_gMistR18Laptop },
     },
@@ -370,8 +368,7 @@ static void _actor213100InitBodyLighting(Task* actorTask)
 static s32 _actor213100SetModelDraw(Task* actorTask, s32 messageId, s32 mode, s32 unusedSecondArg)
 {
     enum {
-        ACTOR_213100_DRAW_SHOW_SKIP_AUTO_BUFFER = 3,
-        ACTOR_213100_BUFFER_FREE_DELAY_TICKS    = 2,
+        ACTOR_213100_BUFFER_FREE_DELAY_TICKS = 2,
     };
 
     TmdObject*                    model;
@@ -398,7 +395,7 @@ static s32 _actor213100SetModelDraw(Task* actorTask, s32 messageId, s32 mode, s3
             work->freeCountdown = ACTOR_213100_BUFFER_FREE_DELAY_TICKS;
             model->flags       |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_213100_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             model->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             model->flags |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;

@@ -9,7 +9,8 @@
 #include "gte.h"
 #include "common.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_05700.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/actor_render.h"
@@ -35,6 +36,7 @@
 #include "main/coord.h"
 #include "main/display.h"
 #include "main/display_types.h"
+#include "main/event_flags.h"
 #include "main/fs.h"
 #include "main/fs_types.h"
 #include "main/gameflag.h"
@@ -87,21 +89,13 @@ static void _shelter1fBulwarkHeliportDepartureTask(Task* task);
 static void _shelter1fBulwarkPlayDepartureMovieTask(Task* movieTask);
 static void _shelter1fBulwarkReloadAfterDepartureMovieTask(Task* task);
 
-/// Execution priorities for the room's staged transition and movie handoff tasks.
-enum {
-    SHELTER_1F_BULWARK_STAGED_EVENT_PRIORITY    = 0x20,
-    SHELTER_1F_BULWARK_DEPARTURE_MOVIE_PRIORITY = 0xC0,
-};
-
 /// Bodyless recipe for the latched CAP/sound/fade transition and saved-location reload.
 ///
 /// Spawn entry 0 with zero payloads after filling the room's staged message and
 /// latched event. The room globals and callback must remain live through reload.
 static TaskDesc _gShelter1fBulwarkStagedEventTaskDesc = {
-    { { TASK_BODY_NONE, SHELTER_1F_BULWARK_STAGED_EVENT_PRIORITY } }, roomEventStagedTask, { .value = 0 }
+    { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 }
 };
-
-enum { SHELTER_1F_BULWARK_HELIPORT_DEPARTURE_PRIORITY = 32 };
 
 /// Bulwark handlers for exit events, key-item refusal and ignored actions/commands.
 ///
@@ -115,13 +109,13 @@ static const TaskMessageEntry _gShelter1fBulwarkRoomMessages[5] SECTION(".data")
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-/// Bodyless first-heliport-departure recipe, priority 32 and zero metadata/payloads.
+/// Bodyless first-heliport-departure recipe, priority `TASK_PRIORITY_SCENE` and zero metadata/payloads.
 ///
 /// Spawn entry 0 after accepting the chapter-6 departure and holding the player.
 /// One descriptor with no terminator. The callback hands CAP/fade playback to
 /// the movie coordinator; keep the room loaded until the final session reload.
 static TaskDesc _gShelter1fBulwarkHeliportDepartureTaskDesc = {
-    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = SHELTER_1F_BULWARK_HELIPORT_DEPARTURE_PRIORITY } },
+    .header   = { .fields = { .flags = TASK_BODY_NONE, .priority = TASK_PRIORITY_SCENE } },
     .callback = _shelter1fBulwarkHeliportDepartureTask,
     .data     = { .value = 0 },
 };
@@ -132,8 +126,8 @@ static TaskDesc _gShelter1fBulwarkHeliportDepartureTaskDesc = {
 /// then reloads at Neo Ark area 26 after playback and game-resource restoration.
 /// There is no terminator; keep this room's callback code loaded while they run.
 static TaskDesc _gShelter1fBulwarkDepartureMovieTaskDescs[2] = {
-    { { { TASK_BODY_NONE, SHELTER_1F_BULWARK_DEPARTURE_MOVIE_PRIORITY } }, _shelter1fBulwarkReloadAfterDepartureMovieTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_1F_BULWARK_DEPARTURE_MOVIE_PRIORITY } }, _shelter1fBulwarkPlayDepartureMovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelter1fBulwarkReloadAfterDepartureMovieTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelter1fBulwarkPlayDepartureMovieTask, { .value = 0 } },
 };
 
 /// Fixed world-space glow centres for mapped view 2, in world-coordinate units.
@@ -497,9 +491,9 @@ static s32 _shelter1fBulwarkResolveRoomEvent(Task* unusedTask, s32 unusedMessage
             capSpawnEventIfIdle(SHELTER_1F_BULWARK_CAP_HELIPORT, CAP_EVENT_NO_FLAGS);
             return ROOM_VARIANT_TRANSITION_HANDLED;
         }
-        if (gameFlagGetNibble(GAME_FLAG_STORY_CHAPTER) < SHELTER_1F_BULWARK_HELIPORT_CHAPTER) {
+        if (gameFlagGetNibble(EVENT_FLAG_STORY_CHAPTER) < SHELTER_1F_BULWARK_HELIPORT_CHAPTER) {
             if (request->queryOnly == ROOM_EVENT_EXECUTE) {
-                gameFlagSetNibble(GAME_FLAG_STORY_CHAPTER, SHELTER_1F_BULWARK_HELIPORT_CHAPTER);
+                gameFlagSetNibble(EVENT_FLAG_STORY_CHAPTER, SHELTER_1F_BULWARK_HELIPORT_CHAPTER);
                 playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);
                 taskSpawnFromTable(&_gShelter1fBulwarkHeliportDepartureTaskDesc, 0, 0, 0);
             }
@@ -604,7 +598,7 @@ static void _shelter1fBulwarkHeliportDepartureTask(Task* task)
             break;
         case SHELTER_1F_BULWARK_DEPARTURE_START_MOVIE:
             // The coordinator owns the movie and the eventual saved-location reload.
-            gameFlagSetNibble(GAME_FLAG_STORY_CHAPTER, SHELTER_1F_BULWARK_DEPARTURE_CHAPTER);
+            gameFlagSetNibble(EVENT_FLAG_STORY_CHAPTER, SHELTER_1F_BULWARK_DEPARTURE_CHAPTER);
             taskSpawnFromTable(_gShelter1fBulwarkDepartureMovieTaskDescs, 0, 0, 0);
             /* fallthrough */
         case SHELTER_1F_BULWARK_DEPARTURE_BEFORE_MOVIE:

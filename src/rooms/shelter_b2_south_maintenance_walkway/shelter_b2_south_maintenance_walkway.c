@@ -10,7 +10,12 @@
 #include "gte.h"
 
 #include "actors/actor_04400.h"
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_02100.h"
+#include "actors/actor_02300.h"
+#include "actors/actor_02400.h"
+#include "actors/actor_05500.h"
+#include "actors/actor_207200.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/area.h"
@@ -96,22 +101,20 @@ static s32 _shelterB2SouthMaintenanceWalkwayIgnoreKeyItem(Task* task, s32 messag
 static s32 _shelterB2SouthMaintenanceWalkwayIgnoreCommand(Task* task, s32 messageId, s32 commandId, s32 commandArg);
 static s32 _shelterB2SouthMaintenanceWalkwayIgnoreAction(Task* task, s32 messageId, const DirectionActionRequest* request, s32 unusedArg);
 
-enum { SHELTER_B2_SOUTH_MAINTENANCE_WALKWAY_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Bodyless transition task spawned by this room's event gate at priority 32.
 ///
 /// Uses the latched request and destination to play CAP and optional sounds,
 /// then reload the session. Spawn payloads and metadata are unused. The gate
 /// reads the recipe synchronously; room snapshots and callback code must remain
 /// live through the deferred transition.
-static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+static TaskDesc _gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 /// Bodyless priority-32 recipe for this room's staged departure task.
 ///
 /// The gate reads index 0 synchronously with zero metadata and unused payloads.
 /// The deferred task borrows the latched event and destination through CAP,
 /// optional sound/fade and reload; retain them and the loaded room throughout.
-static TaskDesc _gShelterB2SouthMaintenanceWalkwayStagedEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventStagedTask, { .value = 0 } };
+static TaskDesc _gShelterB2SouthMaintenanceWalkwayStagedEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventStagedTask, { .value = 0 } };
 
 /// Room receiver routes for departures, key-item refusal and ignored actions/commands.
 ///
@@ -120,7 +123,7 @@ static TaskDesc _gShelterB2SouthMaintenanceWalkwayStagedEventTaskDesc = { { { TA
 /// this table and its callback code for the loaded room's lifetime.
 static TaskMessageEntry _gShelterB2SouthMaintenanceWalkwayRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _shelterB2SouthMaintenanceWalkwayResolveRoomEventMessage },
-    { SHELTER_B2_SOUTH_MAINTENANCE_WALKWAY_MESSAGE_USE_KEY_ITEM, _shelterB2SouthMaintenanceWalkwayIgnoreKeyItem },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _shelterB2SouthMaintenanceWalkwayIgnoreKeyItem },
     { DIRECTION_MESSAGE_ROOM_ACTION, _shelterB2SouthMaintenanceWalkwayIgnoreAction },
     { ROOM_MESSAGE_COMMAND, _shelterB2SouthMaintenanceWalkwayIgnoreCommand },
     { TASK_MESSAGE_TABLE_END, NULL },

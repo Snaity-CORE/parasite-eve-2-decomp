@@ -119,15 +119,15 @@ static void _muzzleFlashTask(Task* task)
             muzzleCoord->composeStamp = GRAPHICS_COORD_DIRTY;
             actorRenderComposeCoord(muzzleCoord);
 
-            work->period    = MUZZLE_FLASH_INITIAL_BRIGHTNESS;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->scale     = ((gRandomLcgState >> 16) & (MUZZLE_FLASH_ANGLE_QUARTER_TURN - 1)) + MUZZLE_FLASH_MIN_WORLD_SIZE;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->angle     = (gRandomLcgState >> 16) & MUZZLE_FLASH_ANGLE_MASK;
-            task->state     = MUZZLE_FLASH_STATE_FADE;
+            work->period = MUZZLE_FLASH_INITIAL_BRIGHTNESS;
+            RANDOM_LCG_ADVANCE();
+            work->scale = (RANDOM_LCG_DRAW() & (MUZZLE_FLASH_ANGLE_QUARTER_TURN - 1)) + MUZZLE_FLASH_MIN_WORLD_SIZE;
+            RANDOM_LCG_ADVANCE();
+            work->angle = RANDOM_LCG_DRAW() & MUZZLE_FLASH_ANGLE_MASK;
+            task->state = MUZZLE_FLASH_STATE_FADE;
             for (streakIndex = 0; streakIndex < ARRAY_SIZE(_gMuzzleFlashAngles); streakIndex++) {
-                gRandomLcgState                  = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                _gMuzzleFlashAngles[streakIndex] = ((streakIndex & (ARRAY_SIZE(_gMuzzleFlashAngles) - 1)) << MUZZLE_FLASH_QUADRANT_SHIFT) + ((gRandomLcgState >> 16) & (MUZZLE_FLASH_ANGLE_QUARTER_TURN - 1));
+                RANDOM_LCG_ADVANCE();
+                _gMuzzleFlashAngles[streakIndex] = ((streakIndex & (ARRAY_SIZE(_gMuzzleFlashAngles) - 1)) << MUZZLE_FLASH_QUADRANT_SHIFT) + (RANDOM_LCG_DRAW() & (MUZZLE_FLASH_ANGLE_QUARTER_TURN - 1));
             }
             break;
         case MUZZLE_FLASH_STATE_FADE:
@@ -229,7 +229,7 @@ static void _muzzleFlashDrawCore(const GfxCoord* muzzleCoord, s16 worldSize, s16
         quad->x2 = block->screenPos.vx - block->cornerDx;
         quad->y1 = block->screenPos.vy - block->cornerDy;
         quad->y2 = block->screenPos.vy + block->cornerDy;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                 quad);
     }
     SCRATCH_STACK_RELEASE_BLOCK(OverlaySpriteScratch);
@@ -324,7 +324,7 @@ static void _muzzleFlashDrawStreak(const GfxCoord* muzzleCoord, s16 directionAng
         setRGB1(quad, 0, 0, 0);
         setRGB2(quad, brightness >> 1, brightness >> 1, brightness);
         setRGB3(quad, 0, 0, 0);
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth),
                 quad);
         gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, block->depth);
     }

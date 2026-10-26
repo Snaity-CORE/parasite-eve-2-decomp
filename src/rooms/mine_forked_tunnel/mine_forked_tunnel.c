@@ -8,7 +8,11 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01500.h"
+#include "actors/actor_01600.h"
+#include "actors/actor_02500.h"
+#include "actors/actor_03700.h"
+#include "actors/actor_300700.h"
 
 #include "gameplay/actor_render.h"
 #include "gameplay/animation.h"
@@ -136,9 +140,6 @@ enum {
     MINE_FORKED_TUNNEL_MODEL_DRAW_HIDE_RELEASE = 2,
     MINE_FORKED_TUNNEL_MODEL_DRAW_SHOW_MANUAL  = 3,
 };
-
-/// Inventory request to use a collected key item in this room.
-enum { MINE_FORKED_TUNNEL_MESSAGE_USE_KEY_ITEM = 0x13F1 };
 
 /// Setup, motion/drawing and teardown handlers for the switch-controlled area object.
 ///
@@ -277,19 +278,18 @@ static SVECTOR _gMineForkedTunnelAreaObjectChildRotationPath[54] = {
 };
 
 enum {
-    MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_PARENT   = 0,
-    MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_CHILD    = 1,
-    MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_PRIORITY = 192,
+    MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_PARENT = 0,
+    MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_CHILD  = 1,
 };
 
 /// TMD recipes for the rolling area-object parent (0) and its tilting child (1).
 ///
-/// Both run at priority 192; there is no terminator. The child's spawnArg2
+/// Both run at priority `TASK_PRIORITY_CONTROL`; there is no terminator. The child's spawnArg2
 /// borrows the live parent task, whose coordinate and lighting it shares.
 /// Spawning copies a recipe; model resources and callbacks remain room-owned.
 static TaskDesc _gMineForkedTunnelAreaObjectTaskDescs[2] = {
-    [MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_PARENT] = { { { TASK_BODY_TMD, MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_PRIORITY } }, mineForkedTunnelAreaObjectTask, { .model = &gMineForkedTunnelModel01B48 } },
-    [MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_CHILD]  = { { { TASK_BODY_TMD, MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_PRIORITY } }, _mineForkedTunnelAreaObjectChildTask, { .model = &_gMineForkedTunnelModel03340 } },
+    [MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_PARENT] = { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, mineForkedTunnelAreaObjectTask, { .model = &gMineForkedTunnelModel01B48 } },
+    [MINE_FORKED_TUNNEL_AREA_OBJECT_TASK_CHILD]  = { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _mineForkedTunnelAreaObjectChildTask, { .model = &_gMineForkedTunnelModel03340 } },
 };
 
 /// Draw-mode and motion-command handlers for the rolling area object, then END.
@@ -391,7 +391,7 @@ static WorldCollisionGrid _gMineForkedTunnelAreaObjectCollisionBox = {
 /// while loaded. TASK_MESSAGE_TABLE_END returns zero for unsupported IDs.
 static const TaskMessageEntry _gMineForkedTunnelRoomMessages[5] SECTION(".data") = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _mineForkedTunnelResolveRoomVariant },
-    { MINE_FORKED_TUNNEL_MESSAGE_USE_KEY_ITEM, _mineForkedTunnelRejectKeyItemMessage },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _mineForkedTunnelRejectKeyItemMessage },
     { DIRECTION_MESSAGE_ROOM_ACTION, _mineForkedTunnelHandleSwitchAction },
     { ROOM_MESSAGE_COMMAND, _mineForkedTunnelBoardCommandMessage },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -465,11 +465,11 @@ static AnimationSet _gMineForkedTunnelAnimation05B1C = {
 
 /// Bodyless interaction tasks: slot 0 operates the switch, slot 1 prompts for the oak board.
 ///
-/// Both run at priority 192 with zero descriptor payloads. Spawning borrows
+/// Both run at priority `TASK_PRIORITY_CONTROL` with zero descriptor payloads. Spawning borrows
 /// callbacks from this room overlay; there is no terminator.
 static TaskDesc _gMineForkedTunnelInteractionTaskDescriptors[2] = {
-    { { { TASK_BODY_NONE, 192 } }, _mineForkedTunnelSwitchInteractionTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _mineForkedTunnelOakBoardPromptTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineForkedTunnelSwitchInteractionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _mineForkedTunnelOakBoardPromptTask, { .value = 0 } },
 };
 
 /// Player animation-bank extension for the switch scene, occupying set slots 47..50.
@@ -1754,9 +1754,7 @@ static void _mineForkedTunnelUpdateAreaObjectCollision(s32 switchUsed)
 /// `itemId` is the inventory's collected item ID; all four arguments are ignored.
 static s32 _mineForkedTunnelRejectKeyItemMessage(Task* unusedTask, s32 messageId, s32 itemId, s32 unused)
 {
-    enum { MINE_FORKED_TUNNEL_KEY_ITEM_REFUSED = 0 };
-
-    return MINE_FORKED_TUNNEL_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Accepts a tunnel room transition and resolves its Mine/Shelter destination variant.

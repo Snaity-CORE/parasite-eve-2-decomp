@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_323300.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -122,13 +122,12 @@ STATIC_ASSERT_SIZEOF(_Actor323300StrangerWork, 0x6B0);
 
 /// Tuning for the toilet-event woman's turn, sound and delayed buffer release.
 enum {
-    ACTOR_323300_WOMAN_VIEW2_ATTENUATION          = 40, // Signed sound-script attenuation; pan stays zero
-    ACTOR_323300_WOMAN_TURN_STEP                  = ACTOR_TRANSFORM_ANGLE_TURN / 64,
-    ACTOR_323300_WOMAN_TURN_START                 = 0,
-    ACTOR_323300_WOMAN_TURN_RATE                  = ANIMATION_RATE_ONE / 2,
-    ACTOR_323300_WOMAN_IDLE_RATE                  = 22, // Sixteenths of a normal-rate animation frame per tick
-    ACTOR_323300_WOMAN_BUFFER_FREE_DELAY          = 2,  // Active actor ticks before freeing on the next zero-count tick
-    ACTOR_323300_WOMAN_DRAW_SHOW_SKIP_AUTO_BUFFER = 3,
+    ACTOR_323300_WOMAN_VIEW2_ATTENUATION = 40, // Signed sound-script attenuation; pan stays zero
+    ACTOR_323300_WOMAN_TURN_STEP         = ACTOR_TRANSFORM_ANGLE_TURN / 64,
+    ACTOR_323300_WOMAN_TURN_START        = 0,
+    ACTOR_323300_WOMAN_TURN_RATE         = ANIMATION_RATE_ONE / 2,
+    ACTOR_323300_WOMAN_IDLE_RATE         = 22, // Sixteenths of a normal-rate animation frame per tick
+    ACTOR_323300_WOMAN_BUFFER_FREE_DELAY = 2,  // Active actor ticks before freeing on the next zero-count tick
 };
 
 static void _actor323300WomanSpawn(Task* task);
@@ -166,7 +165,7 @@ static void      _actor323300WomanTask(Task* task);
 static void      _actor323300StrangerTask(Task* task);
 
 static AnimationSet _gDryfieldToiletStrangerTransformClip;
-static AnimationSet _gAkropolisPatioBodyAnim01Clip;
+static AnimationSet _gStrangerReactClip;
 static AnimationSet _gStrangerOddAlertClip;
 
 #include "assets/characters/anmc_woman_1/body.inc"
@@ -190,18 +189,16 @@ static AnimationSet** const _gActorMotionAnimBanks19[1] SECTION(".data") = {
     _gActor323300WomanAnimSets,
 };
 
-enum { ACTOR_323300_ENCOUNTER_TASK_PRIORITY = 192 };
-
 TaskDesc gActor323300WomanStrangerTaskDescriptors[2] = {
     // 0: woman.
     {
-        .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = ACTOR_323300_ENCOUNTER_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = (TASK_BODY_TMD | TASK_DESC_SKIP_AUTO_MODEL_BUFFER), .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor323300WomanTask,
         .data     = { .model = &_gAnmcWoman1Body },
     },
     // 1: lesser stranger.
     {
-        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = ACTOR_323300_ENCOUNTER_TASK_PRIORITY } },
+        .header   = { .fields = { .flags = TASK_BODY_TMD, .priority = TASK_PRIORITY_CONTROL } },
         .callback = _actor323300StrangerTask,
         .data     = { .model = &_gStrangerLesserBody },
     },
@@ -480,7 +477,7 @@ static s32 _actor323300WomanSetModelDraw(Task* task, s32 messageId, s32 mode, s3
             work->freeCountdown = ACTOR_323300_WOMAN_BUFFER_FREE_DELAY;
             model->flags       |= TMD_OBJECT_SKIP_AUTO_BUFFER;
             break;
-        case ACTOR_323300_WOMAN_DRAW_SHOW_SKIP_AUTO_BUFFER:
+        case ACTOR_MESSAGE_DRAW_SHOW_SKIP_AUTO_BUFFER:
             model->flags &= ~TMD_OBJECT_SKIP_ACTIVE_DRAW;
             bodyFlags     = &work->body.flags;
             for (bodyIndex = 0; bodyIndex < 1; bodyIndex++) {

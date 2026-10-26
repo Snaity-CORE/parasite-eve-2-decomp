@@ -80,12 +80,12 @@ enum {
 
 u8       gCdCmdViewSeekPending = CD_COMMAND_VIEW_SEEK_CLEAR;
 TaskDesc gTaskBank8Descs[6]    = {
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_NONE, 0xC0 } }, taskKill },
-    { { { TASK_BODY_TMD, 0x70 } }, effectBurstModelPartTask },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_EFFECT } }, effectBurstModelPartTask },
 };
 
 void cdCmdEnqueueDisplayResource(s32 fileIdHundreds, s32 fileIndex, s32 loadProfile)
@@ -353,9 +353,7 @@ static void _loadUiDrawDiskSwapMessage(void)
 void midiApplyMusicVolume(u16 volumeOverride)
 {
     enum {
-        SOUND_OUTPUT_SAVED_STEREO   = 0,
-        MIDI_MUSIC_SAVED_VOLUME_OFF = 3,
-        MIDI_MUSIC_ALL_SEQUENCES    = 0
+        MIDI_MUSIC_ALL_SEQUENCES = 0
     };
     _SndMusicVolumeTable volumeTable;
 
@@ -376,7 +374,7 @@ void midiApplyMusicVolume(u16 volumeOverride)
         _midiSavedVolume = (table).volumes[(u8)gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.musicVolume];                                     \
         gMidiMusicVolume = _midiSavedVolume;                                                                                              \
         /* Change the gate before the selected gain; unmuting queues the cached gain. */                                                  \
-        if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.musicVolume == MIDI_MUSIC_SAVED_VOLUME_OFF) {                                        \
+        if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.musicVolume == MEMORY_CARD_OPTION_MUSIC_OFF) {                                       \
             midiMuteMusic();                                                                                                              \
         } else {                                                                                                                          \
             midiUnmuteMusic();                                                                                                            \
@@ -389,7 +387,7 @@ void midiApplyMusicVolume(u16 volumeOverride)
     }
 
     volumeTable = _gMidiSavedMusicVolumes;
-    if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.soundMode == SOUND_OUTPUT_SAVED_STEREO) {
+    if (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.soundMode == MEMORY_CARD_OPTION_SOUND_STEREO) {
         sndOutputSetStereo(SOUND_OUTPUT_STEREO);
     } else {
         sndOutputSetStereo(SOUND_OUTPUT_MONO);

@@ -10,7 +10,9 @@
 #include "common.h"
 #include "gte.h"
 
-#include "actors/task_tables.h"
+#include "actors/actor_01100.h"
+#include "actors/actor_146000.h"
+#include "actors/actor_400600.h"
 
 #include "gameplay/display.h"
 #include "gameplay/actor_render.h"
@@ -130,14 +132,8 @@ static s32 _dryfieldNightWaterHoleRejectKeyItemUse(Task* task, s32 messageId, s3
 static s32 _dryfieldNightWaterHoleCommandMessage(Task* task, s32 messageId, s32 commandId, s32 unusedSecondArg);
 static s32 _dryfieldNightWaterHoleRoomActionMessage(Task* unusedTask, s32 messageId, const DirectionActionRequest* request, s32 unusedSecondArg);
 
-enum {
-    DRYFIELD_NIGHT_WATER_HOLE_MESSAGE_USE_KEY_ITEM = 0x13F1,
-};
-
 // Room-local script choices, task priorities and logical-view extent.
 enum {
-    DRYFIELD_NIGHT_WATER_HOLE_DEPARTURE_TASK_PRIORITY      = 32,
-    DRYFIELD_NIGHT_WATER_HOLE_WATER_TASK_PRIORITY          = 192,
     DRYFIELD_NIGHT_WATER_HOLE_PLAYER_IDLE_CLIP             = 1,
     DRYFIELD_NIGHT_WATER_HOLE_CAP_ARRIVAL                  = 5,
     DRYFIELD_NIGHT_WATER_HOLE_CAP_LOGICAL_VIEW_IDS         = 1,
@@ -191,7 +187,7 @@ static AnimationSet _gDryfieldNightWaterHoleAnimation03004 = {
 /// Bodyless priority-32 controller for a resolved departure through the Shelter door.
 ///
 /// Borrows the staged `gRoomDeparture` until the departure has been issued.
-static TaskDesc _gDryfieldNightWaterHoleShelterDepartureTaskDesc = { { { TASK_BODY_NONE, DRYFIELD_NIGHT_WATER_HOLE_DEPARTURE_TASK_PRIORITY } }, roomEventDepartureTask, { .value = 0 } };
+static TaskDesc _gDryfieldNightWaterHoleShelterDepartureTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventDepartureTask, { .value = 0 } };
 
 /// Room-transition, key-item, trigger-action and Shelter-door message dispatch.
 ///
@@ -199,7 +195,7 @@ static TaskDesc _gDryfieldNightWaterHoleShelterDepartureTaskDesc = { { { TASK_BO
 /// rejects unsupported messages; the four live handlers consume their payloads synchronously.
 static TaskMessageEntry _gDryfieldNightWaterHoleRoomMessages[5] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, _roomVariantResolveWaterHole },
-    { DRYFIELD_NIGHT_WATER_HOLE_MESSAGE_USE_KEY_ITEM, _dryfieldNightWaterHoleRejectKeyItemUse },
+    { ROOM_MESSAGE_USE_KEY_ITEM, _dryfieldNightWaterHoleRejectKeyItemUse },
     { DIRECTION_MESSAGE_ROOM_ACTION, _dryfieldNightWaterHoleRoomActionMessage },
     { ROOM_MESSAGE_COMMAND, _dryfieldNightWaterHoleCommandMessage },
     { TASK_MESSAGE_TABLE_END, NULL },
@@ -304,7 +300,7 @@ static EvsCommand _gDryfieldNightWaterHoleArrival1Script[15] = {
 };
 
 /// Bodyless priority-192 water drawer, spawned while the Shelter route is closed.
-static TaskDesc _gDryfieldNightWaterHoleWaterTaskDesc = { { { TASK_BODY_NONE, DRYFIELD_NIGHT_WATER_HOLE_WATER_TASK_PRIORITY } }, _waterHoleWaterTask, { .value = 0 } };
+static TaskDesc _gDryfieldNightWaterHoleWaterTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _waterHoleWaterTask, { .value = 0 } };
 
 /// Two world-space water patches at the shared session height, followed by a Y=-1 sentinel.
 ///
@@ -1545,7 +1541,7 @@ static void _dryfieldNightWaterHoleInitializeRoom(Task* task)
     }
     if (gGameSession->location.variant == DRYFIELD_NIGHT_WATER_HOLE_ENDING_VARIANT && gameGetTaskSlot(GAME_TASK_SLOT_COMPANION) != 0 && gameFlagGetNibble(GAME_FLAG_0CF) == 0) {
         gameFlagSetNibble(GAME_FLAG_0CF, DRYFIELD_NIGHT_WATER_HOLE_ENDING_STARTED);
-        gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_WATER_HOLE_ENDING_OBJECTIVE);
+        gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, DRYFIELD_NIGHT_WATER_HOLE_ENDING_OBJECTIVE);
         taskSpawnFromTable(gActor146000WaterHoleSceneTasks, DRYFIELD_NIGHT_WATER_HOLE_ENDING_TASK_INDEX, 0, 0);
     }
     task->state = task->state + 1;
@@ -1560,14 +1556,12 @@ static const TaskFuncTable3 _gDryfieldNightWaterHoleRoomStateHandlers = {
 
 /// Refuses every key-item use in this room without consuming the item.
 ///
-/// Message `DRYFIELD_NIGHT_WATER_HOLE_MESSAGE_USE_KEY_ITEM` carries the inventory
+/// Message `ROOM_MESSAGE_USE_KEY_ITEM` carries the inventory
 /// item ID in `itemId`; the receiver and second argument are unused. Returns
 /// zero so the item menu displays its refusal notice.
 static s32 _dryfieldNightWaterHoleRejectKeyItemUse(Task* task, s32 messageId, s32 itemId, s32 unusedSecondArg)
 {
-    enum { DRYFIELD_NIGHT_WATER_HOLE_KEY_ITEM_REFUSED = 0 };
-
-    return DRYFIELD_NIGHT_WATER_HOLE_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 #include "../../shared/water_hole_door_msg.inc.c"
@@ -1735,12 +1729,12 @@ void dryfieldNightWaterHoleSplashAndLightShaftsTask(Task* task)
         surfaceCoord.coord.t[1]   = gGameSession->waterY;                                                                                                                \
         surfaceCoord.composeStamp = GRAPHICS_COORD_DIRTY;                                                                                                                \
         actorRenderComposeCoord(&surfaceCoord);                                                                                                                          \
-        randomRoll = (gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT);                                                                 \
+        randomRoll = (RANDOM_LCG_ADVANCE());                                                                                                                             \
         if ((s32)((randomRoll >> 16) & DRYFIELD_NIGHT_WATER_HOLE_SPLASH_ROLL_MASK) < work->angle) {                                                                      \
             effectSpawn(gRoomEffectWaterRippleId, &surfaceCoord, DRYFIELD_NIGHT_WATER_HOLE_RIPPLE_HALF_SIDE, 0);                                                         \
         }                                                                                                                                                                \
         work->angle -= DRYFIELD_NIGHT_WATER_HOLE_RIPPLE_ODDS_BIAS;                                                                                                       \
-        randomRoll   = (gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT);                                                               \
+        randomRoll   = (RANDOM_LCG_ADVANCE());                                                                                                                           \
         if ((s32)((randomRoll >> 16) & DRYFIELD_NIGHT_WATER_HOLE_SPLASH_ROLL_MASK) < work->angle) {                                                                      \
             effectSpawn(gRoomEffectWaterSprayId, &surfaceCoord, DRYFIELD_NIGHT_WATER_HOLE_SPRAY_SPAWN_ARG, 0);                                                           \
         }                                                                                                                                                                \

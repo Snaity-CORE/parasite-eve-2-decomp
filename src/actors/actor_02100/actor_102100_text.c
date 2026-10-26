@@ -367,11 +367,11 @@ static const EnemyTaskFuncTable3 _gActor02100TaskPhases = { {
 /// The same rows supply beam and gun strike keys. Powers are unscaled damage;
 /// reactions are the player reaction codes defined by `DamageAttack`.
 static DamageAttack _gActor02100WeaponAttacks[ACTOR_02100_WEAPON_COUNT] = {
-    { 15, 7 },
-    { 25, 7 },
+    { 15, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
+    { 25, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
     { 12, 2 },
     { 12, 10 },
-    { 15, 7 },
+    { 15, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
 };
 
 /// Combat parameters shared by the live Watchers in this loaded package.
@@ -411,7 +411,7 @@ static _Actor02100BeamEdges _gActor02100BeamEdges[ACTOR_02100_WEAPON_COUNT][ACTO
 /// A received hit bypasses the ordinary player range test.
 static s16 _gActor02100SightRanges[8] = { 3000, 3500, 4000, 4500, 5000, 6000, 7000, 8000 };
 
-TaskDesc gActor02100WatcherTaskDesc = { { { TASK_BODY_TMD, 96 } }, _actor02100Task, { .model = &_gWatcherBody } };
+TaskDesc gActor02100WatcherTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor02100Task, { .model = &_gWatcherBody } };
 
 /// Corner indices for the two fading edge quads of each beam segment.
 ///
@@ -1680,7 +1680,7 @@ static void _actor02100TickGunAttack(Task* task)
             scratch->muzzleOffset.vx = 0;
             scratch->muzzleOffset.vy = 0;
             scratch->muzzleOffset.vz = ACTOR_02100_MUZZLE_OFFSET;
-            randomState              = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
+            randomState              = RANDOM_LCG_NEXT(gRandomLcgState);
             flareSize                = ((randomState >> 16) & ACTOR_02100_GUN_FLARE_SIZE_JITTER_MASK) | ACTOR_02100_GUN_FLARE_SIZE_BASE;
             gRandomLcgState          = randomState;
             effectSpawn(EFFECT_MUZZLE_FLARE, rootCoord, flareSize, &scratch->muzzleOffset);

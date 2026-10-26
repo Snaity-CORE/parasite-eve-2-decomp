@@ -1,4 +1,4 @@
-#include "actors/task_tables.h"
+#include "actors/actor_123200.h"
 
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
@@ -161,14 +161,12 @@ static s32 _actor123200ApplyCommand(Task* task, s32 messageId, const ActorComman
 
 #include "../../shared/actor/actor_contacts.h"
 
-enum { ACTOR_123200_ATTACK_REACTION_SPARK_AND_PUFFS = 7 };
-
 /// Bone Suckler attack row 0: base damage 24 with spark and puff effects.
 ///
 /// The enemy parameters borrow this single row for packed contact keys.
 /// This player hit reaction applies no status effect.
 static DamageAttack _gActor123200Attacks[1] = {
-    { 24, ACTOR_123200_ATTACK_REACTION_SPARK_AND_PUFFS },
+    { 24, GAME_ACTOR_REACTION_SPARK_AND_PUFFS },
 };
 
 /// Bone Suckler kind parameters borrowed by the staged motel-room actor.
@@ -361,7 +359,7 @@ static TaskMessageEntry _gActor123200Messages[4] = {
     { TASK_MESSAGE_TABLE_END, NULL },
 };
 
-TaskDesc gActor123200BoneSucklerTaskDesc = { { { TASK_BODY_TMD, 96 } }, _actor123200Task, { .model = &_gSucklerBoneBody } };
+TaskDesc gActor123200BoneSucklerTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _actor123200Task, { .model = &_gSucklerBoneBody } };
 
 static SVECTOR ActorContact_ScratchPosition;
 

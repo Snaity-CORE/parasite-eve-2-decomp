@@ -6,7 +6,7 @@
 #include "common.h"
 
 #include "actors/actor_142900.h"
-#include "actors/task_tables.h"
+#include "actors/actor_142900.h"
 
 #include "gameplay/companion_load.h"
 #include "gameplay/actor_render.h"
@@ -88,9 +88,6 @@ static void _shelterB2ElevatorDoorLeafTask(Task* task);
 static void _shelterB2ElevatorRoomInitState(Task* task);
 static void _shelterB2ElevatorExitTask(Task* task);
 
-/// Key-item use request from the inventory menu; this room always refuses it.
-enum { SHELTER_B2_ELEVATOR_MESSAGE_USE_KEY_ITEM = 0x13F1 };
-
 /// Signed travel requests stored in a door leaf's first spawn argument.
 enum {
     SHELTER_B2_ELEVATOR_DOOR_CLOSE = -1,
@@ -103,12 +100,6 @@ enum {
     SHELTER_B2_ELEVATOR_TASK_NEGATIVE_Z_LEAF = 0,
     SHELTER_B2_ELEVATOR_TASK_POSITIVE_Z_LEAF = 1,
     SHELTER_B2_ELEVATOR_TASK_EXIT            = 2,
-};
-
-/// Execution-list priorities for the room's model leaves and exit controller.
-enum {
-    SHELTER_B2_ELEVATOR_DOOR_LEAF_PRIORITY = 192,
-    SHELTER_B2_ELEVATOR_EXIT_PRIORITY      = 32,
 };
 
 /// View slots used by the arrival endpoint and the two directed boundaries.
@@ -201,9 +192,9 @@ static TmdSource _gShelterB2ElevatorModel00884 = {
 /// geometry for their task lifetimes. The bodyless exit controller has priority
 /// 32, ahead of the priority-192 leaves on the ascending execution list.
 static TaskDesc _gShelterB2ElevatorTaskDescriptors[4] = {
-    { { { TASK_BODY_TMD, SHELTER_B2_ELEVATOR_DOOR_LEAF_PRIORITY } }, _shelterB2ElevatorDoorLeafTask, { .model = &_gShelterB2ElevatorModel00688 } },
-    { { { TASK_BODY_TMD, SHELTER_B2_ELEVATOR_DOOR_LEAF_PRIORITY } }, _shelterB2ElevatorDoorLeafTask, { .model = &_gShelterB2ElevatorModel00884 } },
-    { { { TASK_BODY_NONE, SHELTER_B2_ELEVATOR_EXIT_PRIORITY } }, _shelterB2ElevatorExitTask, { .value = 0 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _shelterB2ElevatorDoorLeafTask, { .model = &_gShelterB2ElevatorModel00688 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _shelterB2ElevatorDoorLeafTask, { .model = &_gShelterB2ElevatorModel00884 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _shelterB2ElevatorExitTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -498,7 +489,7 @@ static void _shelterB2ElevatorRoomInitState(Task* task)
         if (gameFlagGetNibble(GAME_FLAG_0CF) == 0) {
             gameFlagSetNibble(GAME_FLAG_0CF, SHELTER_B2_ELEVATOR_FIRST_VISIT_RECORDED);
             evsStartScriptWithSkip(gActor142900ElevatorFirstVisitScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor142900ElevatorFirstVisitSkipScript);
-            gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_B2_ELEVATOR_OBJECTIVE_AFTER_ENTRY);
+            gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_B2_ELEVATOR_OBJECTIVE_AFTER_ENTRY);
         } else {
             gGameSession->hideHud    = SHELTER_B2_ELEVATOR_HUD_HIDDEN;
             gGameSession->eventState = SHELTER_B2_ELEVATOR_EVENT_ACTIVE;
@@ -696,9 +687,7 @@ static void _shelterB2ElevatorExitTask(Task* task)
 /// Refuses every inventory key-item request, returning 0 without consuming it.
 static s32 _shelterB2ElevatorRejectKeyItemMessage(Task* task, s32 messageId, s32 itemId, s32 unusedArg)
 {
-    enum { SHELTER_B2_ELEVATOR_KEY_ITEM_REFUSED = 0 };
-
-    return SHELTER_B2_ELEVATOR_KEY_ITEM_REFUSED;
+    return ROOM_KEY_ITEM_USE_REFUSED;
 }
 
 /// Accepts a room transition after resolving its destination from Shelter progress.

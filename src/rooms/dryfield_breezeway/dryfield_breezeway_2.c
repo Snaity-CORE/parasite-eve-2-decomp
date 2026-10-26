@@ -64,6 +64,8 @@
 
 #include "rooms/room_common.h"
 
+#include "assets/engine/animation/player_schema.h"
+
 /// Selects the private hotspot test used by the key-item cursor and line tip.
 ///
 /// Bind a function identifier with signature
@@ -289,7 +291,7 @@ static s32  _dryfieldBreezewayUseBottlecapMagnet(Task* task, s32 unusedMessageId
 static void _dryfieldBreezewayActionPromptTask(Task* task);
 static void _dryfieldBreezewayKeyItemEventTask(Task* task);
 
-TaskDesc gRoomEventTaskDesc = { { { TASK_BODY_NONE, ROOM_EVENT_TASK_PRIORITY } }, roomEventTask, { .value = 0 } };
+TaskDesc gRoomEventTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, roomEventTask, { .value = 0 } };
 
 TaskMessageEntry gDryfieldBreezewayRoomMessageTable[6] = {
     { ROOM_EVENT_MESSAGE_RESOLVE, dryfieldBreezewayResolveRoomEventMessage },
@@ -301,8 +303,8 @@ TaskMessageEntry gDryfieldBreezewayRoomMessageTable[6] = {
 };
 
 TaskDesc gDryfieldBreezewayInteractionTaskDescs[2] = {
-    { { { TASK_BODY_NONE, 32 } }, dryfieldBreezewayKeyItemSessionTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 32 } }, dryfieldBreezewayFactoryDoorDialogueTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, dryfieldBreezewayKeyItemSessionTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, dryfieldBreezewayFactoryDoorDialogueTask, { .value = 0 } },
 };
 
 /// Staging mark shared by the opening encounter's cutscene and combat chasers.
@@ -364,14 +366,14 @@ static EvsCommand _gDryfieldBreezewayFirstEventSkipScript[12] = {
 };
 
 TaskDesc gDryfieldBreezewayFirstEventTaskDescs[2] = {
-    { { { TASK_BODY_NONE, 192 } }, _dryfieldBreezewayInitFirstEventTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _dryfieldBreezewayFirstEventTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldBreezewayInitFirstEventTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldBreezewayFirstEventTask, { .value = 0 } },
 };
 
 /// Unused bodyless task recipe that retires on its first update at priority 192.
 ///
 /// No room code spawns this descriptor.
-static TaskDesc _gDryfieldBreezewayImmediateExitTaskDesc = { { { TASK_BODY_NONE, 192 } }, taskKill, { .value = 0 } };
+static TaskDesc _gDryfieldBreezewayImmediateExitTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, taskKill, { .value = 0 } };
 
 static TmdBone _gDryfieldBreezewayModel04E8CSkeleton[1] = {
 #include "assets/dryfield_breezeway_model_04E8C_skeleton.inc"
@@ -409,7 +411,7 @@ static TmdSource _gDryfieldBreezewayModel04E8C = {
 ///
 /// Runs at priority 192. The event passes first payload 1 to select port 0
 /// and retains the child handle until event exit; the second payload is unused.
-static TaskDesc _gDryfieldBreezewayKeyItemCursorTaskDesc = { { { TASK_BODY_NONE, 192 } }, _dryfieldBreezewayActionPromptTask, { .value = 0 } };
+static TaskDesc _gDryfieldBreezewayKeyItemCursorTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _dryfieldBreezewayActionPromptTask, { .value = 0 } };
 
 /// Key-item-use receiver installed on the TMD event that owns the hanging line.
 ///
@@ -443,7 +445,7 @@ static ActionPromptHotspot _gDryfieldBreezewayKeyItemModelHotspots[2] = {
     { 0, 0, 0, 0, ACTION_PROMPT_HOTSPOT_END, 0, 0 },
 };
 
-TaskDesc gDryfieldBreezewayKeyItemModelTaskDesc = { { { TASK_BODY_TMD, 192 } }, _dryfieldBreezewayKeyItemEventTask, { .model = &_gDryfieldBreezewayModel04E8C } };
+TaskDesc gDryfieldBreezewayKeyItemModelTaskDesc = { { { TASK_BODY_TMD, TASK_PRIORITY_CONTROL } }, _dryfieldBreezewayKeyItemEventTask, { .model = &_gDryfieldBreezewayModel04E8C } };
 
 /// Packed eight-bit indexed artwork for the hanging line, 16 by 16 texels.
 ///
@@ -492,16 +494,13 @@ static inline void _dryfieldBreezewayBroadcastActorCommand(u16 command)
 /// the animation resources remain borrowed through playback.
 static inline void _dryfieldBreezewayPlayPlayerAnimation(u16 animationId, u16 blend, u16 blendFrames)
 {
-    enum { DRYFIELD_BREEZEWAY_PLAYER_PRIMARY_CHARACTER    = 1,
-           DRYFIELD_BREEZEWAY_PRIMARY_WEAPON_BANK_FIRST   = 1,
-           DRYFIELD_BREEZEWAY_OTHER_CHARACTER_BANK_OFFSET = 0x22 };
 
     AnimationPlayRequest request;
     s32                  weapon;
 
     // Character 1 selects the equipped-weapon bank; the retained other-character offset is unproven.
     weapon                       = gPlayerStatus.weapon;
-    request.source.index         = (gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.characterId == DRYFIELD_BREEZEWAY_PLAYER_PRIMARY_CHARACTER) ? weapon + DRYFIELD_BREEZEWAY_PRIMARY_WEAPON_BANK_FIRST : weapon + DRYFIELD_BREEZEWAY_OTHER_CHARACTER_BANK_OFFSET;
+    request.source.index         = PLAYER_ACTOR_SCENE_WEAPON_BANK(weapon);
     request.animationId          = animationId;
     request.blend                = blend;
     request.blendFrames          = blendFrames;
@@ -541,7 +540,7 @@ static void _dryfieldBreezewayProcessFirstEventAction(Task* task)
             gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.view = viewFindLogicalIndex(DRYFIELD_BREEZEWAY_FIRST_EVENT_STAGING_VIEW);
             break;
         case DRYFIELD_BREEZEWAY_FIRST_EVENT_ACTION_PLAY_ANIMATION_9:
-            _dryfieldBreezewayPlayPlayerAnimation(DRYFIELD_BREEZEWAY_FIRST_EVENT_PLAYER_ANIMATION, ANIMATION_BLEND_INTERPOLATE, 10);
+            _dryfieldBreezewayPlayPlayerAnimation(PLAYER_ANIMATION_AIM_IDLE, ANIMATION_BLEND_INTERPOLATE, 10);
             break;
     }
     work->action = DRYFIELD_BREEZEWAY_FIRST_EVENT_ACTION_NONE;
@@ -617,7 +616,7 @@ static void _dryfieldBreezewayFirstEventTask(Task* task)
             }
             // Bind the actors before scripts can send their staging requests.
             _dryfieldBreezewayInitializeFirstEventWork(task);
-            _dryfieldBreezewayPlayPlayerAnimation(1, ANIMATION_BLEND_INTERPOLATE, 10);
+            _dryfieldBreezewayPlayPlayerAnimation(PLAYER_ANIMATION_IDLE, ANIMATION_BLEND_INTERPOLATE, 10);
             evsStartScriptWithSkip(_gDryfieldBreezewayFirstEventScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, _gDryfieldBreezewayFirstEventSkipScript);
             task->state += 1;
             break;
@@ -683,7 +682,7 @@ static void _dryfieldBreezewayRequestFirstEventAction(s16 action)
 /// The player, loaded animation bank and published first-event task must be live.
 static void _dryfieldBreezewayStageFirstEventSkip(void)
 {
-    _dryfieldBreezewayPlayPlayerAnimation(DRYFIELD_BREEZEWAY_FIRST_EVENT_PLAYER_ANIMATION, ANIMATION_BLEND_RESET, 0);
+    _dryfieldBreezewayPlayPlayerAnimation(PLAYER_ANIMATION_AIM_IDLE, ANIMATION_BLEND_RESET, 0);
     _dryfieldBreezewayStartFirstEventPursuit();
 }
 
@@ -1374,29 +1373,29 @@ void dryfieldBreezewayAmbientEffectsTask(Task* task)
     if (gameFlagGetNibble(GAME_FLAG_BREEZEWAY_FIRST_EVENT_SEEN) == 0) {
         // Offsets use this task's placement frame; work->move stages each spawn position.
         if (gGameSession->location.view == DRYFIELD_BREEZEWAY_PARTICLE_APPROACH_VIEW) {
-            spawnChance     = (playerCoord->coord.t[0] - 5856) >> 7;
-            work->move.vx   = 12000;
-            work->move.vy   = -3000;
-            work->move.vz   = 3000;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            if ((u16)((gRandomLcgState >> 16) % 100) < spawnChance) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, (s32)(gRandomLcgState >> 16) % spawnChance + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
+            spawnChance   = (playerCoord->coord.t[0] - 5856) >> 7;
+            work->move.vx = 12000;
+            work->move.vy = -3000;
+            work->move.vz = 3000;
+            RANDOM_LCG_ADVANCE();
+            if ((u16)(RANDOM_LCG_DRAW() % 100) < spawnChance) {
+                RANDOM_LCG_ADVANCE();
+                effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, (s32)RANDOM_LCG_DRAW() % spawnChance + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
             }
             if (work->step == DRYFIELD_BREEZEWAY_SOUND_NOT_STARTED) {
                 sndEvtRequestScriptStart(SOUND_BREEZEWAY_EFFECT_LOOP, 0, 0);
                 work->step = DRYFIELD_BREEZEWAY_SOUND_LOOP_STARTED;
             }
         } else if (gGameSession->location.view == DRYFIELD_BREEZEWAY_PARTICLE_NEAR_VIEW) {
-            work->scale     = DRYFIELD_BREEZEWAY_PARTICLE_END_TICKS;
-            work->move.vx   = playerCoord->coord.t[0] + 0x100;
-            work->move.vy   = -3000;
-            work->move.vz   = 3000;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, ((gRandomLcgState >> 16) & 0x7F) + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
+            work->scale   = DRYFIELD_BREEZEWAY_PARTICLE_END_TICKS;
+            work->move.vx = playerCoord->coord.t[0] + 0x100;
+            work->move.vy = -3000;
+            work->move.vz = 3000;
+            RANDOM_LCG_ADVANCE();
+            effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, (RANDOM_LCG_DRAW() & 0x7F) + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
             if (work->step < DRYFIELD_BREEZEWAY_SOUND_BURST_STARTED) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                if (!((gRandomLcgState >> 16) & 3)) {
+                RANDOM_LCG_ADVANCE();
+                if (!(RANDOM_LCG_DRAW() & 3)) {
                     panOffset = (s8)worldCoordGetOriginAudioPan(coord);
                     sndEvtRequestScriptStart(SOUND_BREEZEWAY_EFFECT_BURST, panOffset, (s8)worldCoordGetOriginAudioDepth(coord));
                     work->step = DRYFIELD_BREEZEWAY_SOUND_BURST_STARTED;
@@ -1411,16 +1410,16 @@ void dryfieldBreezewayAmbientEffectsTask(Task* task)
         }
         if (work->scale != 0) {
             work->scale--;
-            work->move.vx   = 16000;
-            work->move.vy   = -3000;
-            work->move.vz   = 2750;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, ((gRandomLcgState >> 16) & 0xFF) + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
-            work->move.vx   = 17000;
-            work->move.vy   = -3000;
-            work->move.vz   = 4000;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, ((gRandomLcgState >> 16) & 0xFF) + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
+            work->move.vx = 16000;
+            work->move.vy = -3000;
+            work->move.vz = 2750;
+            RANDOM_LCG_ADVANCE();
+            effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, (RANDOM_LCG_DRAW() & 0xFF) + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
+            work->move.vx = 17000;
+            work->move.vy = -3000;
+            work->move.vz = 4000;
+            RANDOM_LCG_ADVANCE();
+            effectSpawn(EFFECT_DRYFIELD_BREEZEWAY_BOUNCING_PARTICLE, coord, (RANDOM_LCG_DRAW() & 0xFF) + DRYFIELD_BREEZEWAY_PARTICLE_MIN_SIZE, &work->move);
         }
     }
 }
@@ -1517,7 +1516,7 @@ static void _dryfieldBreezewayDrawRedDiamondGlow(GfxCoord* coord, const SVECTOR*
             quad->y0 = quad->y2 = quad->y3 = block->screenPos.vy;
             verticalSide                   = partIndex << 1;
             quad->y1                       = (block->screenPos.vy - block->halfExtent) + block->halfExtent * verticalSide;
-            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->otz << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)),
+            addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->otz),
                     quad);
             gpuSetPrimitiveBlendMode(quad, GPU_BLEND_ADD, block->otz);
             partIndex++;
@@ -1644,23 +1643,23 @@ void dryfieldBreezewayBouncingParticleTask(Task* task)
         case DRYFIELD_BREEZEWAY_PARTICLE_INITIALIZE:
             // Choose independent texture timing, spin and a Q12 launch direction.
             gfxSetRotIdentity(&coord->coord);
-            work->pos.vx    = (u16)task->spawnArg1.value & DRYFIELD_BREEZEWAY_PARTICLE_SIZE_MASK;
-            work->scale     = DRYFIELD_BREEZEWAY_PARTICLE_INITIAL_SPEED;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vy    = (gRandomLcgState >> 16) & DRYFIELD_BREEZEWAY_PARTICLE_FRAME_PERIOD_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->index     = (gRandomLcgState >> 16) & (DRYFIELD_BREEZEWAY_PARTICLE_FRAME_COUNT - 1);
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->pos.vz    = (gRandomLcgState >> 16) & ACTOR_TRANSFORM_ANGLE_MASK;
-            gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-            work->period    = 0x200 - ((gRandomLcgState >> 16) & 0x3FF);
+            work->pos.vx = (u16)task->spawnArg1.value & DRYFIELD_BREEZEWAY_PARTICLE_SIZE_MASK;
+            work->scale  = DRYFIELD_BREEZEWAY_PARTICLE_INITIAL_SPEED;
+            RANDOM_LCG_ADVANCE();
+            work->pos.vy = RANDOM_LCG_DRAW() & DRYFIELD_BREEZEWAY_PARTICLE_FRAME_PERIOD_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->index = RANDOM_LCG_DRAW() & (DRYFIELD_BREEZEWAY_PARTICLE_FRAME_COUNT - 1);
+            RANDOM_LCG_ADVANCE();
+            work->pos.vz = RANDOM_LCG_DRAW() & ACTOR_TRANSFORM_ANGLE_MASK;
+            RANDOM_LCG_ADVANCE();
+            work->period = 0x200 - (RANDOM_LCG_DRAW() & 0x3FF);
             if ((work->move.vx | work->move.vy | work->move.vz) == 0) {
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vx   = 0x40 - ((gRandomLcgState >> 16) & 0x7F);
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vy   = ((gRandomLcgState >> 16) & 0x3F) + 0x40;
-                gRandomLcgState = gRandomLcgState * RANDOM_LCG_MULTIPLIER + RANDOM_LCG_INCREMENT;
-                work->move.vz   = 0x40 - ((gRandomLcgState >> 16) & 0x7F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vx = 0x40 - (RANDOM_LCG_DRAW() & 0x7F);
+                RANDOM_LCG_ADVANCE();
+                work->move.vy = (RANDOM_LCG_DRAW() & 0x3F) + 0x40;
+                RANDOM_LCG_ADVANCE();
+                work->move.vz = 0x40 - (RANDOM_LCG_DRAW() & 0x7F);
                 gte_SetRotMatrix(&work->parent->coord);
                 gte_ldv0(&work->move);
                 gte_rtv0();
@@ -1791,7 +1790,7 @@ static void _dryfieldBreezewayDrawBouncingParticle(Task* task, const u8 rgb[3])
         sprite->x2             = block->screenX - block->extent.corner.x;
         sprite->y1             = block->screenY - block->extent.corner.y;
         sprite->y2             = block->screenY + block->extent.corner.y;
-        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_BYTE_OFFSET(((((u32)block->depth << gDisplayState.otDepthShift) >> 2) & GPU_ORDERING_TABLE_DEPTH_BYTE_MASK)), sprite);
+        addPrim(GPU_ORDERING_TABLE_ENTRY_AT_DEPTH(block->depth), sprite);
     }
     SCRATCH_STACK_RELEASE_BLOCK(EffectShapeScratch);
 }

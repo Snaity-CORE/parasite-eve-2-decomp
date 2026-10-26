@@ -10,7 +10,6 @@
 
 #include "actors/actor_143400.h"
 #include "actors/actor_443500.h"
-#include "actors/task_tables.h"
 
 #include "gameplay/action_prompt.h"
 #include "gameplay/area.h"
@@ -60,8 +59,6 @@
 #include "mapui/map_shelter.h"
 
 #include "overlay.h"
-
-#include "rooms/akropolis_square.h"
 
 #include "rooms/room.h"
 
@@ -152,8 +149,8 @@ static void _shelterR47AdvanceTerminalTour(Task* unusedTask);
 /// Both run at priority 32. Keep callback code and the scene record loaded
 /// until completion; spawning copies the recipe and retains no table pointer.
 static TaskDesc _gRoomCutsceneTaskDescs[ROOM_CUTSCENE_TASK_DESCRIPTOR_COUNT] = {
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, ROOM_CUTSCENE_TASK_PRIORITY } }, _roomCutsceneSoundTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_SCENE } }, _roomCutsceneSoundTask, { .value = 0 } },
     { { { TASK_DESC_END, 0 } }, NULL, { .model = NULL } },
 };
 
@@ -193,16 +190,15 @@ enum {
 /// the ambience task persists with the room. CAP playback takes its command
 /// in spawnArg1 and releases after completion. Keep room code/resources loaded.
 static TaskDesc _gShelterR47AuxiliaryTaskDescs[3] = {
-    { { { TASK_BODY_NONE, 192 } }, _shelterR47RestoreActorsAfterTerminalTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _shelterR47AmbienceTask, { .value = 0 } },
-    { { { TASK_BODY_NONE, 192 } }, _shelterR47PlayCapCommandTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterR47RestoreActorsAfterTerminalTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterR47AmbienceTask, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterR47PlayCapCommandTask, { .value = 0 } },
 };
 
 enum {
-    SHELTER_R47_ENTRY_SCENE_8_TASK_INDEX  = 0,
-    SHELTER_R47_ENTRY_SCENE_7_TASK_INDEX  = 1,
-    SHELTER_R47_ENTRY_SCENE_TASK_COUNT    = 2,
-    SHELTER_R47_ENTRY_SCENE_TASK_PRIORITY = 192,
+    SHELTER_R47_ENTRY_SCENE_8_TASK_INDEX = 0,
+    SHELTER_R47_ENTRY_SCENE_7_TASK_INDEX = 1,
+    SHELTER_R47_ENTRY_SCENE_TASK_COUNT   = 2,
 };
 
 /// Two bodyless priority-192 recipes for entry CAP scenes 8 and 7, without a terminator.
@@ -212,8 +208,8 @@ enum {
 /// synchronously; player control is held beforehand and CAP resources remain
 /// borrowed until the scene finishes and restores actors.
 static TaskDesc _gShelterR47EntrySceneTaskDescs[SHELTER_R47_ENTRY_SCENE_TASK_COUNT] = {
-    { { { TASK_BODY_NONE, SHELTER_R47_ENTRY_SCENE_TASK_PRIORITY } }, _shelterR47PlayEntryScene8Task, { .value = 0 } },
-    { { { TASK_BODY_NONE, SHELTER_R47_ENTRY_SCENE_TASK_PRIORITY } }, _shelterR47PlayEntryScene7Task, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterR47PlayEntryScene8Task, { .value = 0 } },
+    { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, _shelterR47PlayEntryScene7Task, { .value = 0 } },
 };
 
 /// Initial logical camera views for the five console rows.
@@ -261,14 +257,12 @@ static ActionPromptHotspot _gShelterR47ConsoleHotspots[9] = {
     { 0, 0, 0, 0, ACTION_PROMPT_HOTSPOT_END, 0, 0 },
 };
 
-enum { SHELTER_R47_CONSOLE_TASK_PRIORITY = 192 };
-
 /// Bodyless priority-192 recipe for the R47 console, with zero metadata.
 ///
 /// SpawnArg1 selects the guided tour (1) or ordinary console (0); spawnArg2
 /// is unused. Spawning reads this single recipe synchronously. Console code
 /// and room resources must remain loaded until the console task ends.
-static TaskDesc _gShelterR47ConsoleTaskDesc = { { { TASK_BODY_NONE, SHELTER_R47_CONSOLE_TASK_PRIORITY } }, shelterR47ConsoleTask, { .value = 0 } };
+static TaskDesc _gShelterR47ConsoleTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterR47ConsoleTask, { .value = 0 } };
 
 /// Console header: one 72x24-pixel piece followed by the list terminator.
 static _ShelterR47SpritePart _gShelterR47ConsoleHeaderParts[2] = {
@@ -446,7 +440,7 @@ enum { SHELTER_R47_CONSOLE_PROMPT_PORT_0 = 1 };
 /// Console setup spawns the sole entry with spawnArg1 = 1 and spawnArg2 = 0,
 /// retains the child in its second payload word and releases it on console
 /// exit. Spawning copies the recipe; keep console code/resources loaded.
-static TaskDesc _gShelterR47ConsolePromptTaskDesc = { { { TASK_BODY_NONE, 192 } }, shelterR47ConsolePromptTask, { .value = 0 } };
+static TaskDesc _gShelterR47ConsolePromptTaskDesc = { { { TASK_BODY_NONE, TASK_PRIORITY_CONTROL } }, shelterR47ConsolePromptTask, { .value = 0 } };
 
 /// Byte offsets of the ten status starts in the console's reveal-stop storage.
 ///
@@ -740,7 +734,7 @@ static void _shelterR47AdvanceTerminalTour(Task* unusedTask)
                 gShelterR47TerminalTask = taskSpawnFromTable(&_gShelterR47ConsoleTaskDesc, 0, 1, 0);
                 playerActorSetDrawMode(PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE);
                 playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);
-                sceneSetPlacedActorDrawMode(0, 0);
+                sceneSetPlacedActorDrawMode(0, ACTOR_MESSAGE_DRAW_HIDE);
                 gameFlagSetNibble(GAME_FLAG_SHELTER_R47_EVENT_PROGRESS, SHELTER_R47_TOUR_CONSOLE_FOLLOWUP);
             }
             break;
@@ -755,7 +749,7 @@ static void _shelterR47AdvanceTerminalTour(Task* unusedTask)
                 gShelterR47TerminalTask = taskSpawnFromTable(&gShelterR47MapTerminalTaskDesc, 0, SHELTER_R47_MAP_MODE_TOUR, 0);
                 playerActorSetDrawMode(PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE);
                 playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);
-                sceneSetPlacedActorDrawMode(0, 0);
+                sceneSetPlacedActorDrawMode(0, ACTOR_MESSAGE_DRAW_HIDE);
                 gameFlagSetNibble(GAME_FLAG_SHELTER_R47_EVENT_PROGRESS, SHELTER_R47_TOUR_MAP_FOLLOWUP);
             }
             break;
@@ -797,12 +791,11 @@ static inline void _shelterR47HideActorsForTourTerminal(void)
 {
     enum {
         SHELTER_R47_TOUR_PLACED_ACTOR_INDEX = 0,
-        SHELTER_R47_PLACED_ACTOR_DRAW_HIDE  = 0
     };
 
     playerActorSetDrawMode(PLAYER_ACTOR_MODEL_DRAW_HIDE_ALLOCATE);
     playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_HOLD);
-    sceneSetPlacedActorDrawMode(SHELTER_R47_TOUR_PLACED_ACTOR_INDEX, SHELTER_R47_PLACED_ACTOR_DRAW_HIDE);
+    sceneSetPlacedActorDrawMode(SHELTER_R47_TOUR_PLACED_ACTOR_INDEX, ACTOR_MESSAGE_DRAW_HIDE);
     taskSpawnFromTable(_gShelterR47AuxiliaryTaskDescs, SHELTER_R47_RESTORE_ACTORS_TASK_INDEX, 0, 0);
 }
 
@@ -877,7 +870,7 @@ static s32 _shelterR47HandleDirectionAction(Task* unusedTask, s32 unusedMessageI
                 break;
             case SHELTER_R47_ACTION_BEGIN_TERMINAL_TOUR:
                 if ((gameFlagGetNibble(GAME_FLAG_083) == 1) && (gameFlagGetNibble(GAME_FLAG_SHELTER_R47_EVENT_PROGRESS) == SHELTER_R47_TOUR_NOT_STARTED)) {
-                    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_R47_OBJECTIVE_TERMINAL_TOUR);
+                    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_R47_OBJECTIVE_TERMINAL_TOUR);
                     gameFlagSetNibble(EVENT_FLAG_TELEPHONE_DIALOGUE_COUNTER, EVENT_FLAG_TELEPHONE_DIALOGUE_UNHEARD);
                     gameFlagSetNibble(EVENT_FLAG_STORY_DIALOGUE_INDEX, SHELTER_R47_DIALOGUE_TERMINAL_TOUR);
                     evsStartScriptWithSkip(gActor443500TourOpeningScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor443500TourOpeningSkipScript);
@@ -915,7 +908,7 @@ static s32 _shelterR47HandleDirectionAction(Task* unusedTask, s32 unusedMessageI
                     if (gameGetTaskSlot(GAME_TASK_SLOT_COMPANION) != 0) {
                         evsStartScriptWithSkip(gActor143400CompanionEntryScript, EVENT_SCRIPT_HUD_HIDE_RESTORE, gActor143400CompanionEntrySkipScript);
                     }
-                    gameFlagSetPackedByte(GAME_FLAG_CURRENT_OBJECTIVE, SHELTER_R47_OBJECTIVE_COMPANION_ENTRY);
+                    gameFlagSetPackedByte(EVENT_FLAG_CURRENT_OBJECTIVE, SHELTER_R47_OBJECTIVE_COMPANION_ENTRY);
                     gameFlagSetNibble(GAME_FLAG_SHELTER_R47_080, 1);
                     gameFlagSetNibble(GAME_FLAG_COMPANION_1_SCHEDULE, SHELTER_R47_COMPANION_SCHEDULE_AFTER_ENTRY);
                     gameFlagSetNibble(GAME_FLAG_0D1, SHELTER_R47_COMPANION_PROGRESS_AFTER_ENTRY);
@@ -1162,7 +1155,7 @@ static void _shelterR47RestoreActorsAfterTerminalTask(Task* task)
         playerActorSetDrawMode(PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO);
         playerActorSetScriptedControl(GAME_ACTOR_SCRIPTED_CONTROL_RESUME);
         if (gGameSession->location.variant == 1) {
-            sceneSetPlacedActorDrawMode(0, 1);
+            sceneSetPlacedActorDrawMode(0, ACTOR_MESSAGE_DRAW_SHOW);
         }
         if (gameGetTaskSlot(GAME_TASK_SLOT_COMPANION) != NULL) {
             companionSetDrawMode(PLAYER_ACTOR_MODEL_DRAW_SHOW_AUTO);

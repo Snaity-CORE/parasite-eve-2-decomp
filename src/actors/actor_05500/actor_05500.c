@@ -93,8 +93,8 @@ static DamageAttack _gMaggotCaterpillarAttacks[6] = {
     [MAGGOT_CATERPILLAR_ATTACK_BITE_LATE]          = { 10, GAME_ACTOR_REACTION_ORDINARY },
     [MAGGOT_CATERPILLAR_ATTACK_BITE_EARLY]         = { 16, GAME_ACTOR_REACTION_ORDINARY },
     [MAGGOT_CATERPILLAR_ATTACK_PUFF]               = { 8, GAME_ACTOR_REACTION_DARKNESS },
-    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_LATE]  = { 12, MAGGOT_CATERPILLAR_ATTACK_REACTION_BODY_BLAST },
-    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_EARLY] = { 18, MAGGOT_CATERPILLAR_ATTACK_REACTION_BODY_BLAST },
+    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_LATE]  = { 12, GAME_ACTOR_REACTION_BODY_BLAST },
+    [MAGGOT_CATERPILLAR_ATTACK_BURNING_BITE_EARLY] = { 18, GAME_ACTOR_REACTION_BODY_BLAST },
     [MAGGOT_CATERPILLAR_ATTACK_DROP]               = { 8, GAME_ACTOR_REACTION_ORDINARY },
 };
 
@@ -311,11 +311,9 @@ static s16 _gMaggotCaterpillarPuffRadius[14] = {
     0,
 };
 
-enum { ACTOR_05500_TASK_PRIORITY = 96 };
-
 TaskDesc gActor05500MaggotCaterpillarTasks[2] = {
-    { { { TASK_BODY_TMD, ACTOR_05500_TASK_PRIORITY } }, _maggotCaterpillarTask, { .model = &_gCrawlerBody } },
-    { { { TASK_BODY_COORD, ACTOR_05500_TASK_PRIORITY } }, _maggotCaterpillarPuffTask, { .value = 0 } },
+    { { { TASK_BODY_TMD, TASK_PRIORITY_ACTOR } }, _maggotCaterpillarTask, { .model = &_gCrawlerBody } },
+    { { { TASK_BODY_COORD, TASK_PRIORITY_ACTOR } }, _maggotCaterpillarPuffTask, { .value = 0 } },
 };
 
 /// Borrowed model clips indexed by `MAGGOT_CATERPILLAR_ANIM_*`.

@@ -51,7 +51,7 @@ def symbol_map(path: Path, owner: str | None = None) -> dict[int, str]:
     """Address -> name from a symbol map; a stage map's room symbols only for `owner`."""
     out = {}
     for line in path.read_text().splitlines():
-        m = re.match(r"(\w+) = (0x[0-9A-Fa-f]+);(.*)", line)
+        m = re.match(r"(\w+)\s*=\s*(0x[0-9A-Fa-f]+);(.*)", line)
         if m:
             o = re.search(r"owner=(\w+)", m.group(3))
             if o is None or o.group(1) == owner:
@@ -60,17 +60,23 @@ def symbol_map(path: Path, owner: str | None = None) -> dict[int, str]:
 
 
 class Images:
-    """Gameplay, a stage overlay and a room, mapped at their load addresses, with the names the symbol maps give.
-    `own` is the image being decoded - the room's, or the stage overlay's where `room_name` is None - at `base`."""
+    """Gameplay, a stage overlay, a room and an actor package, mapped at their load addresses, with the names the
+    symbol maps give. `own` is the image being decoded at `base`: the actor's where there is one (`actor` is its
+    package, image and load address), else the room's, or the stage overlay's where `room_name` is None."""
 
-    def __init__(self, stage: int, stage_image: bytes, room_name: str | None, room: bytes, gameplay: bytes):
+    def __init__(self, stage: int, stage_image: bytes, room_name: str | None, room: bytes, gameplay: bytes,
+                 actor: tuple[str, bytes, int] | None = None):
         self.stage, (self.stage_name,) = stage, STAGES[stage]
         self.stage_image, self.room_name, self.room, self.gameplay = stage_image, room_name, room, gameplay
         self.own, self.base = (room, ROOM_LOAD) if room_name else (stage_image, STAGE_LOAD)
         sym = ROOT / "configs" / "USA"
-        self.names = {**symbol_map(sym / "sym.gameplay.txt"),
+        self.names = {**symbol_map(sym / "sym.main.txt"), **symbol_map(sym / "sym.gameplay.txt"),
                       **symbol_map(sym / "sym" / "mapui" / f"{self.stage_name}.txt", room_name or "-"),
                       **(symbol_map(sym / "sym" / "rooms" / f"{room_name}.txt") if room_name else {})}
+        self.package = None
+        if actor:
+            self.package, self.own, self.base = actor
+            self.names.update(symbol_map(sym / "sym" / "actors" / f"{self.package}.txt"))
         self.addresses = {n: a for a, n in self.names.items()}
         self.directories = self.stage_tables()
 
@@ -88,7 +94,8 @@ class Images:
     in_room = in_own
 
     def word(self, a: int) -> int:
-        for base, image in ((ROOM_LOAD, self.room), (GAMEPLAY_LOAD, self.gameplay), (STAGE_LOAD, self.stage_image)):
+        for base, image in ((self.base, self.own), (ROOM_LOAD, self.room), (GAMEPLAY_LOAD, self.gameplay),
+                            (STAGE_LOAD, self.stage_image)):
             if not image:
                 continue
             if base <= a < base + len(image):
@@ -273,6 +280,18 @@ def _reach(images: Images, roots: list, extra: list, counts_of) -> tuple[dict[in
         if not new:
             return objs, extent
         starts |= new
+
+
+def walk_actor(images: Images, entries: dict) -> tuple[dict[int, Object], dict[str, list]]:
+    """({address: object}, {role: entry points}) of every object an actor package's stated entry points reach in it:
+    its scripts and the payloads they send, and those its code sends itself."""
+    stated = entry_points(entries)
+    extra = [(images.base + at, kind, module, single, rows) for at, kind, module, single, rows, _r in stated]
+    objs, _extent = _reach(images, [], extra, lambda _extent: {})
+    roles: dict[str, list] = {}
+    for at, _kind, _m, _s, _r, role in stated:
+        roles.setdefault(role, []).append(images.base + at)
+    return objs, roles
 
 
 # The stage overlay: its per-area tables and their wrappers (gameplay's roots), its area objects, the placement lists
