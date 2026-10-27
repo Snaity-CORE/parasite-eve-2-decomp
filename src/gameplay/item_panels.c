@@ -17,6 +17,9 @@
 #include "items.h"
 #include "gameplay/map.h"
 #include "telephone.h"
+#ifdef PC_PORT
+#include "gameplay/player_state.h"
+#endif
 
 #include "main/display.h"
 #include "main/fs.h"
@@ -785,6 +788,9 @@ void itemMenuApplyHealingPanel(UiObject* object, Task* task, s32 healingId)
                 player->hp = player->hpMax;
             }
         } else if (previousHp < player->hpMax) {
+#ifdef PC_PORT
+            if (!pc_cheat_infinite_mp())
+#endif
             player->mp         = player->mp - attachmentGetPackedLevelValue(healingId, ATTACHMENT_LEVEL_CAST_COST);
             displayedStats->mp = player->mp;
             player->hp         = player->hp + attachmentGetPackedLevelValue(healingId, ATTACHMENT_LEVEL_AMOUNT);

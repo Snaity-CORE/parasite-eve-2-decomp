@@ -25,6 +25,12 @@ void playerStateRestoreFullHpMp(void);
 /// changes neither maximum MP nor HP and retains no pointers.
 s32 playerStateSpendMp(s32 amount);
 
+#ifdef PC_PORT
+/// The PC port's cheat (pe2.toml [cheats] infinite_mp): nonzero when the
+/// player's MP never goes down, neither by Parasite Energy nor by drains.
+s32 pc_cheat_infinite_mp(void);
+#endif
+
 /// Applies or clears a mask of timed player ailments.
 ///
 /// Zero `clearEffects` applies recognized bits independently, respecting each

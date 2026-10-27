@@ -141,6 +141,22 @@ void sceneBattleStartTransitionTask(Task* task)
         (request).drawMode   = (mode);                                                   \
     }
 
+#ifdef PC_PORT
+/* The PC port's cheats (pe2.toml [cheats] exp_multiplier, bp_multiplier): a
+ * won battle's EXP and BP multiplied, before they are narrowed, applied and
+ * drawn; each award stays within its halfword. */
+extern s32 pc_cheat_exp_multiplier(void);
+extern s32 pc_cheat_bp_multiplier(void);
+
+static s16 _itemMenuPcMultipliedReward(s32 reward, s32 multiplier)
+{
+    enum { ITEM_MENU_PC_REWARD_MAX = 0x7FFF };
+    s32 award = reward * multiplier;
+
+    return (s16)(award > ITEM_MENU_PC_REWARD_MAX ? ITEM_MENU_PC_REWARD_MAX : award);
+}
+#endif
+
 void itemMenuBattleResultTask(Task* task)
 {
     enum {
@@ -193,6 +209,14 @@ void itemMenuBattleResultTask(Task* task)
             _gItemMenuBattleResultBpDelta    = gSceneCombatState.bpReward;
             _gItemMenuBattleResultExpGain    = gSceneCombatState.expReward;
             _gItemMenuBattleResultMpGain     = gSceneCombatState.mpReward;
+#ifdef PC_PORT
+            if (pc_cheat_bp_multiplier() > 1) {
+                _gItemMenuBattleResultBpDelta = _itemMenuPcMultipliedReward(gSceneCombatState.bpReward, pc_cheat_bp_multiplier());
+            }
+            if (pc_cheat_exp_multiplier() > 1) {
+                _gItemMenuBattleResultExpGain = _itemMenuPcMultipliedReward(gSceneCombatState.expReward, pc_cheat_exp_multiplier());
+            }
+#endif
             if (equipmentHasEffect(EQUIPMENT_EFFECT_MP_RECOVERY) != 0) {
                 _gItemMenuBattleResultMpRecovery = ((u32)(gSceneCombatState.mpReward - 1) >> 2) + 1;
                 if (_gItemMenuBattleResultMpRecovery >= ITEM_MENU_BATTLE_MP_BONUS_MAX + 1) {

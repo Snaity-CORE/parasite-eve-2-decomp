@@ -1412,6 +1412,11 @@ s32 playerStateSpendMp(s32 amount)
 
     player    = &gPlayerStatus;
     fullyPaid = 1;
+#ifdef PC_PORT
+    if (pc_cheat_infinite_mp()) {
+        return fullyPaid;
+    }
+#endif
     if (player->mp >= amount) {
         player->mp -= amount;
     } else {

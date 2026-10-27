@@ -1534,6 +1534,9 @@ static void _attachmentUpdateAndDrawHud(HudState* hud)
                         player->hp = 1;
                     }
                 } else {
+#ifdef PC_PORT
+                    if (!pc_cheat_infinite_mp())
+#endif
                     player->mp -= attachmentGetActiveLevelValue(ATTACHMENT_LEVEL_CAST_COST);
                     if (player->mp < 0) {
                         player->mp = 0;
