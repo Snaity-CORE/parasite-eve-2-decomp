@@ -92,6 +92,11 @@ static inline void _gpSpawnPlace(AreaObjectSpawn* spawn, AreaObjectPlace* place)
     GfxCoord*  coord;
     u16        id;
 
+#ifdef PC_PORT
+    if (spawn == NULL) {
+        return; // See PC_PORT in areaSpawnRoomObjects.
+    }
+#endif
     id = spawn->kind;
     while (id != AREA_OBJECT_SPAWN_END) {
         if (id == place->kind) {
@@ -353,6 +358,16 @@ void areaSpawnRoomObjects(const GameLocationKey* location)
     }
     do {
         spawnEntry = areaObjects[location->area].spawns;
+#ifdef PC_PORT
+        /* An area may list places with no spawn table (the Shelter's B3
+         * incinerator control room). The console then scans kernel RAM from
+         * address 0 for the place's kind, finds none before an end word and
+         * spawns nothing; the PC has no kernel data there and the scan runs
+         * off into the host's memory. Nothing to spawn, as on the console. */
+        if (spawnEntry == NULL) {
+            return;
+        }
+#endif
         spawnKind  = spawnEntry->kind;
         if (spawnKind != tableEnd) {
             do {
