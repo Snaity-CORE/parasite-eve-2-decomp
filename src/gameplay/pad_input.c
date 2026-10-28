@@ -574,3 +574,17 @@ void padInputResetSuppression(void)
     gPadInputMenuUnlockUpdates        = PAD_INPUT_MENU_UNLOCK_UPDATES;
     _gPadInputWheelBlockUpdates       = PAD_INPUT_WHEEL_BLOCK_UPDATES;
 }
+
+#ifdef PC_PORT
+/* The PC port's Discord presence (the host's discord.rs): where the player
+ * is (stage 0 before a game has started) and their EXP and BP. The host
+ * reads it from its own thread now and then; a torn read only shows for a
+ * few seconds. */
+void pc_presence_state(s32* stage, s32* area, s32* exp, s32* bp)
+{
+    *stage = gGameSession->location.stage;
+    *area  = gGameSession->location.area;
+    *exp   = gPlayerStatus.exp;
+    *bp    = gPlayerStatus.bp;
+}
+#endif
