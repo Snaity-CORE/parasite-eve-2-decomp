@@ -741,7 +741,7 @@ void textDrawString(TextDrawReq* request, const u8* text)
     DR_TPAGE*         texturePage;
 
 #ifdef PC_PORT
-    text = pc_text_translate(text);
+    text = pc_text_for_face(pc_text_translate(text), request->glyphTable == TEXT_GLYPH_TABLE_SMALL);
 #endif
     cursor                    = text;
     previousRightKerningClass = FONT_KERNING_CLASS_NEUTRAL;
@@ -1142,7 +1142,7 @@ void textAlignLine(TextDrawReq* request, const u8* text)
     s32               width;
 
 #ifdef PC_PORT
-    text = pc_text_translate(text);
+    text = pc_text_for_face(pc_text_translate(text), request->glyphTable == TEXT_GLYPH_TABLE_SMALL);
 #endif
     // Alignment keeps the initial face even when the line contains font commands.
     switch (request->glyphTable) {

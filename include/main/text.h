@@ -429,6 +429,9 @@ u8* textFormatPlayTime(u8* buffer, u16 totalMinutes);
 /// the text to use for `text` (a mod's translation of it, or `text` itself).
 /// Text drawn, measured or appended passes through it first.
 const u8* pc_text_translate(const u8* text);
+/// The text to draw in a face: `text`, or for the small face (whose glyph
+/// table stops at 'z') a copy with accented letters made plain.
+const u8* pc_text_for_face(const u8* text, s32 small);
 #endif
 
 #endif // MAIN_TEXT_H
