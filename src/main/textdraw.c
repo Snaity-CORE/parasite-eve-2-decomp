@@ -740,6 +740,9 @@ void textDrawString(TextDrawReq* request, const u8* text)
     s32               glyphIndex;
     DR_TPAGE*         texturePage;
 
+#ifdef PC_PORT
+    text = pc_text_translate(text);
+#endif
     cursor                    = text;
     previousRightKerningClass = FONT_KERNING_CLASS_NEUTRAL;
     colorRgb                  = request->colorRgb;
@@ -1138,6 +1141,9 @@ void textAlignLine(TextDrawReq* request, const u8* text)
     const _FontGlyph* glyphTable;
     s32               width;
 
+#ifdef PC_PORT
+    text = pc_text_translate(text);
+#endif
     // Alignment keeps the initial face even when the line contains font commands.
     switch (request->glyphTable) {
         case TEXT_GLYPH_TABLE_MEDIUM:
@@ -1310,6 +1316,9 @@ u8* textAppendString(u8* dest, const u8* src)
         }
     }
 
+#ifdef PC_PORT
+    src = pc_text_translate(src);
+#endif
     byte = *src;
     if (byte != 0) {
         do {

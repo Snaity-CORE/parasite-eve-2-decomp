@@ -424,4 +424,11 @@ u8* textAppendString(u8* dest, const u8* src);
 /// the caller owns it, no pointer is retained and no capacity is checked.
 u8* textFormatPlayTime(u8* buffer, u16 totalMinutes);
 
+#ifdef PC_PORT
+/// The PC port's translations of the game's texts (the host's mods/strings.rs):
+/// the text to use for `text` (a mod's translation of it, or `text` itself).
+/// Text drawn, measured or appended passes through it first.
+const u8* pc_text_translate(const u8* text);
+#endif
+
 #endif // MAIN_TEXT_H

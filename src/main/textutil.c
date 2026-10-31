@@ -256,6 +256,9 @@ s32 textDrawUiLines(const UiObject* object, s32 startX, s32 startY, const u8* te
     s32       lineY;
     s32       lineEnd;
 
+#ifdef PC_PORT
+    text = pc_text_translate(text);
+#endif
     lineX  = startX;
     lineY  = startY;
     cursor = text;
@@ -318,6 +321,9 @@ u32 textMeasureUiTextSize(const u8* text)
     const u8*    cursor;
     s32          lineEnd;
 
+#ifdef PC_PORT
+    text = pc_text_translate(text);
+#endif
     maxWidthPixels = 0;
     heightPixels   = maxWidthPixels;
     measureRequest = &request;
