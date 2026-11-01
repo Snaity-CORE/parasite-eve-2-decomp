@@ -3336,3 +3336,29 @@ void uiSetPromptPeItem(s32 peItemId, s32 unused2, s32 unused3)
         gUiPromptObject->owner->spawnArg1.value = peItemId;
     }
 }
+
+#ifdef PC_PORT
+/// The PC port's pause menu (src/main/pc/menu.c) opens option dialogs over
+/// a frozen game, which may have one of its own open: the shared dialog
+/// list and the cursor are saved when the menu opens and restored when it
+/// closes, so the game's dialog goes on as it was.
+static struct {
+    UiList list;
+    s32    cursorX;
+    s32    cursorY;
+} _gPcUiSaved;
+
+void pcUiSaveState(void)
+{
+    _gPcUiSaved.list    = _gUiOptionDialogList;
+    _gPcUiSaved.cursorX = _gUiCursorScreenXFixed;
+    _gPcUiSaved.cursorY = _gUiCursorScreenYFixed;
+}
+
+void pcUiRestoreState(void)
+{
+    _gUiOptionDialogList   = _gPcUiSaved.list;
+    _gUiCursorScreenXFixed = _gPcUiSaved.cursorX;
+    _gUiCursorScreenYFixed = _gPcUiSaved.cursorY;
+}
+#endif

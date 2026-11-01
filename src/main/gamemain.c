@@ -429,6 +429,11 @@ static inline void _gameMainAdvanceSceneTimingCursor(CdCmdQueue* queue)
 #ifdef PC_PORT
 /* PE2_TRACE=scene: the scene's accumulated scanlines and deadline, each frame. */
 extern void pc_trace_scene_timing(u32 accumulated, u32 deadline, s32 elapsed);
+/* The pause menu (src/main/pc/menu.c): a frame of it, if open or asked for
+ * and not `blocked` (returns nonzero when it drew one); and its Quit to
+ * title, taken once. */
+extern s32 pcMenuFrame(s32 blocked);
+extern s32 pcMenuTakeTitleRequest(void);
 #endif
 
 static inline s32 _gameMainPaceToSceneTiming(s32 frameStartLines, s32 elapsedLines)
@@ -525,7 +530,12 @@ static void _gameMainRunLoop(void)
     for (;;) {
         if (gDisplayState.gameMode == DISPLAY_GAME_RESTART ||
             (gDisplayState.gameMode == DISPLAY_GAME_ACTIVE && gDisplayState.cdBusy == DISPLAY_CD_IDLE && gDisplayState.gameRunning != 0 &&
+#ifdef PC_PORT
+             // The pause menu's Quit to title: the same soft reset.
+             (padCheckSoftResetCombo() != 0 || pcMenuTakeTitleRequest() != 0))) {
+#else
              padCheckSoftResetCombo() != 0)) {
+#endif
             _gameMainInitialize();
             gGameMainHaltFlags = 0;
         }
@@ -549,6 +559,18 @@ static void _gameMainRunLoop(void)
             cdCmdService();
             continue;
         }
+#ifdef PC_PORT
+        // The pause menu (src/main/pc/menu.c): while open, its frames instead
+        // of the game's, which stays frozen. Blocked as the game's pause is
+        // (_gameMainPauseBlocked), but for the display's state: the game draws
+        // its own frames here, and the GPU register it reads is not mapped.
+        if (pcMenuFrame(gGameMainHaltFlags != 0 || gCdCmdQueue.blockGamePause != 0 ||
+                        (gDisplayState.vsyncFlag == DISPLAY_VSYNC_TASK && gDisplayState.control.flags.flipMode == DISPLAY_FLIP_HOLD) ||
+                        gFsCdOperationStatus != FILE_SYSTEM_CD_OPERATION_COMPLETE)) {
+            frameStartLines = VSync(GAME_MAIN_VSYNC_SCANLINE_COUNTER) & GAME_MAIN_ELAPSED_SCANLINE_MASK;
+            continue;
+        }
+#endif
 
         // Clocks differ: CD file loads freeze play time, while paced loop time continues.
         gDisplayState.loopCount++;
