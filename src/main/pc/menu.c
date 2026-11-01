@@ -339,6 +339,19 @@ s32 pcMenuFrame(s32 blocked)
     return 1;
 }
 
+/// The menu's own texts (not the game's, so not on the disc), for the host's
+/// extract to list for translators (mods' strings/ translate them as the
+/// game's); `count` gets how many.
+const u8* const* pcMenuTexts(s32* count)
+{
+    static const u8* const texts[] = {
+        _gPcMenuPauseTitle, _gPcMenuResumeText, _gPcMenuToTitleText, _gPcMenuQuitGameText, _gPcMenuTitleTitle, _gPcMenuQuitTitle,
+    };
+
+    *count = ARRAY_SIZE(texts);
+    return texts;
+}
+
 s32 pcMenuTakeTitleRequest(void)
 {
     s32 requested;
