@@ -7,8 +7,10 @@
  *
  * While it is open the main loop runs no game task: each frame runs only
  * the menu's own task list, draws its ordering table over the saved
- * picture and shows it (gamemain.c calls pcMenuFrame). The host asks for it
- * and quits the game (the host's pause_menu.rs).
+ * picture and shows it (gamemain.c calls pcMenuFrame); it opens only where
+ * the game loop draws the frames (gameplay, the title screen), not over
+ * movies. The host asks for it and quits the game (the host's
+ * pause_menu.rs).
  */
 #ifdef PC_PORT
 
@@ -164,12 +166,18 @@ static void _pcMenuOpenConfirm(s32 state)
     _gPcMenuState = state;
 }
 
-/// Whether the menu may open now: a game frame of the game loop's own, at
-/// 320x240, with nothing holding the screen or streaming a scene.
+/// Whether the game's frames are ones the menu's can stand in for: the game
+/// loop's own, at 320x240.
+static s32 _pcMenuAvailable(void)
+{
+    return gDisplayState.displayOwner == DISPLAY_OWNER_GAME_LOOP && gDisplayState.height == DISPLAY_SCREEN_HEIGHT;
+}
+
+/// Whether the menu may open now: available, with nothing holding the
+/// screen or streaming a scene.
 static s32 _pcMenuCanOpen(s32 blocked)
 {
-    return !blocked && gDisplayState.displayOwner == DISPLAY_OWNER_GAME_LOOP && gDisplayState.height == DISPLAY_SCREEN_HEIGHT &&
-           gCdCmdQueue.paceToSceneTiming == 0;
+    return !blocked && _pcMenuAvailable() && gCdCmdQueue.paceToSceneTiming == 0;
 }
 
 static void _pcMenuOpen(void)
@@ -289,7 +297,7 @@ s32 pcMenuFrame(s32 blocked)
 
     // Whether the game draws its own frames, where the menu can open (a
     // moment's block aside): elsewhere the host asks to quit at once.
-    pc_menu_available(gDisplayState.displayOwner == DISPLAY_OWNER_GAME_LOOP && gDisplayState.height == DISPLAY_SCREEN_HEIGHT);
+    pc_menu_available(_pcMenuAvailable());
     if (_gPcMenuState == PC_MENU_CLOSED) {
         if (!pc_menu_requested() || !_pcMenuCanOpen(blocked)) {
             return 0;

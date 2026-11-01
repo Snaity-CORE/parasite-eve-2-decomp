@@ -562,9 +562,11 @@ static void _gameMainRunLoop(void)
 #ifdef PC_PORT
         // The pause menu (src/main/pc/menu.c): while open, its frames instead
         // of the game's, which stays frozen. Blocked as the game's pause is
-        // (_gameMainPauseBlocked), but for the display's state: the game draws
-        // its own frames here, and the GPU register it reads is not mapped.
-        if (pcMenuFrame(gGameMainHaltFlags != 0 || gCdCmdQueue.blockGamePause != 0 ||
+        // (_gameMainPauseBlocked), but for the display's state (the game draws
+        // its own frames here, and the GPU register it reads is not mapped) and
+        // the CD queue's block (the title screen's: the menu serves the CD
+        // each frame, and keeps away from streamed scenes itself).
+        if (pcMenuFrame(gGameMainHaltFlags != 0 ||
                         (gDisplayState.vsyncFlag == DISPLAY_VSYNC_TASK && gDisplayState.control.flags.flipMode == DISPLAY_FLIP_HOLD) ||
                         gFsCdOperationStatus != FILE_SYSTEM_CD_OPERATION_COMPLETE)) {
             frameStartLines = VSync(GAME_MAIN_VSYNC_SCANLINE_COUNTER) & GAME_MAIN_ELAPSED_SCANLINE_MASK;
