@@ -256,7 +256,12 @@ static void _pcMenuDrawSettingRow(UiList* list, UiObject* object)
 /// to close it (as the game's options panel does).
 static void _pcMenuUpdateSettingsTask(Task* owningTask)
 {
-    enum { PC_MENU_ROW_HEIGHT_PIXELS = 16 };
+    enum {
+        PC_MENU_ROW_HEIGHT_PIXELS     = 16,
+        PC_MENU_COLUMN_GAP_PIXELS     = 16,
+        PC_MENU_COLUMN_GAP_MIN_PIXELS = 6,
+        PC_MENU_SCREEN_MARGIN_PIXELS  = 8,
+    };
     UiObject*  object;
     UiList*    list;
     const u8*  text;
@@ -267,6 +272,8 @@ static void _pcMenuUpdateSettingsTask(Task* owningTask)
     s32        labelWidth;
     s32        restartWidth;
     s32        rowWidth;
+    s32        widest;
+    s32        gap;
 
     object = owningTask->spawnArg2.pointer;
     list   = &_gPcMenuSettingList;
@@ -309,7 +316,22 @@ static void _pcMenuUpdateSettingsTask(Task* owningTask)
                 rowWidth = width;
             }
         }
-        _gPcMenuChoiceX = 6 + labelWidth + 16;
+        // No wider than the screen (with the game's eight-pixel margins):
+        // a long translation first narrows the gap between the columns,
+        // then lets the choices overlap the labels' ends.
+        widest = DISPLAY_SCREEN_WIDTH - 2 * PC_MENU_SCREEN_MARGIN_PIXELS -
+                 (object->panel.bounds.rect.w - (object->panel.contentRight.signedValue - object->panel.contentLeft.signedValue));
+        gap = PC_MENU_COLUMN_GAP_PIXELS;
+        if (6 + labelWidth + gap + rowWidth + 6 > widest) {
+            gap = widest - (6 + labelWidth + rowWidth + 6);
+            if (gap < PC_MENU_COLUMN_GAP_MIN_PIXELS) {
+                gap = PC_MENU_COLUMN_GAP_MIN_PIXELS;
+            }
+        }
+        _gPcMenuChoiceX = 6 + labelWidth + gap;
+        if (_gPcMenuChoiceX + rowWidth + 6 > widest) {
+            _gPcMenuChoiceX = widest - rowWidth - 6;
+        }
         uiSetPanelContentSize(&object->panel, _gPcMenuChoiceX + rowWidth + 6, 0);
         object->panel.bounds.rect.x = -(object->panel.bounds.rect.w / 2);
         object->panel.bounds.rect.y = -(object->panel.bounds.rect.h / 2);
