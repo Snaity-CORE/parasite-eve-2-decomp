@@ -34,6 +34,7 @@
 #include "../task.h"
 
 /* The host's side (pause_menu.rs). */
+extern void pc_menu_available(s32 available);
 extern s32 pc_menu_requested(void);
 extern void pc_menu_taken(void);
 extern s32 pc_menu_confirms_quit(void);
@@ -286,6 +287,9 @@ s32 pcMenuFrame(s32 blocked)
     TaskNode* previous;
     s32       bufferIndex;
 
+    // Whether the game draws its own frames, where the menu can open (a
+    // moment's block aside): elsewhere the host asks to quit at once.
+    pc_menu_available(gDisplayState.displayOwner == DISPLAY_OWNER_GAME_LOOP && gDisplayState.height == DISPLAY_SCREEN_HEIGHT);
     if (_gPcMenuState == PC_MENU_CLOSED) {
         if (!pc_menu_requested() || !_pcMenuCanOpen(blocked)) {
             return 0;
