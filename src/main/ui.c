@@ -3361,4 +3361,14 @@ void pcUiRestoreState(void)
     _gUiCursorScreenXFixed = _gPcUiSaved.cursorX;
     _gUiCursorScreenYFixed = _gPcUiSaved.cursorY;
 }
+
+/// Puts the shared dialog list's cursor on `row`, which the game's dialogs
+/// otherwise keep from the last one opened.
+void pcUiSelectDialogRow(s32 row)
+{
+    _gUiOptionDialogList.selectedItemIndex                   = row;
+    _gUiOptionDialogList.firstVisibleItemIndex.unsignedValue = 0;
+    _gUiOptionDialogList.scrollPixelsRemaining               = 0;
+    _gUiOptionDialogList.scrollDirection                     = 0;
+}
 #endif
