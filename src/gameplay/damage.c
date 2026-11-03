@@ -231,11 +231,16 @@ static u16 _gDamageDistanceBandClasses[16] = {
 };
 
 #ifdef PC_PORT
-/* The PC port's cheats (pe2.toml [cheats]): every hit of the player's kills
- * (more damage than any enemy has health), and the player takes none. */
+/* The PC port's cheats (pe2.toml [cheats]): every hit of the player's kills,
+ * and the player takes none. Enemies multiply the damage afterwards (up to
+ * ten times: the cafeteria Stranger's critical hit from behind) and take it
+ * from their health in 16 bits, so it is at most 32767 / 10: more would
+ * wrap around and leave them with more health (9999 critical left the
+ * cafeteria Stranger 15891). It is more than any enemy has but the few
+ * bosses of 3000 to 3500, which take a second hit or a critical one. */
 extern s32 pc_cheat_one_hit_kill(void);
 extern s32 pc_cheat_infinite_hp(void);
-enum { DAMAGE_PC_ONE_HIT_KILL = 9999 };
+enum { DAMAGE_PC_ONE_HIT_KILL = 3276 };
 #endif
 
 u32 damageComputePlayerAttack(u32 attackKey, u32 playerDistance, s32 scaledReaction, s32 reactionScale)
