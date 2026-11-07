@@ -16,6 +16,7 @@
 #include <psyq/sys/types.h>
 #include <psyq/libgte.h>
 
+#include "gameplay/attachments.h"
 #include "main/gfx.h"
 #endif
 
@@ -285,8 +286,13 @@ static u16 pc_movement(const PadState* pad, GameActor* actor, u16 held)
         pcQuickTurn        -= step;
         return held & ~(PC_PAD_DIRS | run);
     }
-    /* Battle: the lock button held picks targets. */
-    if (actor->state == PAD_INPUT_PLAYER_STATE_AIM && (_padInputRemapButtons(actor, pad->buttons) & PC_LOGICAL_LOCK)) {
+    /* Battle: the lock button held picks targets. And while Parasite
+     * Energy's wheel is open, armed or casting (in battle or not), the
+     * directions keep their original jobs, picking a spell and aiming:
+     * turning the player there cast the spell where the stick last
+     * pointed. */
+    if ((actor->state == PAD_INPUT_PLAYER_STATE_AIM && (_padInputRemapButtons(actor, pad->buttons) & PC_LOGICAL_LOCK)) ||
+        gAttachmentState.mode != 0) {
         pcMoveHeld = 0;
         return held;
     }
