@@ -94,6 +94,23 @@ static inline void _displayConfigureSmallTaskBuffers(void)
     _gDisplayTaskPrimitiveArenaBytes = sizeof(gDisplayStaticPrimitiveArena);
 }
 
+#ifdef PC_PORT
+#include "main/fs.h"
+
+/* The options a replay keeps (controls.rs): bit 2 fast camera changes. */
+extern u32 pc_input_options(void);
+
+/// PC: whether the game holds the picture (frozen while it loads a camera's
+/// pictures) outside a paced scene. Fast camera changes speed loading up
+/// only then, out of sight. Not in paced scenes (the cafeteria's): their
+/// camera changes count towards their timing, and sped up, the picture ran
+/// ahead of the music streamed with it.
+s32 pc_camera_change_held(void)
+{
+    return gDisplayState.control.flags.flipMode == DISPLAY_FLIP_HOLD && gCdCmdQueue.paceToSceneTiming == 0;
+}
+#endif
+
 s32 displayRunTaskFrame(GsOT* unusedOrderingTables, s32 frameStartLines, s32 unusedOtBuffer)
 {
 /// Selects and clears a display-task ordering table and borrows its primitive half.
@@ -159,7 +176,15 @@ s32 displayRunTaskFrame(GsOT* unusedOrderingTables, s32 frameStartLines, s32 unu
         // This non-volatile store must remain eligible for the following call delay slot.
         *(u8*)&gDisplayTaskImageSourceSnapshot = display->control.flags.imageSource;
         ExitCriticalSection();
+#ifdef PC_PORT
+        /* Fast camera changes: while the picture is held, a step of the
+         * loading every blank instead of every second one. Nothing shows
+         * meanwhile, and the main loop still turns once a blank, as in the
+         * menus (replays count its turns). */
+        VSync((pc_input_options() & 4) && pc_camera_change_held() ? 0 : gDisplayVSyncWaitMode);
+#else
         VSync(gDisplayVSyncWaitMode);
+#endif
         if (gDisplayPendingFlip != DISPLAY_TASK_FLIP_NONE) {
             gDisplayPreviousVSyncElapsedLines = 0;
             frameStartLines                   = VSync(1) & DISPLAY_TASK_FRAME_SCANLINE_MASK;
