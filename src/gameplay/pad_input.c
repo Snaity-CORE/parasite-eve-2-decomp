@@ -198,6 +198,11 @@ extern void pc_replay_player(s32 x, s32 z, s32 yaw);
 /* item_inventory.c: the carried rows a bigger inventory asks for. */
 extern void pcSyncCarriedRows(void);
 
+/* main/pc/menu.c, item_notice.c: save anywhere. */
+extern void pcMenuAllowSave(void (*prepare)(void), void (*done)(void));
+extern void pcSaveAnywherePrepare(void);
+extern void pcSaveAnywhereDone(void);
+
 #define PC_INPUT_MODERN     1
 #define PC_INPUT_QUICK_TURN 2
 
@@ -595,5 +600,32 @@ void pc_presence_state(s32* stage, s32* area, s32* exp, s32* bp)
     *area  = gGameSession->location.area;
     *exp   = gPlayerStatus.exp;
     *bp    = gPlayerStatus.bp;
+}
+#endif
+
+#ifdef PC_PORT
+/* PC: save anywhere ([gameplay] save_anywhere, option bit 10), each update of
+ * play (the play clock's, model_lighting.c): whether the player is free to
+ * save (exploring, not in a battle, a scene, a menu, a load or training),
+ * told to the pause menu, whose Save saves with the game held. */
+void pcSaveAnywhereFrame(s32 inBattle)
+{
+    Task*            playerTask;
+    const GameActor* player;
+    GameSession*     session;
+    s32              free;
+
+    session    = gGameSession;
+    playerTask = gPlayerActorTasks[PLAYER_ACTOR_TASK_PLAYER];
+    player     = playerTask != NULL ? playerTask->work : NULL;
+    free       = (pc_input_options() & 1024) != 0 && inBattle == 0 && player != NULL && player->mode == GAME_ACTOR_MODE_NORMAL && player->state == 0 &&
+           player->movementInputDisabled == 0 && _gPadInputMenuLocked == 0 && gAttachmentState.mode == 0 && gPlayerStatus.hp > 0 &&
+           gDisplayState.gameMode == DISPLAY_GAME_ACTIVE && gDisplayState.gameRunning != 0 && gDisplayState.pendingMode == DISPLAY_MODE_NONE &&
+           gDisplayState.demoScene == DISPLAY_DEMO_NONE && session->eventState == 0 && session->cutsceneHold == 0 && session->uiOpen == 0 &&
+           session->deathVariant == 0 && session->sceneUpdatesPaused == 0 && session->dirActionBusy == 0 &&
+           gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems.firstRow == 0 && cdCmdIsIdle() != 0;
+    if (free) {
+        pcMenuAllowSave(pcSaveAnywherePrepare, pcSaveAnywhereDone);
+    }
 }
 #endif

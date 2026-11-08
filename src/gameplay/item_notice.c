@@ -172,3 +172,25 @@ void itemPickupActionPromptTask(Task* task)
         }
     }
 }
+
+#ifdef PC_PORT
+/* PC: save anywhere (pad_input.c): before the pause menu's save, what a save
+ * point does before its telephone (itemPickupActionPromptTask); after it,
+ * the place's spare byte cleared again. */
+enum { PC_SAVE_ANYWHERE_VARIANT_MARK = 0xA0 };
+
+void pcSaveAnywherePrepare(void)
+{
+    _playerCaptureRootPose();
+    gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.playerExp = gPlayerStatus.exp;
+    gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.playerBp  = gPlayerStatus.bp;
+    /* The place's label stays the last telephone's. The room's display
+     * resource variant rides in the place's spare byte (mc.c). */
+    gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.unknown_6[0] = PC_SAVE_ANYWHERE_VARIANT_MARK | (gDisplayState.spriteVariant & 0x0F);
+}
+
+void pcSaveAnywhereDone(void)
+{
+    gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.unknown_6[0] = 0;
+}
+#endif

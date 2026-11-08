@@ -2597,6 +2597,14 @@ static void _mcStatePrepareSectionRead(Task* dialogTask, McWork* dialogWork)
             playClockResetMinuteTicks();
             gDisplayState.control.flags.pendingPlayerPos = 1;
             dialogTask->state                            = MEMORY_CARD_LOAD_STATE_CLOSE_FILE;
+#ifdef PC_PORT
+            /* PC: a save made anywhere (item_notice.c) keeps the room's
+             * display resource variant, which a load would set to 1. */
+            if ((gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.unknown_6[0] & 0xF0) == 0xA0) {
+                gDisplayState.spriteVariant = gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.unknown_6[0] & 0x0F;
+                gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.location.unknown_6[0] = 0;
+            }
+#endif
         } else {
             mcResetSaveData();
             dialogTask->state = MEMORY_CARD_LOAD_STATE_CORRUPTED;

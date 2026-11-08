@@ -2980,6 +2980,11 @@ static inline void _playClockCancelDeathEffects(void)
     roomEffectRequestCancelPe();
 }
 
+#ifdef PC_PORT
+/* pad_input.c: save anywhere. */
+extern void pcSaveAnywhereFrame(s32 inBattle);
+#endif
+
 void playClockUpdateTask(Task* task)
 {
     enum {
@@ -3084,6 +3089,9 @@ void playClockUpdateTask(Task* task)
         task->state++;
     } else {
         hudUpdateAndDraw(&work->hud);
+#ifdef PC_PORT
+        pcSaveAnywhereFrame(work->hud.inBattle);
+#endif
     }
 }
 

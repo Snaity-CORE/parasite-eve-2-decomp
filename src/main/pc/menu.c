@@ -23,6 +23,7 @@
 #include "main/display.h"
 #include "main/display_types.h"
 #include "main/fs.h"
+#include "main/mc.h"
 #include "main/mem.h"
 #include "main/pad.h"
 #include "main/sound.h"
@@ -67,6 +68,7 @@ enum {
     PC_MENU_CONFIRM_QUIT,
     PC_MENU_CATEGORIES,
     PC_MENU_SETTINGS,
+    PC_MENU_SAVE,
 };
 
 /* What happens once the menu's dialogs have closed. */
@@ -80,12 +82,14 @@ enum {
     PC_MENU_THEN_QUIT,
     PC_MENU_THEN_CATEGORIES,
     PC_MENU_THEN_SETTINGS,
+    PC_MENU_THEN_SAVE,
 };
 
 static u8 _gPcMenuPauseTitle[]    = "PAUSE";
 static u8 _gPcMenuTitleTitle[]    = "QUIT TO TITLE";
 static u8 _gPcMenuQuitTitle[]     = "QUIT GAME";
 static u8 _gPcMenuResumeText[]    = "Resume";
+static u8 _gPcMenuSaveText[]      = "Save";
 static u8 _gPcMenuOptionsText[]   = "Options";
 static u8 _gPcMenuOptionsTitle[]  = "OPTIONS";
 static u8 _gPcMenuToTitleText[]   = "Quit to title";
@@ -98,7 +102,7 @@ static UiObject*             _gPcMenuDialog;
 static s32                   _gPcMenuState;
 static s32                   _gPcMenuThen;
 /* What each row of the pause dialog does (its rows depend on the game's state). */
-static s32 _gPcMenuPauseRows[4];
+static s32 _gPcMenuPauseRows[5];
 /* The settings' category shown, its panel and its row list. */
 static s32       _gPcMenuCategory;
 // The menus' font has no < or >: its guillemets point instead.
@@ -120,6 +124,19 @@ static TILE     _gPcMenuDimTile;
 static DR_TPAGE _gPcMenuDimMode;
 /* Quit to title asked, for gamemain.c's soft reset at the top of its loop. */
 static s32 _gPcMenuTitleRequested;
+/* Save anywhere ([gameplay] save_anywhere): the main-loop update gameplay
+ * last found the player free to save in (pad_input.c), what it does before
+ * and after a save, and the save dialog (main/mc.c's) while open. */
+static u32       _gPcMenuSaveAllowedAt = (u32)-2;
+static void      (*_gPcMenuSavePrepare)(void);
+static void      (*_gPcMenuSaveDone)(void);
+static UiObject* _gPcMenuSave;
+
+/// Whether the game was free to save in the update before the menu opened.
+static s32 _pcMenuCanSave(void)
+{
+    return gDisplayState.loopCount - _gPcMenuSaveAllowedAt <= 1;
+}
 
 /// Whether quitting to the title is possible: what the game's soft reset
 /// needs (gamemain.c).
@@ -175,12 +192,16 @@ static void _pcMenuOpenDialog(u8* title, u8** labels, s32 count, s32 selected)
 
 static void _pcMenuOpenPause(void)
 {
-    u8* labels[4];
+    u8* labels[5];
     s32 count;
 
     count                       = 0;
     _gPcMenuPauseRows[count]    = PC_MENU_THEN_RESUME;
     labels[count++]             = _gPcMenuResumeText;
+    if (_pcMenuCanSave()) {
+        _gPcMenuPauseRows[count] = PC_MENU_THEN_SAVE;
+        labels[count++]          = _gPcMenuSaveText;
+    }
     _gPcMenuPauseRows[count]    = PC_MENU_THEN_CATEGORIES;
     labels[count++]             = _gPcMenuOptionsText;
     if (_pcMenuCanQuitToTitle()) {
@@ -366,6 +387,24 @@ static void _pcMenuOpenSettings(void)
     _gPcMenuState = PC_MENU_SETTINGS;
 }
 
+/// Opens the game's save (as a telephone's) over the held game.
+static void _pcMenuOpenSave(void)
+{
+    TaskNode*    previous;
+    TaskSpawnArg none;
+
+    _gPcMenuSavePrepare();
+    none.value = 0;
+    previous   = taskGetActiveList();
+    taskSetActiveList(&_gPcMenuTasks);
+    _gPcMenuSave = uiSpawnObject(&gMcDialogDescriptors[MEMORY_CARD_DIALOG_SAVE], none, USER_INTERFACE_PANEL_ACTIVE, 1, NULL);
+    taskSetActiveList(previous);
+    if (_gPcMenuSave == NULL) {
+        _gPcMenuSaveDone();
+    }
+    _gPcMenuState = PC_MENU_SAVE;
+}
+
 static void _pcMenuOpenConfirm(s32 state)
 {
     u8* labels[2];
@@ -473,6 +512,12 @@ static void _pcMenuAfterClosing(void)
         case PC_MENU_THEN_TITLE:
             _gPcMenuTitleRequested = 1;
             break;
+        case PC_MENU_THEN_SAVE:
+            _pcMenuOpenSave();
+            if (_gPcMenuSave != NULL) {
+                return;
+            }
+            break;
     }
     // Back to the game: its dialogs as they were, its sound, and no button
     // the menu took reaching it.
@@ -536,7 +581,9 @@ s32 pcMenuFrame(s32 blocked)
     } else if (pc_menu_requested()) {
         // Esc again: as the dialog's Cancel.
         pc_menu_taken();
-        if (_gPcMenuDialog != NULL) {
+        if (_gPcMenuSave != NULL) {
+            // The save answers for itself (the card may be busy).
+        } else if (_gPcMenuDialog != NULL) {
             uiStartTreeClosing(_gPcMenuDialog, NULL);
             _pcMenuAnswer(-1);
         } else if (_gPcMenuPanel != NULL) {
@@ -568,7 +615,14 @@ s32 pcMenuFrame(s32 blocked)
         _gPcMenuPanel = NULL;
         _gPcMenuThen  = PC_MENU_THEN_CATEGORIES;
     }
-    if (_gPcMenuDialog == NULL && _gPcMenuPanel == NULL && _gPcMenuTasks.next == NULL) {
+    // The save answered (saved or not): back to the game.
+    if (_gPcMenuSave != NULL && (_gPcMenuSave->result == USER_INTERFACE_RESULT_CONFIRM || _gPcMenuSave->result == USER_INTERFACE_RESULT_CANCEL)) {
+        uiStartTreeClosing(_gPcMenuSave, NULL);
+        _gPcMenuSave = NULL;
+        _gPcMenuSaveDone();
+        _gPcMenuThen = PC_MENU_THEN_RESUME;
+    }
+    if (_gPcMenuDialog == NULL && _gPcMenuPanel == NULL && _gPcMenuSave == NULL && _gPcMenuTasks.next == NULL) {
         _pcMenuAfterClosing();
     }
 
@@ -583,7 +637,7 @@ s32 pcMenuFrame(s32 blocked)
 const u8* const* pcMenuTexts(s32* count)
 {
     static const u8* const texts[] = {
-        _gPcMenuPauseTitle, _gPcMenuResumeText, _gPcMenuOptionsText, _gPcMenuToTitleText, _gPcMenuQuitGameText, _gPcMenuTitleTitle, _gPcMenuQuitTitle,
+        _gPcMenuPauseTitle, _gPcMenuResumeText, _gPcMenuSaveText, _gPcMenuOptionsText, _gPcMenuToTitleText, _gPcMenuQuitGameText, _gPcMenuTitleTitle, _gPcMenuQuitTitle,
     };
 
     *count = ARRAY_SIZE(texts);
@@ -597,6 +651,13 @@ s32 pcMenuTakeTitleRequest(void)
     requested              = _gPcMenuTitleRequested;
     _gPcMenuTitleRequested = 0;
     return requested;
+}
+
+void pcMenuAllowSave(void (*prepare)(void), void (*done)(void))
+{
+    _gPcMenuSaveAllowedAt = gDisplayState.loopCount;
+    _gPcMenuSavePrepare   = prepare;
+    _gPcMenuSaveDone      = done;
 }
 
 #endif
