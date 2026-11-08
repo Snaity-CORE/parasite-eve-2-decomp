@@ -2790,7 +2790,11 @@ void itemMenuNoticeTask(Task* task)
     uiDrawPanelLabel(&(object)->panel, gItemMenuNoticeTitle);
 
     textColorRgb = 0x606060;
+#ifdef PC_PORT
+    text = pcItemMenuNoticeText((u16)task->spawnArg1.value);
+#else
     text         = gItemMenuNoticeTexts[(u16)task->spawnArg1.value];
+#endif
 
     if (task->state == ITEM_MENU_NOTICE_STATE_INIT) {
         uiSizePanelForTextDefault(&(object)->panel, text);
@@ -3857,7 +3861,11 @@ static void _itemMenuUpdateTimedNoticeDialog(UiObject* object, Task* task)
     s32       colorRgb;
 
     colorRgb = ITEM_MENU_TEXT_COLOR_RGB;
+#ifdef PC_PORT
+    text = pcItemMenuNoticeText((u16)task->spawnArg1.value);
+#else
     text     = gItemMenuNoticeTexts[(u16)task->spawnArg1.value];
+#endif
 
     if (task->state == ITEM_MENU_STATE_INITIAL) {
         uiSizePanelForTextDefault(&(object)->panel, text);

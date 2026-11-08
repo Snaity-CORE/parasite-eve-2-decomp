@@ -34,7 +34,8 @@
 #include "main/wipsys.h"
 
 #ifdef PC_PORT
-/* The options a replay keeps (controls.rs): bit 6 unified boxes. */
+/* The options a replay keeps (controls.rs): bits 6 unified boxes, 8 full
+ * inventory to the item box. */
 extern u32 pc_input_options(void);
 
 /// PC: the range every item box shows with unified boxes: the boxes' saved
@@ -44,6 +45,14 @@ extern u32 pc_input_options(void);
 /// most 127 rows: container 11's (170..179) are moved into it when it opens
 /// (_itemMenuGatherUnifiedBox).
 static InventoryItemRange _gItemMenuUnifiedBoxRange = { .firstRow = 50, .rowCount = 120, .tableId = INVENTORY_ITEM_TABLE_SAVED };
+
+const u8* pcItemMenuNoticeText(s32 noticeId)
+{
+    if (noticeId == ITEM_MENU_NOTICE_MOVED_TO_BOX) {
+        return (const u8*)"Moved to the item box.";
+    }
+    return gItemMenuNoticeTexts[noticeId];
+}
 
 InventoryItemRange* pcUnifiedBoxRange(void)
 {
@@ -956,6 +965,29 @@ void itemMenuDrawTransferMoveRow(UiList* list, UiObject* object)
         itemId         = selectedRow->itemId;
         quantity       = selectedRow->qty;
         sndEvtRequestScriptStart(SOUND_MENU_CONFIRM, 0, 0);
+#ifdef PC_PORT
+        /* PC: full inventory to the item box (with unified boxes). A battle's
+         * winnings the inventory has no room for go whole to the box (an item
+         * that may not move stays to get its usual notice). */
+        if (paneIndex == ITEM_MENU_PANE_CONTAINER && object->owner->status != 0 && (pc_input_options() & (64 | 256)) == (64 | 256)) {
+            const InventoryItemRange* carried = gItemMenuTransferRanges + ITEM_MENU_PANE_CARRIED;
+            s32                       fits;
+
+            if ((u32)(itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT) {
+                fits = inventoryFindLastItemRowInRange(itemId, carried) != NULL || inventoryCanAddItem(carried, itemId) != 0;
+            } else {
+                fits = inventoryCanAddItem(carried, itemId) != 0 || _itemMenuCheckTransferRestriction(itemId, object->owner->parent->status) != 0;
+            }
+            if (!fits && inventoryCanAddItem(pcUnifiedBoxRange(), itemId) != 0) {
+                equipmentClearRemovableLoads(itemId);
+                inventoryRemoveItemRow(gItemMenuTransferRanges + paneIndex, selectedRow, quantity);
+                inventoryGiveItem(pcUnifiedBoxRange(), itemId, quantity);
+                itemMenuSpawnNotice(object, ITEM_MENU_NOTICE_MOVED_TO_BOX, 0, ITEM_MENU_NOTICE_RESULT_DISMISS);
+                object->panel.control.word = USER_INTERFACE_PANEL_INACTIVE;
+                return;
+            }
+        }
+#endif
         // Item-box ammunition uses a quantity selector; battlefield stacks move whole.
         if ((u32)(itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT) {
             rangeTask = object->owner;

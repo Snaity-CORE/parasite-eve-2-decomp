@@ -294,6 +294,15 @@ enum {
     ITEM_MENU_NOTICE_TEXT_COUNT   = 33
 };
 
+#ifdef PC_PORT
+/* PC: notices past the catalog, whose table is the disc's (item_menu.c):
+ * battle winnings sent to the item box. */
+enum { ITEM_MENU_NOTICE_MOVED_TO_BOX = ITEM_MENU_NOTICE_TEXT_COUNT };
+
+/* A notice's text, the catalog's or a PC one. */
+const u8* pcItemMenuNoticeText(s32 noticeId);
+#endif
+
 /// Complete item-menu message catalog, indexed by notice id 0..32.
 ///
 /// Entries are borrowed terminated byte strings with gameplay-overlay lifetime.
