@@ -182,6 +182,13 @@ static __inline void _inventoryRemoveItemRow(InventoryItemRange* range, Inventor
     s32 itemId;
 
     itemId = row->itemId;
+#ifdef PC_PORT
+    /* PC: one use of a stack of medicines takes one (item_sort.c). */
+    if (pcItemStacks(itemId) && quantity >= 1 && quantity < row->qty) {
+        row->qty -= quantity;
+        return;
+    }
+#endif
     if (itemId < INVENTORY_CONSUMABLE_ITEM_FIRST) {
         _inventoryClearItemRow(row);
     } else {

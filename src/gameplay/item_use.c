@@ -401,6 +401,14 @@ static s32 _itemUseAttachedItem(InventoryItemRow* attachedRow)
                 }
             }
 
+#ifdef PC_PORT
+            /* PC: an attached stack of medicines gives one (item_sort.c). */
+            if (applied == 1 && consumeRow != 0 && pcItemStacks(itemId) && attachedRow->qty > 1) {
+                attachedRow->qty--;
+                itemSetIdentified(itemId, 1);
+                consumeRow = 0;
+            }
+#endif
             if (applied == 1 && consumeRow != 0) {
                 attachedRow->itemId     = INVENTORY_ITEM_NONE;
                 attachedRow->qty        = 0;

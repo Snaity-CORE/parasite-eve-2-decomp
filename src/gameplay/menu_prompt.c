@@ -1332,7 +1332,12 @@ static inline void _itemMenuDrawUnloadedRowQuantity(const UiList* list, const Ui
     rowY         = list->rowTextY.signedValue;
     textColorRgb = list->colorRgb;
     if (carriedRow != NULL) {
+#ifdef PC_PORT
+        /* PC: a stack of medicines shows its count too (item_sort.c). */
+        if ((u32)(carriedRow->itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT || (pcItemStacks(carriedRow->itemId) && carriedRow->qty > 1)) {
+#else
         if ((u32)(carriedRow->itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT) {
+#endif
             unloadedQuantity           = carriedRow->qty - equipmentGetLoadedConsumableQuantity(&gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems, carriedRow->itemId);
             quantityRequest.x          = object->panel.contentOriginX.unsignedValue + 132 + rowX;
             screenBaselineY            = object->panel.contentOriginY.unsignedValue - 3;
@@ -2235,7 +2240,12 @@ void itemMenuDrawArmorAttachmentRow(UiList* list, UiObject* object)
         rowX           = list->rowTextX.signedValue;
         rowY           = list->rowTextY.signedValue;
         textColorRgb   = list->colorRgb;
+#ifdef PC_PORT
+        /* PC: a stack of medicines shows its count too (item_sort.c). */
+        if ((u32)(attachedItemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT || (pcItemStacks(attachedItemId) && carriedRow->qty > 1)) {
+#else
         if ((u32)(attachedItemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT) {
+#endif
             availableQuantity                       = carriedRow->qty - equipmentGetLoadedConsumableQuantity(&gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems, attachedItemId);
             textScratch.quantity.request.x          = object->panel.contentOriginX.unsignedValue + 0x84 + rowX;
             screenBaselineY                         = object->panel.contentOriginY.unsignedValue - 3;

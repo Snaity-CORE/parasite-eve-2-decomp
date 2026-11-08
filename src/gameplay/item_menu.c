@@ -246,8 +246,17 @@ typedef struct {
     s32 carriedQty;          // Rounds the player would carry (`loadedQty`..`stackLimit`).
     s32 loadedQty;           // Carried rounds loaded in carried weapons, which cannot be moved.
     s32 stackLimit;          // Largest quantity either side's stack may hold.
+#ifdef PC_PORT
+    s32 pcMedicine;       // PC: a medicine's units (item_sort.c), each side its own limit:
+    s32 pcContainerLimit; // the most the container may end with,
+    s32 pcCarriedLimit;   // and the player.
+#endif
 } _ItemMenuAmmoSplitWork;
+#ifdef PC_PORT
+STATIC_ASSERT_SIZEOF(_ItemMenuAmmoSplitWork, 0x24);
+#else
 STATIC_ASSERT_SIZEOF(_ItemMenuAmmoSplitWork, 0x18);
+#endif
 
 /// Lighting matrices owned by a placed item-container lid task.
 ///
@@ -767,7 +776,12 @@ void itemMenuDrawTransferInventoryRow(UiList* list, UiObject* object)
     } else {
         itemMenuDrawItemRow(object, list->rowTextX.signedValue, list->rowTextY.signedValue, itemId, list->colorRgb, ITEM_MENU_ATTACHMENT_MARK_ATTACHED);
     }
+#ifdef PC_PORT
+    /* PC: a stack of medicines shows its count too (item_sort.c). */
+    if ((itemId >= INVENTORY_CONSUMABLE_ITEM_FIRST && itemId < INVENTORY_CONSUMABLE_ITEM_FIRST + INVENTORY_CONSUMABLE_ITEM_COUNT) || (pcItemStacks(itemId) && row->qty > 1)) {
+#else
     if (itemId >= INVENTORY_CONSUMABLE_ITEM_FIRST && itemId < INVENTORY_CONSUMABLE_ITEM_FIRST + INVENTORY_CONSUMABLE_ITEM_COUNT) {
+#endif
         itemMenuDrawQuantity(object, list->rowTextX.signedValue, list->rowTextY.signedValue, row->qty, list->colorRgb);
     }
     if (list->rowInputEnabled == USER_INTERFACE_LIST_ROW_ACTIVE) {
@@ -976,9 +990,9 @@ void itemMenuDrawTransferMoveRow(UiList* list, UiObject* object)
             if ((u32)(itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT) {
                 fits = inventoryFindLastItemRowInRange(itemId, carried) != NULL || inventoryCanAddItem(carried, itemId) != 0;
             } else {
-                fits = inventoryCanAddItem(carried, itemId) != 0 || _itemMenuCheckTransferRestriction(itemId, object->owner->parent->status) != 0;
+                fits = pcInventoryCanAddStack(carried, itemId, quantity) != 0 || _itemMenuCheckTransferRestriction(itemId, object->owner->parent->status) != 0;
             }
-            if (!fits && inventoryCanAddItem(pcUnifiedBoxRange(), itemId) != 0) {
+            if (!fits && pcInventoryCanAddStack(pcUnifiedBoxRange(), itemId, quantity) != 0) {
                 equipmentClearRemovableLoads(itemId);
                 inventoryRemoveItemRow(gItemMenuTransferRanges + paneIndex, selectedRow, quantity);
                 inventoryGiveItem(pcUnifiedBoxRange(), itemId, quantity);
@@ -1000,7 +1014,15 @@ void itemMenuDrawTransferMoveRow(UiList* list, UiObject* object)
             } else {
                 noticeId = ITEM_MENU_NOTICE_NO_TRANSFER_SPACE;
             }
+#ifdef PC_PORT
+            /* PC: in an item box, a stack of medicines is split as ammunition
+             * is (item_sort.c); else it moves whole. */
+        } else if (pcItemStacks(itemId) && pcStackingItems() && selectedRow->qty > 1 && object->owner->status == 0) {
+            chooseQuantity = 1;
+        } else if (pcInventoryCanAddStack((gItemMenuTransferRanges + (object->owner->spawnArg1.value ^ 1)), itemId, quantity) != 0) {
+#else
         } else if (inventoryCanAddItem((gItemMenuTransferRanges + (object->owner->spawnArg1.value ^ 1)), itemId) != 0) {
+#endif
             actionTask         = object->owner;
             battleFieldMode    = actionTask->parent->status;
             transferRestricted = _itemMenuCheckTransferRestriction(itemId, battleFieldMode);
@@ -1394,6 +1416,11 @@ static void _itemMenuAmmoSplitTask(Task* task)
     object         = task->spawnArg2.pointer;
     object->result = USER_INTERFACE_RESULT_NONE;
     width          = (object->panel.contentRight.signedValue - object->panel.contentLeft.signedValue) - 0x50;
+#ifdef PC_PORT
+    if (pcItemStacks(task->spawnArg1.value)) {
+        uiDrawPanelLabel(&(object)->panel, "Item");
+    } else
+#endif
     uiDrawPanelLabel(&(object)->panel, _gItemMenuAmmoSplitTitleText);
     // Snapshot both stacks; loaded carried rounds stay on the carried side.
     if (task->state == 0) {
@@ -1412,6 +1439,21 @@ static void _itemMenuAmmoSplitTask(Task* task)
         split->loadedQty           = equipmentGetLoadedConsumableQuantity(gItemMenuTransferRanges + ITEM_MENU_PANE_CARRIED, task->spawnArg1.value);
         uiSetPromptText(gItemMenuAmmoSplitHelpText, 0, 0);
         split->stackLimit = gInventoryConsumableStacks[task->spawnArg1.value - INVENTORY_CONSUMABLE_ITEM_FIRST].maxHeld;
+#ifdef PC_PORT
+        if (pcItemStacks(task->spawnArg1.value)) {
+            split->pcMedicine          = 1;
+            containerInitialQty        = pcInventoryStackUnits(gItemMenuTransferRanges, task->spawnArg1.value);
+            carriedInitialQty          = pcInventoryStackUnits(gItemMenuTransferRanges + ITEM_MENU_PANE_CARRIED, task->spawnArg1.value);
+            split->containerQty        = containerInitialQty;
+            split->containerInitialQty = containerInitialQty;
+            split->carriedQty          = carriedInitialQty;
+            split->carriedInitialQty   = carriedInitialQty;
+            split->loadedQty           = 0;
+            split->pcContainerLimit    = containerInitialQty + pcInventoryStackCapacity(gItemMenuTransferRanges, task->spawnArg1.value);
+            split->pcCarriedLimit      = carriedInitialQty + pcInventoryStackCapacity(gItemMenuTransferRanges + ITEM_MENU_PANE_CARRIED, task->spawnArg1.value);
+            uiSetPromptText((u8*)"Set the number with the directional\nbuttons. } button to confirm.", 0, 0);
+        }
+#endif
         task->state       = task->state + 1;
     }
     split = task->work;
@@ -1430,12 +1472,33 @@ static void _itemMenuAmmoSplitTask(Task* task)
     }
     panelControl = object->panel.control.word;
     if (panelControl == USER_INTERFACE_PANEL_ACTIVE) {
+#ifdef PC_PORT
+        /* A medicine's sides have limits of their own: the side a press
+         * moves toward is the one that bounds it. */
+        if (split->pcMedicine) {
+            if (padCheckButtons(0, PAD_BUTTON_QUERY_PRESSED, PAD_BUTTON_LEFT | PAD_BUTTON_UP | PAD_BUTTON_L1 | PAD_BUTTON_L2) != 0) {
+                split->stackLimit = split->pcContainerLimit;
+            } else {
+                split->stackLimit = split->pcCarriedLimit;
+            }
+        }
+#endif
         _itemMenuAdjustAmmoSplitQuantities(task, split, pad, repeatStep);
 
         // Apply only the net change; the preview has not touched inventory.
         if (padCheckButtons(0, PAD_BUTTON_QUERY_PRESSED, gPadConfirmButtonMask) != 0) {
             sndEvtRequestScriptStart(SOUND_MENU_CONFIRM, 0, 0);
             transferQty = split->containerQty - split->containerInitialQty;
+#ifdef PC_PORT
+            if (split->pcMedicine) {
+                if (transferQty > 0) {
+                    pcInventoryMoveUnits(gItemMenuTransferRanges + ITEM_MENU_PANE_CARRIED, gItemMenuTransferRanges, task->spawnArg1.value, transferQty);
+                } else if (transferQty < 0) {
+                    pcInventoryMoveUnits(gItemMenuTransferRanges, gItemMenuTransferRanges + ITEM_MENU_PANE_CARRIED, task->spawnArg1.value, -transferQty);
+                }
+                transferQty = 0;
+            }
+#endif
             if (transferQty > 0) {
                 containerRange = gItemMenuTransferRanges;
                 inventoryGiveItem(containerRange, task->spawnArg1.value, transferQty);

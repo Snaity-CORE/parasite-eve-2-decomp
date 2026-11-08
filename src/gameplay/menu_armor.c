@@ -200,7 +200,12 @@ static inline void _itemMenuDrawAvailableAttachmentQuantity(const UiList* list, 
     rowX         = list->rowTextX.signedValue;
     rowY         = list->rowTextY.signedValue;
     textColorRgb = list->colorRgb;
+#ifdef PC_PORT
+    /* PC: a stack of medicines shows its count too (item_sort.c). */
+    if ((u32)(itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT || (pcItemStacks(itemId) && candidateRow->qty > 1)) {
+#else
     if ((u32)(itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT) {
+#endif
         unloadedQuantity           = candidateRow->qty - equipmentGetLoadedConsumableQuantity(carriedItems, itemId);
         quantityRequest.x          = object->panel.contentOriginX.unsignedValue + 132 + rowX;
         quantityRequest.y          = object->panel.contentOriginY.unsignedValue + (rowY - 3);

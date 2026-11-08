@@ -443,4 +443,31 @@ enum {
 /// the retained parser to read the preceding byte.
 const u8* itemGetText(s32 itemId, s32 fieldIndex, s32 forceIdentified);
 
+#ifdef PC_PORT
+/* PC: stacks of identical medicines ([gameplay] stack_items; item_sort.c).
+ * A medicine row's qty counts the units it holds, up to PC_ITEM_STACK_MAX;
+ * with the option, an added medicine joins a row of its kind. */
+enum { PC_ITEM_STACK_MAX = 10 };
+
+/* Whether rows of the item hold stacks (medicines: catalog classification 1). */
+s32 pcItemStacks(s32 itemId);
+
+/* Whether a whole row of `quantity` of the item fits the range: a free row,
+ * or room in the rows of its kind it would join. */
+s32 pcInventoryCanAddStack(const InventoryItemRange* range, s32 itemId, s32 quantity);
+
+/* Whether the option is on. */
+s32 pcStackingItems(void);
+
+/* Units of a medicine in the range's rows. */
+s32 pcInventoryStackUnits(const InventoryItemRange* range, s32 itemId);
+
+/* Units of a medicine the range could still take. */
+s32 pcInventoryStackCapacity(const InventoryItemRange* range, s32 itemId);
+
+/* Moves `quantity` units of a medicine (no more than `from` holds, nor than
+ * `to` can take): out of `from`'s unattached rows first, its last first. */
+void pcInventoryMoveUnits(InventoryItemRange* from, const InventoryItemRange* to, s32 itemId, s32 quantity);
+#endif
+
 #endif // GAMEPLAY_ITEMS_H

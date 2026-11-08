@@ -1921,7 +1921,12 @@ void itemMenuDrawUnloadedConsumableQuantity(const UiObject* object, s32 x, s32 y
     s32         unloadedQuantity;
 
     if (row != NULL) {
+#ifdef PC_PORT
+        /* PC: a stack of medicines shows its count too (item_sort.c). */
+        if ((u32)(row->itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT || (pcItemStacks(row->itemId) && row->qty > 1)) {
+#else
         if ((u32)(row->itemId - INVENTORY_CONSUMABLE_ITEM_FIRST) < (u32)INVENTORY_CONSUMABLE_ITEM_COUNT) {
+#endif
             unloadedQuantity           = row->qty - equipmentGetLoadedConsumableQuantity(&gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems, row->itemId);
             quantityRequest.x          = object->panel.contentOriginX.unsignedValue + 0x84 + x;
             textBaseY                  = object->panel.contentOriginY.unsignedValue - 3;

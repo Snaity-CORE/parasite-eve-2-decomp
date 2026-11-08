@@ -444,6 +444,11 @@ static s32 _inventoryCanAddItemQuantity(const InventoryItemRange* range, s32 ite
             return 0;
         }
     } else {
+#ifdef PC_PORT
+        if (pcItemStacks(itemId) && _pcStackRoom(range, itemId) > 0) {
+            return 1;
+        }
+#endif
         requiredRows++;
     }
     return requiredRows <= rowCapacity;
@@ -526,6 +531,11 @@ s32 inventoryCanAddItem(const InventoryItemRange* range, s32 itemId)
             return 0;
         }
     } else {
+#ifdef PC_PORT
+        if (pcItemStacks(itemId) && _pcStackRoom(range, itemId) > 0) {
+            return 1;
+        }
+#endif
         requiredRows++;
     }
     return requiredRows <= rowCapacity;
@@ -580,18 +590,189 @@ InventoryItemRow* inventoryPlaceItemAtRow(const InventoryItemRange* range, s32 r
             placedRow         = &table[tableIndex];
             placedRow->itemId = itemId;
             placedRow->qty    = 1;
+#ifdef PC_PORT
+            if (pcItemStacks(itemId) && quantity > 1) {
+                placedRow->qty = quantity;
+            }
+#endif
         } else {
             placedRow         = &table[tableIndex];
             displacedItemId   = placedRow->itemId;
             displacedQuantity = placedRow->qty;
             placedRow->itemId = itemId;
             placedRow->qty    = 1;
+#ifdef PC_PORT
+            if (pcItemStacks(itemId) && quantity > 1) {
+                placedRow->qty = quantity;
+            }
+#endif
             inventoryGiveItem(range, displacedItemId, displacedQuantity);
         }
     }
     return placedRow;
 #undef INVENTORY_RELOCATE_STACK
 }
+
+#ifdef PC_PORT
+extern u32 pc_input_options(void);
+
+/* The options a replay keeps (controls.rs): bit 9 stacks identical items. */
+static s32 _pcStackingItems(void)
+{
+    return (pc_input_options() & 512) != 0;
+}
+
+static InventoryItemRow* _pcAddStack(const InventoryItemRange* range, s32 itemId, s32 quantity);
+
+s32 pcStackingItems(void)
+{
+    return _pcStackingItems();
+}
+
+s32 pcItemStacks(s32 itemId)
+{
+    return (u32)(itemId - 1) < (u32)(EQUIPMENT_WEAPON_ITEM_FIRST - 1) && gItemDescriptors[itemId].classification == ITEM_SUBTYPE_MEDICINE;
+}
+
+/* Room left in the rows of the item's kind it would join (0 without the
+ * option). */
+static s32 _pcStackRoom(const InventoryItemRange* range, s32 itemId)
+{
+    const InventoryItemRow* table;
+    s32                     rowIndex;
+    s32                     room;
+
+    room = 0;
+    if (!_pcStackingItems()) {
+        return 0;
+    }
+    table = _inventoryGetRangeTable(range);
+    for (rowIndex = range->firstRow; rowIndex < range->firstRow + range->rowCount; rowIndex++) {
+        if (table[rowIndex].itemId == itemId && table[rowIndex].qty < PC_ITEM_STACK_MAX) {
+            room += PC_ITEM_STACK_MAX - table[rowIndex].qty;
+        }
+    }
+    return room;
+}
+
+s32 pcInventoryCanAddStack(const InventoryItemRange* range, s32 itemId, s32 quantity)
+{
+    if (pcItemStacks(itemId) && _pcStackRoom(range, itemId) >= quantity) {
+        return 1;
+    }
+    return inventoryCanAddItem(range, itemId);
+}
+
+s32 pcInventoryStackUnits(const InventoryItemRange* range, s32 itemId)
+{
+    const InventoryItemRow* table;
+    s32                     rowIndex;
+    s32                     units;
+
+    table = _inventoryGetRangeTable(range);
+    units = 0;
+    for (rowIndex = range->firstRow; rowIndex < range->firstRow + range->rowCount; rowIndex++) {
+        if (table[rowIndex].itemId == itemId) {
+            units += table[rowIndex].qty;
+        }
+    }
+    return units;
+}
+
+s32 pcInventoryStackCapacity(const InventoryItemRange* range, s32 itemId)
+{
+    const InventoryItemRow* table;
+    s32                     rowIndex;
+    s32                     capacity;
+
+    table    = _inventoryGetRangeTable(range);
+    capacity = _pcStackRoom(range, itemId);
+    for (rowIndex = range->firstRow; rowIndex < range->firstRow + range->rowCount; rowIndex++) {
+        if (table[rowIndex].itemId == INVENTORY_ITEM_NONE) {
+            capacity += PC_ITEM_STACK_MAX;
+        }
+    }
+    return capacity;
+}
+
+void pcInventoryMoveUnits(InventoryItemRange* from, const InventoryItemRange* to, s32 itemId, s32 quantity)
+{
+    InventoryItemRow* table;
+    s32               pass;
+    s32               rowIndex;
+    s32               taken;
+
+    if (quantity > pcInventoryStackUnits(from, itemId)) {
+        quantity = pcInventoryStackUnits(from, itemId);
+    }
+    if (quantity > pcInventoryStackCapacity(to, itemId)) {
+        quantity = pcInventoryStackCapacity(to, itemId);
+    }
+    table = _inventoryGetRangeTable(from);
+    for (pass = 0; pass < 2; pass++) {
+        for (rowIndex = from->firstRow + from->rowCount - 1; rowIndex >= from->firstRow && quantity > 0; rowIndex--) {
+            if (table[rowIndex].itemId != itemId || (pass == 0 && table[rowIndex].attachSlot > INVENTORY_ATTACHMENT_NONE)) {
+                continue;
+            }
+            taken = table[rowIndex].qty < quantity ? table[rowIndex].qty : quantity;
+            table[rowIndex].qty -= taken;
+            if (table[rowIndex].qty == 0) {
+                table[rowIndex].itemId     = INVENTORY_ITEM_NONE;
+                table[rowIndex].attachSlot = INVENTORY_ATTACHMENT_NONE;
+            }
+            quantity -= taken;
+            while (taken > 0) {
+                _pcAddStack(to, itemId, taken < PC_ITEM_STACK_MAX ? taken : PC_ITEM_STACK_MAX);
+                taken -= PC_ITEM_STACK_MAX;
+            }
+        }
+    }
+}
+
+/* Adds `quantity` of a medicine: into the rows of its kind first (with the
+ * option), the rest into a free row. NULL when none of it found room. */
+static InventoryItemRow* _pcAddStack(const InventoryItemRange* range, s32 itemId, s32 quantity)
+{
+    InventoryItemRow* table;
+    InventoryItemRow* addedRow;
+    s32               rowIndex;
+    s32               moved;
+
+    table    = _inventoryGetRangeTable(range);
+    addedRow = NULL;
+    if (quantity < 1) {
+        quantity = 1;
+    }
+    if (quantity > PC_ITEM_STACK_MAX) {
+        quantity = PC_ITEM_STACK_MAX;
+    }
+    if (_pcStackingItems()) {
+        for (rowIndex = range->firstRow; rowIndex < range->firstRow + range->rowCount && quantity > 0; rowIndex++) {
+            if (table[rowIndex].itemId == itemId && table[rowIndex].qty < PC_ITEM_STACK_MAX) {
+                moved = PC_ITEM_STACK_MAX - table[rowIndex].qty;
+                if (moved > quantity) {
+                    moved = quantity;
+                }
+                table[rowIndex].qty += moved;
+                quantity            -= moved;
+                addedRow             = &table[rowIndex];
+            }
+        }
+    }
+    if (quantity > 0) {
+        for (rowIndex = range->firstRow; rowIndex < range->firstRow + range->rowCount; rowIndex++) {
+            if (table[rowIndex].itemId == INVENTORY_ITEM_NONE) {
+                addedRow             = &table[rowIndex];
+                addedRow->itemId     = itemId;
+                addedRow->qty        = quantity;
+                addedRow->attachSlot = INVENTORY_ATTACHMENT_NONE;
+                break;
+            }
+        }
+    }
+    return addedRow;
+}
+#endif
 
 InventoryItemRow* inventoryAddItem(const InventoryItemRange* range, s32 itemId, s32 quantity)
 {
@@ -615,6 +796,11 @@ InventoryItemRow* inventoryAddItem(const InventoryItemRange* range, s32 itemId, 
         }
     }
 
+#ifdef PC_PORT
+    if (pcItemStacks(itemId)) {
+        return _pcAddStack(range, itemId, quantity);
+    }
+#endif
     // Consumables share one stack within the requested range.
     rowIndex   = range->firstRow;
     foundStack = 0;
