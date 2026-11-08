@@ -714,6 +714,11 @@ static void _titleIntroMovieTask(Task* task)
 /// The movie route waits two ticks before the screen spawn; both routes wait
 /// one tick after it, then enable display output, latch the subsequent intro-skip
 /// request and release this task.
+#ifdef PC_PORT
+/* The options a replay keeps (controls.rs): bit 3 skip the intro. */
+extern u32 pc_input_options(void);
+#endif
+
 static void _titleStartupTask(Task* startupTask)
 {
     enum {
@@ -736,7 +741,14 @@ static void _titleStartupTask(Task* startupTask)
             // Normal boot gives the movie exclusive presentation ownership.
             gDisplayState.control.flags.imageSource = DISPLAY_IMAGE_NONE;
             _gTitleScreenSkipFade                   = true;
+#ifdef PC_PORT
+            /* PC: skip the intro (Squaresoft's logo, the opening movie) as
+             * when coming back to the title. */
+            if ((gDisplayState.debugMode < 0) || (gGameMainPersistentState.skipTitleIntro != 0) ||
+                (pc_input_options() & 8)) {
+#else
             if ((gDisplayState.debugMode < 0) || (gGameMainPersistentState.skipTitleIntro != 0)) {
+#endif
                 nextState             = TITLE_STARTUP_QUEUE_BACKGROUND;
                 _gTitleScreenSkipFade = false;
             } else {

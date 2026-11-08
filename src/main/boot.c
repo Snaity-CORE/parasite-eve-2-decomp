@@ -270,6 +270,11 @@ void memConfigureImageMemory(s32 stageId, s32 areaId)
     _memClearPrimitiveTrailer();
 }
 
+#ifdef PC_PORT
+/* The options a replay keeps (controls.rs): bit 3 skip the intro. */
+extern u32 pc_input_options(void);
+#endif
+
 void bootColdStartTask(Task* task)
 {
     enum {
@@ -316,6 +321,15 @@ void bootColdStartTask(Task* task)
             break;
 
         case BOOT_COLD_START_FADE_IN:
+#ifdef PC_PORT
+            /* PC: skip the intro. The publisher's picture is not shown (the
+             * screen stays black) nor held longer than the loading takes. */
+            if (pc_input_options() & 8) {
+                task->killCountdown = BOOT_COLD_START_HOLD_FRAMES;
+                task->state++;
+                break;
+            }
+#endif
             SetDispMask(1);
             task->killCountdown -= BOOT_FADE_BRIGHTNESS_STEP;
             if (task->killCountdown <= 0) {
@@ -343,6 +357,11 @@ void bootColdStartTask(Task* task)
 
         case BOOT_COLD_START_FADE_OUT:
             task->killCountdown += BOOT_FADE_BRIGHTNESS_STEP;
+#ifdef PC_PORT
+            if (pc_input_options() & 8) {
+                task->killCountdown = BOOT_FADE_FINISHED;
+            }
+#endif
             if (task->killCountdown >= BOOT_FADE_FINISHED) {
                 memFillBytes(gFsImageWorkspacePtr, 0, sizeof(*gFsImageWorkspacePtr));
                 task->state++;
