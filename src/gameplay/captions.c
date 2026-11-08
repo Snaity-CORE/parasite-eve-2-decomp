@@ -166,6 +166,11 @@ static inline void _capUpdateChoiceSelection(void)
     _capDrawChoiceMarker();
 }
 
+#ifdef PC_PORT
+/* The options a replay keeps (controls.rs): bit 4 instant text. */
+extern u32 pc_input_options(void);
+#endif
+
 void capUpdatePlaybackTask(Task* task)
 {
     enum {
@@ -549,7 +554,15 @@ void capUpdatePlaybackTask(Task* task)
                 gCapSceneSyncAdjustmentFrames = 0;
                 return;
             }
+#ifdef PC_PORT
+            /* PC: instant text. Lines that wait for a button show whole at
+             * once, as a press shows them (timed captions keep their pace,
+             * which follows the scene). */
+            if ((padCheckButtons(0, PAD_BUTTON_QUERY_PRESSED, gPadConfirmButtonMask | gPadCancelButtonMask) != 0) ||
+                (gCapRecordSoundAndTextFlags & CAP_SEQUENCE_INSTANT_TEXT) || (pc_input_options() & 16)) {
+#else
             if ((padCheckButtons(0, PAD_BUTTON_QUERY_PRESSED, gPadConfirmButtonMask | gPadCancelButtonMask) != 0) || (gCapRecordSoundAndTextFlags & CAP_SEQUENCE_INSTANT_TEXT)) {
+#endif
                 gCapRecordPhase     = _capDrawTextStream(gCapSelectedSequence[(s16)gCapRecordIndex].textRef.text, CAP_PLAYBACK_UNUSED_TEXT_DRAW_ARG, 1, gCapSelectedSequence[(s16)gCapRecordIndex].control.text.title | ((gCapSelectedSequence[(s16)gCapRecordIndex].control.text.flags & (CAP_SEQUENCE_LEFT_ALIGN | CAP_SEQUENCE_TITLE_BANK)) << CAP_TEXT_TITLE_FLAGS_SHIFT));
                 nextRecordForReveal = capFindVariantRecord((s16)gCapRecordIndex + 1);
                 if (((gCapSelectedSequence[nextRecordForReveal].textRef.offset != CAP_TEXT_REF_END) && (gCapSelectedSequence[nextRecordForReveal].actionId == 0) && ((gCapSelectedSequence[nextRecordForReveal].control.text.displayFrames != 0) || (gCapSelectedSequence[nextRecordForReveal].control.text.pauseFrames == 0))) || (gCapSelectedSequence[(s16)gCapRecordIndex].control.text.flags & CAP_SEQUENCE_FORCE_CARET)) {
