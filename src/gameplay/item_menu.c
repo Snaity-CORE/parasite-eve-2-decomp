@@ -995,6 +995,31 @@ void itemMenuDrawSwitchRow(UiList* list, UiObject* object)
     }
 }
 
+#ifdef PC_PORT
+/// PC: Sort, the last row of the item box's actions, as the item menu has
+/// one: orders the box and the carried items the way the game orders them.
+static void _itemMenuDrawTransferSortRow(UiList* list, UiObject* object)
+{
+    TextDrawReq textRequest;
+
+    textRequest.x          = object->panel.contentOriginX.unsignedValue + list->rowTextX.unsignedValue;
+    textRequest.y          = object->panel.contentOriginY.unsignedValue + list->rowTextY.unsignedValue;
+    textRequest.otIndex    = object->panel.otIndex.signedValue + 1;
+    textRequest.colorRgb   = list->colorRgb;
+    textRequest.glyphTable = TEXT_GLYPH_TABLE_MEDIUM;
+    textRequest.alignment  = TEXT_ALIGNMENT_LEFT;
+    textRequest.drawMode   = TEXT_DRAW_OUTLINED;
+    textDrawString(&textRequest, gItemMenuSortText);
+
+    if (list->rowInputEnabled == USER_INTERFACE_LIST_ROW_ACTIVE && padCheckButtons(0, PAD_BUTTON_QUERY_PRESSED, gPadConfirmButtonMask) != 0) {
+        sndEvtRequestScriptStart(SOUND_MENU_CONFIRM, 0, 0);
+        inventorySortItems(gItemMenuTransferRanges + ITEM_MENU_PANE_CONTAINER, 0);
+        inventorySortItems(&gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems, 1);
+        object->result = USER_INTERFACE_RESULT_CONFIRM;
+    }
+}
+#endif
+
 /// Builds the Move, Switch and Use rows for the currently selected transfer item.
 ///
 /// Borrows a writable action list and its task-owned object. Its owner carries
@@ -1036,6 +1061,10 @@ static void _itemMenuFillTransferActions(UiList* list, UiObject* object)
             actionCount                                   = actionCount + 1;
         }
     }
+#ifdef PC_PORT
+    gItemMenuTransferActionCallbacks[actionCount] = _itemMenuDrawTransferSortRow;
+    actionCount                                   = actionCount + 1;
+#endif
     list->visibleRowCount.unsignedValue = actionCount;
     list->itemCount                     = actionCount;
 }

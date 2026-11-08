@@ -42,11 +42,21 @@ UiList gItemMenuTransferPaneLists[ITEM_MENU_PANE_COUNT] = {
     [ITEM_MENU_PANE_CARRIED]   = { .rowCallbacks = _gItemMenuTransferInventoryRowCallbacks, .itemCount = 60, .visibleRowCount = { 60 }, .rowHeight = 15 },
 };
 
+#ifdef PC_PORT
+/* PC: room for a fourth row, Sort (item_menu.c). */
+UiListRowCallback gItemMenuTransferActionCallbacks[4] = {
+    itemMenuDrawTransferMoveRow,
+    itemMenuDrawSwitchRow,
+    NULL,
+    NULL,
+};
+#else
 UiListRowCallback gItemMenuTransferActionCallbacks[3] = {
     itemMenuDrawTransferMoveRow,
     itemMenuDrawSwitchRow,
     NULL,
 };
+#endif
 
 s32 itemMenuCanMoveAllItems(void)
 {

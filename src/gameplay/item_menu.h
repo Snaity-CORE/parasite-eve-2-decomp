@@ -1863,7 +1863,11 @@ extern UiList gItemMenuTransferPaneLists[ITEM_MENU_PANE_COUNT];
 /// optionally Use for supported consumables. The popup's item/visible counts
 /// select the initialized prefix; a NULL or stale trailing slot is never
 /// dispatched. Only the active transfer screen may rebuild this shared table.
+#ifdef PC_PORT
+extern UiListRowCallback gItemMenuTransferActionCallbacks[4];
+#else
 extern UiListRowCallback gItemMenuTransferActionCallbacks[3];
+#endif
 
 /// All command label for moving every container item into carried inventory.
 extern u8 gItemMenuTransferAllText[];
