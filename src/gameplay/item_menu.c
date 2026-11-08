@@ -46,10 +46,15 @@ extern u32 pc_input_options(void);
 /// (_itemMenuGatherUnifiedBox).
 static InventoryItemRange _gItemMenuUnifiedBoxRange = { .firstRow = 50, .rowCount = 120, .tableId = INVENTORY_ITEM_TABLE_SAVED };
 
+/* main/pc/menu.c: PE2PC's texts, listed for translators. */
+extern const u8 gPcTextMovedToBox[];
+extern const u8 gPcTextQuantity[];
+extern const u8 gPcTextSetNumber[];
+
 const u8* pcItemMenuNoticeText(s32 noticeId)
 {
     if (noticeId == ITEM_MENU_NOTICE_MOVED_TO_BOX) {
-        return (const u8*)"Moved to the item box.";
+        return gPcTextMovedToBox;
     }
     return gItemMenuNoticeTexts[noticeId];
 }
@@ -1418,7 +1423,7 @@ static void _itemMenuAmmoSplitTask(Task* task)
     width          = (object->panel.contentRight.signedValue - object->panel.contentLeft.signedValue) - 0x50;
 #ifdef PC_PORT
     if (pcItemStacks(task->spawnArg1.value)) {
-        uiDrawPanelLabel(&(object)->panel, "Item");
+        uiDrawPanelLabel(&(object)->panel, (const char*)gPcTextQuantity);
     } else
 #endif
     uiDrawPanelLabel(&(object)->panel, _gItemMenuAmmoSplitTitleText);
@@ -1451,7 +1456,7 @@ static void _itemMenuAmmoSplitTask(Task* task)
             split->loadedQty           = 0;
             split->pcContainerLimit    = containerInitialQty + pcInventoryStackCapacity(gItemMenuTransferRanges, task->spawnArg1.value);
             split->pcCarriedLimit      = carriedInitialQty + pcInventoryStackCapacity(gItemMenuTransferRanges + ITEM_MENU_PANE_CARRIED, task->spawnArg1.value);
-            uiSetPromptText((u8*)"Set the number with the directional\nbuttons. } button to confirm.", 0, 0);
+            uiSetPromptText((u8*)gPcTextSetNumber, 0, 0);
         }
 #endif
         task->state       = task->state + 1;

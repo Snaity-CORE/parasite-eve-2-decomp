@@ -90,6 +90,11 @@ static u8 _gPcMenuTitleTitle[]    = "QUIT TO TITLE";
 static u8 _gPcMenuQuitTitle[]     = "QUIT GAME";
 static u8 _gPcMenuResumeText[]    = "Resume";
 static u8 _gPcMenuSaveText[]      = "Save";
+/* PE2PC's texts in the game's screens (item_menu.c), listed here with the
+ * menu's for translators. */
+const u8 gPcTextMovedToBox[]  = "Moved to the item box.";
+const u8 gPcTextQuantity[]    = "Quantity";
+const u8 gPcTextSetNumber[]   = "Set the number with the directional\nbuttons. } button to confirm.";
 static u8 _gPcMenuOptionsText[]   = "Options";
 static u8 _gPcMenuOptionsTitle[]  = "OPTIONS";
 static u8 _gPcMenuToTitleText[]   = "Quit to title";
@@ -637,7 +642,7 @@ s32 pcMenuFrame(s32 blocked)
 const u8* const* pcMenuTexts(s32* count)
 {
     static const u8* const texts[] = {
-        _gPcMenuPauseTitle, _gPcMenuResumeText, _gPcMenuSaveText, _gPcMenuOptionsText, _gPcMenuToTitleText, _gPcMenuQuitGameText, _gPcMenuTitleTitle, _gPcMenuQuitTitle,
+        _gPcMenuPauseTitle, _gPcMenuResumeText, _gPcMenuSaveText, _gPcMenuOptionsText, gPcTextMovedToBox, gPcTextQuantity, gPcTextSetNumber, _gPcMenuToTitleText, _gPcMenuQuitGameText, _gPcMenuTitleTitle, _gPcMenuQuitTitle,
     };
 
     *count = ARRAY_SIZE(texts);
