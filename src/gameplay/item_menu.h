@@ -2056,4 +2056,18 @@ void itemMenuAmmoSelectionTask(Task* task);
 /// GPU/OT storage. This task itself changes no equipment or inventory quantities.
 void itemMenuArmorSelectionTask(Task* task);
 
+#ifdef PC_PORT
+/// PC: how many rows the player carries: 30 with a bigger inventory (the
+/// options a replay keeps, bit 7), or while rows 20..29 still hold items
+/// after it was turned off; else the game's 20 (item_inventory.c).
+s32 pcCarriedRowCount(void);
+
+/// PC: brings the live carried range to pcCarriedRowCount when it is the
+/// normal one (rows from 0), each update (pad_input.c).
+void pcSyncCarriedRows(void);
+
+/// PC: the range every item box shows with unified boxes (item_menu.c).
+InventoryItemRange* pcUnifiedBoxRange(void);
+#endif
+
 #endif // GAMEPLAY_PRIVATE_ITEM_MENU_H

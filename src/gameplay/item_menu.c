@@ -45,6 +45,11 @@ extern u32 pc_input_options(void);
 /// (_itemMenuGatherUnifiedBox).
 static InventoryItemRange _gItemMenuUnifiedBoxRange = { .firstRow = 50, .rowCount = 120, .tableId = INVENTORY_ITEM_TABLE_SAVED };
 
+InventoryItemRange* pcUnifiedBoxRange(void)
+{
+    return &_gItemMenuUnifiedBoxRange;
+}
+
 enum {
     ITEM_MENU_UNIFIED_BOX_FIRST_CONTAINER = 3,
     ITEM_MENU_UNIFIED_BOX_LAST_ROW        = 179,

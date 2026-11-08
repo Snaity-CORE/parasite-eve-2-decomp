@@ -40,7 +40,14 @@ enum {
     INVENTORY_STARTER_TEMP_RANGE_B_INDEX       = 2
 };
 
+#ifdef PC_PORT
+/* PC: the shooting gallery's temporary rows moved to the unused 180..189,
+ * so a bigger inventory can take rows 20..29 (item_inventory.c). The
+ * gallery clears them as it starts and ends, so saves never hold any. */
+InventoryItemRange gInventoryTrainingCarriedRange = { .firstRow = 180, .rowCount = 10, .tableId = INVENTORY_ITEM_TABLE_SAVED };
+#else
 InventoryItemRange gInventoryTrainingCarriedRange = { .firstRow = 20, .rowCount = 10, .tableId = INVENTORY_ITEM_TABLE_SAVED };
+#endif
 
 /// Container selector 1's saved rows 30..39; cleared by the starter-loadout reset.
 static InventoryItemRange _gInventoryContainerRange1 = { .firstRow = 30, .rowCount = 10, .tableId = INVENTORY_ITEM_TABLE_SAVED };

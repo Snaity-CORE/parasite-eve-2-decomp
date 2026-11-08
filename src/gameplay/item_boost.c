@@ -707,7 +707,11 @@ void inventoryRestoreCarriedLoadout(void)
 
     // Discard temporary rows, then recover the armor marked in normal inventory.
     _inventoryClearItems(&gInventoryTrainingCarriedRange);
+#ifdef PC_PORT
+    _inventorySetCarriedRange(pcCarriedRowCount());
+#else
     _inventorySetCarriedRange(INVENTORY_INITIAL_CARRIED_ROWS);
+#endif
     range = &gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems;
 
     row = &_gpScanTable(range)[range->firstRow];

@@ -1422,6 +1422,22 @@ void itemMenuInventoryCountTask(Task* task)
     textDrawString(&labelRequest, _gItemMenuInventoryTotalText);
 }
 
+#ifdef PC_PORT
+/* The options a replay keeps (controls.rs): bits 6 unified boxes, 8 full
+ * inventory to the item box. */
+extern u32 pc_input_options(void);
+
+/// PC: the item box a pickup goes to when the player's inventory is full:
+/// the unified box (both options on) if it has room for `itemId`, else NULL.
+static InventoryItemRange* _itemPickupOverflowRange(s32 itemId)
+{
+    if ((pc_input_options() & (64 | 256)) == (64 | 256) && inventoryCanAddItem(pcUnifiedBoxRange(), itemId) != 0) {
+        return pcUnifiedBoxRange();
+    }
+    return NULL;
+}
+#endif
+
 void itemPickupPanelTask(Task* task)
 {
     enum {
@@ -1451,7 +1467,12 @@ void itemPickupPanelTask(Task* task)
             if (noticeObject != NULL) {
                 noticeObject->resultValue = USER_INTERFACE_LIST_COMMAND_YES;
             }
+#ifdef PC_PORT
+        } else if (inventoryCanAddItem(&gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems, gItemPickupPublishedKind) != 0 ||
+                   _itemPickupOverflowRange(gItemPickupPublishedKind) != NULL) {
+#else
         } else if (inventoryCanAddItem(&gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems, gItemPickupPublishedKind) != 0) {
+#endif
             uiSpawnObject(pickupPanelDescs + ITEM_PICKUP_CHILD_PANEL_QUESTION, 0, USER_INTERFACE_PANEL_ACTIVE, ITEM_PICKUP_PANEL_OPEN_DELAY, object);
         } else {
             uiSpawnObject(pickupPanelDescs + ITEM_PICKUP_CHILD_PANEL_INVENTORY_FULL, 0, USER_INTERFACE_PANEL_ACTIVE, ITEM_PICKUP_PANEL_OPEN_DELAY, object);
@@ -1696,6 +1717,11 @@ static void _itemPickupAskTask(Task* task)
                             carriedItems = &gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems;
                             if (inventoryCanAddItem(carriedItems, gItemPickupPublishedKind) != 0) {
                                 inventoryGiveItem(carriedItems, gItemPickupPublishedKind, gItemPickupPublishedQuantity);
+#ifdef PC_PORT
+                            } else if (_itemPickupOverflowRange(gItemPickupPublishedKind) != NULL) {
+                                /* PC: a full inventory sends it to the item box. */
+                                inventoryGiveItem(_itemPickupOverflowRange(gItemPickupPublishedKind), gItemPickupPublishedKind, gItemPickupPublishedQuantity);
+#endif
                             } else {
                                 childObject->resultValue = USER_INTERFACE_LIST_COMMAND_NO;
                             }

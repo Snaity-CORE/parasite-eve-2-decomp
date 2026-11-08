@@ -195,6 +195,8 @@ extern u32 pc_input_options(void);
 extern void pc_trace_movement(s32 sx, s32 sy, s32 want, s32 yaw, s32 x, s32 z);
 /* Input recordings (replay.rs): where the player is, each update. */
 extern void pc_replay_player(s32 x, s32 z, s32 yaw);
+/* item_inventory.c: the carried rows a bigger inventory asks for. */
+extern void pcSyncCarriedRows(void);
 
 #define PC_INPUT_MODERN     1
 #define PC_INPUT_QUICK_TURN 2
@@ -491,6 +493,7 @@ void padInputUpdate(void)
 #ifdef PC_PORT
     pc_replay_player(player->previousPosition.vx, player->previousPosition.vz, player->rotation.vy);
     heldButtons = pc_movement(pad, (GameActor*)player, heldButtons);
+    pcSyncCarriedRows();
 #endif
     // Suppression masks address logical buttons, so apply them after remapping.
     _padInputPublishButtons(player, heldButtons, pressedButtons, releasedButtons, ~0);

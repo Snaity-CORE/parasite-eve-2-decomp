@@ -190,7 +190,11 @@ void inventoryInitializeNewGame(void)
     inventoryClearCollectedBits();
     _equipmentInitializeNewGameWeaponLoads();
     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems.firstRow = 0;
+#ifdef PC_PORT
+    gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems.rowCount = pcCarriedRowCount();
+#else
     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems.rowCount = INVENTORY_NEW_GAME_CARRIED_ROW_COUNT;
+#endif
     gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems.tableId  = INVENTORY_ITEM_TABLE_SAVED;
     // Only the four three-entry energy pages are reset; the remaining six bytes survive.
     for (pageIndex = 0; pageIndex < INVENTORY_NEW_GAME_ENERGY_PAGE_COUNT; pageIndex++) {
@@ -306,3 +310,42 @@ void inventoryMoveItemRow(const InventoryItemRange* range, s32 sourceIndex, s32 
 }
 
 #undef INVENTORY_TAKE_MOVED_ROW
+
+#ifdef PC_PORT
+/* The options a replay keeps (controls.rs): bit 7 bigger inventory. */
+extern u32 pc_input_options(void);
+
+enum {
+    PC_CARRIED_ROWS_NORMAL = 20,
+    PC_CARRIED_ROWS_BIGGER = 30,
+};
+
+s32 pcCarriedRowCount(void)
+{
+    const InventoryItemRow* rows;
+    s32                     rowIndex;
+
+    if (pc_input_options() & 128) {
+        return PC_CARRIED_ROWS_BIGGER;
+    }
+    // Turned off: kept until the extra rows are empty, so nothing is lost.
+    rows = gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.itemRows;
+    for (rowIndex = PC_CARRIED_ROWS_NORMAL; rowIndex < PC_CARRIED_ROWS_BIGGER; rowIndex++) {
+        if (rows[rowIndex].itemId != INVENTORY_ITEM_NONE) {
+            return PC_CARRIED_ROWS_BIGGER;
+        }
+    }
+    return PC_CARRIED_ROWS_NORMAL;
+}
+
+void pcSyncCarriedRows(void)
+{
+    InventoryItemRange* carried;
+
+    carried = &gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems;
+    if (carried->firstRow == 0 && carried->tableId == INVENTORY_ITEM_TABLE_SAVED &&
+        (carried->rowCount == PC_CARRIED_ROWS_NORMAL || carried->rowCount == PC_CARRIED_ROWS_BIGGER)) {
+        carried->rowCount = pcCarriedRowCount();
+    }
+}
+#endif
