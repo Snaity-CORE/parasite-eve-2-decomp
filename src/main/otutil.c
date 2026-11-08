@@ -97,7 +97,8 @@ static inline void _displayConfigureSmallTaskBuffers(void)
 #ifdef PC_PORT
 #include "main/fs.h"
 
-/* The options a replay keeps (controls.rs): bit 2 fast camera changes. */
+/* The options a replay keeps (controls.rs): bits 2 fast camera changes
+ * and 5 fast doors, which both load faster while the picture is held. */
 extern u32 pc_input_options(void);
 
 /// PC: whether the game holds the picture (frozen while it loads a camera's
@@ -177,11 +178,11 @@ s32 displayRunTaskFrame(GsOT* unusedOrderingTables, s32 frameStartLines, s32 unu
         *(u8*)&gDisplayTaskImageSourceSnapshot = display->control.flags.imageSource;
         ExitCriticalSection();
 #ifdef PC_PORT
-        /* Fast camera changes: while the picture is held, a step of the
-         * loading every blank instead of every second one. Nothing shows
-         * meanwhile, and the main loop still turns once a blank, as in the
-         * menus (replays count its turns). */
-        VSync((pc_input_options() & 4) && pc_camera_change_held() ? 0 : gDisplayVSyncWaitMode);
+        /* Fast loading (fast camera changes or doors): while the picture is
+         * held, a step of the loading every blank instead of every second
+         * one. Nothing shows meanwhile, and the main loop still turns once a
+         * blank, as in the menus (replays count its turns). */
+        VSync((pc_input_options() & (4 | 32)) && pc_camera_change_held() ? 0 : gDisplayVSyncWaitMode);
 #else
         VSync(gDisplayVSyncWaitMode);
 #endif

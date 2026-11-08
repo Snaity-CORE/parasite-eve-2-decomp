@@ -411,9 +411,22 @@ void directionResolveWarp(void)
     }
 }
 
+#ifdef PC_PORT
+/* The options a replay keeps (controls.rs): bit 5 fast doors. */
+extern u32 pc_input_options(void);
+#endif
+
 void directionAwaitWarpSound(void)
 {
     _directionStepDepartureFade();
+#ifdef PC_PORT
+    /* PC: fast doors. The room changes while the door's sound plays on,
+     * instead of after it (about a second and a half). */
+    if (pc_input_options() & 32) {
+        gDirectionActionPhase++;
+        return;
+    }
+#endif
     if (_gDirectionWarpSoundId == DIRECTION_WARP_SOUND_NONE || sndScriptHasActiveId(_gDirectionWarpSoundId) == 0) {
         gDirectionActionPhase++;
     }
