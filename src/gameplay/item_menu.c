@@ -33,6 +33,52 @@
 #include "main/ui.h"
 #include "main/wipsys.h"
 
+#ifdef PC_PORT
+/* The options a replay keeps (controls.rs): bit 6 unified boxes. */
+extern u32 pc_input_options(void);
+
+/// PC: the range every item box shows with unified boxes: the boxes' saved
+/// rows 50..169 (containers 3..10). Not containers 1 and 2 (rows 30..49),
+/// the training's, which the starter loadout clears: those boxes stay as
+/// they were. Lists index their rows with signed bytes, so a box holds at
+/// most 127 rows: container 11's (170..179) are moved into it when it opens
+/// (_itemMenuGatherUnifiedBox).
+static InventoryItemRange _gItemMenuUnifiedBoxRange = { .firstRow = 50, .rowCount = 120, .tableId = INVENTORY_ITEM_TABLE_SAVED };
+
+enum {
+    ITEM_MENU_UNIFIED_BOX_FIRST_CONTAINER = 3,
+    ITEM_MENU_UNIFIED_BOX_LAST_ROW        = 179,
+};
+
+/// PC: moves the items of the boxes' rows past the unified box (170..179)
+/// into its free rows, so none is out of sight. Items with no free row left
+/// stay where they are.
+static void _itemMenuGatherUnifiedBox(void)
+{
+    InventoryItemRow* rows;
+    s32               from;
+    s32               to;
+
+    rows = gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.itemRows;
+    to   = _gItemMenuUnifiedBoxRange.firstRow;
+    for (from = _gItemMenuUnifiedBoxRange.firstRow + _gItemMenuUnifiedBoxRange.rowCount; from <= ITEM_MENU_UNIFIED_BOX_LAST_ROW; from++) {
+        if (rows[from].itemId == INVENTORY_ITEM_NONE) {
+            continue;
+        }
+        while (to < _gItemMenuUnifiedBoxRange.firstRow + _gItemMenuUnifiedBoxRange.rowCount && rows[to].itemId != INVENTORY_ITEM_NONE) {
+            to++;
+        }
+        if (to >= _gItemMenuUnifiedBoxRange.firstRow + _gItemMenuUnifiedBoxRange.rowCount) {
+            return;
+        }
+        rows[to]              = rows[from];
+        rows[from].itemId     = INVENTORY_ITEM_NONE;
+        rows[from].attachSlot = 0;
+        rows[from].qty        = 0;
+    }
+}
+#endif
+
 /// Prevents a cancel press from also activating the discard row it selected.
 enum { ITEM_MENU_LIST_ACTION_CANCEL_HANDLED = 0x21 };
 
@@ -633,6 +679,16 @@ static void _itemMenuTransferScreenTask(Task* task)
                 placeKind                   = gItemPickupPublishedKind;
                 sourceRange                 = containerRanges[placeKind & ITEM_MENU_TRANSFER_CONTAINER_INDEX_MASK];
                 _gItemMenuTransferPlaceKind = placeKind;
+#ifdef PC_PORT
+                /* PC: unified boxes. Every item box shows all the boxes'
+                 * rows (not the battle's winnings, container 0, nor the
+                 * training's boxes, 1 and 2). */
+                if ((pc_input_options() & 64) &&
+                    (placeKind & ITEM_MENU_TRANSFER_CONTAINER_INDEX_MASK) >= ITEM_MENU_UNIFIED_BOX_FIRST_CONTAINER) {
+                    _itemMenuGatherUnifiedBox();
+                    sourceRange = &_gItemMenuUnifiedBoxRange;
+                }
+#endif
             } else {
                 sourceRange = &gMcSaveData[MEMORY_CARD_SAVE_LIVE].state.carriedItems;
             }
