@@ -4,7 +4,7 @@
  * freezes the game and opens the game's own option dialogs over its last
  * picture, dimmed: Resume, Options (the host's settings, in a panel of the
  * game's options' look for each category), Quit to title (the game's soft
- * reset), Quit game, the last two confirmed with the game's Yes and No.
+ * reset), Quit game, the last two confirmed with a Yes and No of its own.
  *
  * While it is open the main loop runs no game task: each frame runs only
  * the menu's own task list, draws its ordering table over the saved
@@ -99,6 +99,10 @@ static u8 _gPcMenuOptionsText[]   = "Options";
 static u8 _gPcMenuOptionsTitle[]  = "OPTIONS";
 static u8 _gPcMenuToTitleText[]   = "Quit to title";
 static u8 _gPcMenuQuitGameText[]  = "Quit game";
+/* The confirmations' answers: as the game's (main/mc.c), but PE2PC's own,
+ * so they follow PE2PC's language and not the disc's. */
+static u8 _gPcMenuNoText[]        = "No";
+static u8 _gPcMenuYesText[]       = "Yes";
 
 static TaskNode              _gPcMenuTasks;
 static UiOptionDialogRequest _gPcMenuRequest;
@@ -414,9 +418,9 @@ static void _pcMenuOpenConfirm(s32 state)
 {
     u8* labels[2];
 
-    // The game's own Yes and No (main/mc.c), No first as the safe choice.
-    labels[0] = gMcTextNo;
-    labels[1] = gMcTextYes;
+    // No first, as the safe choice.
+    labels[0] = _gPcMenuNoText;
+    labels[1] = _gPcMenuYesText;
     _pcMenuOpenDialog(state == PC_MENU_CONFIRM_TITLE ? _gPcMenuTitleTitle : _gPcMenuQuitTitle, labels, 2, 0);
     _gPcMenuState = state;
 }
@@ -642,7 +646,7 @@ s32 pcMenuFrame(s32 blocked)
 const u8* const* pcMenuTexts(s32* count)
 {
     static const u8* const texts[] = {
-        _gPcMenuPauseTitle, _gPcMenuResumeText, _gPcMenuSaveText, _gPcMenuOptionsText, gPcTextMovedToBox, gPcTextQuantity, gPcTextSetNumber, _gPcMenuToTitleText, _gPcMenuQuitGameText, _gPcMenuTitleTitle, _gPcMenuQuitTitle,
+        _gPcMenuPauseTitle, _gPcMenuResumeText, _gPcMenuSaveText, _gPcMenuOptionsText, gPcTextMovedToBox, gPcTextQuantity, gPcTextSetNumber, _gPcMenuToTitleText, _gPcMenuQuitGameText, _gPcMenuTitleTitle, _gPcMenuQuitTitle, _gPcMenuNoText, _gPcMenuYesText,
     };
 
     *count = ARRAY_SIZE(texts);
