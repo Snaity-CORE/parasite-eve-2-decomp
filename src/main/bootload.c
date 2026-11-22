@@ -2369,6 +2369,9 @@ void gameFlowStepLoadScreenPresentation(TextStream* primaryCaption, TextStream* 
     secondaryCaption = NULL;
     switch (gGameFlowLoadScreenPresentationStep) {
         case GAME_FLOW_LOAD_PRESENTATION_BEGIN:
+#ifdef PC_PORT
+            pc_caption_translate(primaryCaption);
+#endif
             _gGameFlowLoadCaptionElapsedFrames               = 0;
             _gGameFlowLegacySecondaryLoadCaptionPhase        = GAME_FLOW_LOAD_CAPTION_PHASE_ARM;
             _gGameFlowLoadCaptionPhase                       = GAME_FLOW_LOAD_CAPTION_PHASE_ARM;

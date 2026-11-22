@@ -316,4 +316,12 @@ s32 capGetVariantKey(void);
 /// be loaded there. CAP reset restores (384, 0).
 void capSetTexturePage(s16 vramX, s16 vramY);
 
+#ifdef PC_PORT
+// Mods' translations and fonts (the host's mods/translate.rs): the CAP file to
+// use instead of one the game loads (or it unchanged), and the glyphs that copy
+// adds, put into its glyph page before its text is drawn.
+extern CapFile* pc_cap_translate(CapFile* file);
+extern void pc_cap_glyphs(const CapFile* file, s32 pageX, s32 pageY);
+#endif
+
 #endif // GAMEPLAY_CAPTIONS_H

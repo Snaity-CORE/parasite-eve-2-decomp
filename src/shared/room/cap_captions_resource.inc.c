@@ -32,7 +32,15 @@ static inline void _capCaptionLoadResource(s16 texturePageX, s16 texturePageY, s
     for (slotIndex = 0; slotIndex < ARRAY_SIZE(gFsResourceSlots); slotIndex++) {
         if (gFsResourceSlots[slotIndex].kind == FILE_SYSTEM_RESOURCE_DATA) {
             if (dataOrdinal == dataResourceIndex) {
+#ifdef PC_PORT
+                CapFile* file = pc_cap_translate(gFsResourceSlots[slotIndex].data);
+
+                if (_capCaptionRelocateFile(file)) {
+                    _gCapCaptionPcFile = file;
+                }
+#else
                 _capCaptionRelocateFile(gFsResourceSlots[slotIndex].data);
+#endif
                 break;
             }
             dataOrdinal++;
