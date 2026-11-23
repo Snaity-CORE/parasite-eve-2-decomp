@@ -311,6 +311,9 @@ static void _streamLoadMovieSlotState(u32 slotIndex)
     _gStreamMovieDisplayMode              = movieSlot->data.movie.displayMode;
     gStreamMovieVolumeTableIndex          = movieSlot->data.movie.volumeTableIndex;
     _gStreamMovieUploadMode               = movieSlot->data.movie.uploadMode;
+#ifdef PC_PORT
+    pc_movie_frames(_gStreamMovieFrameLimit);
+#endif
 }
 
 s16 streamFindMovieSlot(const GameLocationKey* location, s32 subId, s32 requireViewStream)
