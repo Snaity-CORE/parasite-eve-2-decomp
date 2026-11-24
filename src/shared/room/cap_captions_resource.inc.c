@@ -27,6 +27,11 @@ static inline void _capCaptionLoadResource(s16 texturePageX, s16 texturePageY, s
     s32 slotIndex;
 
     dataOrdinal              = 0;
+#ifdef PC_PORT
+    // A native static, which the room overlay's reload does not reset as
+    // the console's copy is: no CAP file selected until this one is.
+    _gCapCaptionPcFile = NULL;
+#endif
     _gCapCaptionTexturePageX = texturePageX;
     _gCapCaptionTexturePageY = texturePageY;
     for (slotIndex = 0; slotIndex < ARRAY_SIZE(gFsResourceSlots); slotIndex++) {
