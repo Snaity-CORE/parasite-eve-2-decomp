@@ -232,6 +232,13 @@ typedef struct {
 } TextStream;
 STATIC_ASSERT_SIZEOF(TextStream, 0x20);
 
+#ifdef PC_PORT
+/// Mods' loading captions (the host's mods/load_captions.rs): before a
+/// caption is shown, points its record at a mod's script, cell table, place
+/// and plate when the mod gives one for its script.
+void pc_caption_translate(TextStream* stream);
+#endif
+
 /// Screen rectangle, texture origin and colour for one `TILE` or `SPRT`.
 ///
 /// The caption drawers fill one on the stack and hand it to their primitive

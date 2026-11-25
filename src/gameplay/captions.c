@@ -652,14 +652,6 @@ static inline void _capDrawTextBackground(void)
 /// save and stage state. OT entries 2/3 and primitive storage must stay writable
 /// through GPU completion: two G4s and a DR_MODE, one FT4 per title/icon, and two
 /// GT4s per glyph. The borrowed stream and glyph/icon tables are not modified.
-#ifdef PC_PORT
-// Mods' translations and fonts (the host's mods/translate.rs): the CAP file to
-// use instead of one the game loads (or it unchanged), and the glyphs that copy
-// adds, put into its glyph page before its text is drawn.
-extern CapFile* pc_cap_translate(CapFile* file);
-extern void pc_cap_glyphs(const CapFile* file, s32 pageX, s32 pageY);
-#endif
-
 static u16 _capDrawTextStream(const u16* textStream, s32 unusedDrawArg, u8 revealAll, u16 titleAndFlags)
 {
     enum {

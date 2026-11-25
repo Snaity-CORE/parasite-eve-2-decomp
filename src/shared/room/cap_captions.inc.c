@@ -21,6 +21,12 @@
 #include "main/task_types.h"
 #include "main/text.h"
 
+#ifdef PC_PORT
+/// The CAP file `_capCaptionLoadResource` selected: the one a mod's
+/// translation gives (gameplay/captions.h `pc_cap_translate`) or the loaded one.
+static const CapFile* _gCapCaptionPcFile;
+#endif
+
 // CAP text words are read as signed halfwords for control-token dispatch.
 enum {
     CAP_CAPTION_TEXT_END              = -1,
@@ -200,7 +206,13 @@ static bool _capCaptionRelocateFile(CapFile* file)
 
     entryIndex = 0;
     // Relocated KSEG0 addresses are negative in the signed offset word.
+#ifdef PC_PORT
+    // Here possibly not (a copy the host built in its own memory, see
+    // pc_cap_translate), but never below the file itself (as capRelocateFile).
+    if (file->glyphs.offset > 0 && (u32)file->glyphs.offset < (u32)file) {
+#else
     if (file->glyphs.offset > 0) {
+#endif
         // Rebase serialized byte offsets using the 32-bit file address.
         file->glyphs.offset    += (u32)file;
         file->sequences.offset += (u32)file;
@@ -347,6 +359,11 @@ static s32 _capCaptionDrawText(const u16* textStream, s32 unusedDrawArg, s32 unu
     POLY_GT4*      glyphOutline;
     TextGlyphCell* iconCell;
 
+#ifdef PC_PORT
+    if (_gCapCaptionPcFile != NULL) {
+        pc_cap_glyphs(_gCapCaptionPcFile, _gCapCaptionTexturePageX, _gCapCaptionTexturePageY);
+    }
+#endif
     lineIndex = 0;
     title     = titleIndex;
     text      = textStream;

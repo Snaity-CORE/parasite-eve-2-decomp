@@ -219,4 +219,10 @@ void streamInitMoviePlayback(u32 slotIndex);
 /// disc recovery have no timeout here.
 extern s32 streamPollMoviePlayback(u16 sectorIsAbsolute, s32 sectorOffset);
 
+#ifdef PC_PORT
+/// Mods' movies (the host's mods/movies.rs): the frame limit of the movie
+/// about to stream, which tells apart movies whose first frames are the same.
+void pc_movie_frames(u32 frameLimit);
+#endif
+
 #endif // MAIN_STREAM_H

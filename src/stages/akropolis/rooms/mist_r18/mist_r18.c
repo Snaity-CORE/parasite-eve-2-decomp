@@ -274,6 +274,9 @@ static void _mistR18CaptionTask(Task* task)
 
     switch (task->state) {
         case CAPTION_INITIALIZE:
+#ifdef PC_PORT
+            pc_caption_translate(stream);
+#endif
             // Reset reveal timing; a negative delay exposes the complete script.
             stream->cursor = 0;
             if (stream->charDelay < 0) {
