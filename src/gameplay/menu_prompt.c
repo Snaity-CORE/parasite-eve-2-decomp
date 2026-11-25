@@ -46,6 +46,13 @@ enum {
     ITEM_MENU_WIND_WATER_CAPTION_CLUT      = 0x3C86,
     ITEM_MENU_ELEMENT_EARTH                = 3,
     ITEM_MENU_FIRE_CAPTION_WIDTH           = 24,
+#ifdef PC_PORT
+    /// Where "Lv." ends right of its caption's centre (the digit two pixels
+    /// on), the pair centred under it.
+    PC_LEVEL_SPLIT_X = 2,
+    /// The same under the wider captions, whose words sit left in them.
+    PC_LEVEL_SPLIT_X_WIDE = -1,
+#endif
     ITEM_MENU_OTHER_ELEMENT_CAPTION_WIDTH  = 32,
     ITEM_MENU_METER_FRAME_CLUT             = 0x3C0B,
     ITEM_MENU_STAT_TEXT_COLOR              = 0x606060,
@@ -1005,6 +1012,17 @@ void itemMenuParasiteEnergySummaryTask(Task* task)
                 levelText.alignment  = TEXT_ALIGNMENT_LEFT;
                 // The level-limit local also supplies mode 3 (translucent outlined text).
                 levelText.drawMode = maxLevel;
+#ifdef PC_PORT
+                // "Lv." is text here, in the digits' face and on their line
+                // (the console's is a picture, a few pixels off), the digit
+                // after it, the two centred under the element's caption.
+                levelText.x = object->panel.contentOriginX.unsignedValue + columnX + gItemMenuParasiteEnergyCaptions[element].xOffset +
+                              ((element == 0) ? ITEM_MENU_FIRE_CAPTION_WIDTH / 2 + PC_LEVEL_SPLIT_X : ITEM_MENU_OTHER_ELEMENT_CAPTION_WIDTH / 2 + PC_LEVEL_SPLIT_X_WIDE);
+                levelText.alignment = TEXT_ALIGNMENT_RIGHT;
+                textDrawString(&levelText, (const u8*)"Lv.");
+                levelText.x        += 2;
+                levelText.alignment = TEXT_ALIGNMENT_LEFT;
+#endif
                 textDrawString(&levelText, textItoaSigned(numberText, abilityLevel[0]));
             }
             columnX            += columnWidth;
@@ -1040,6 +1058,8 @@ void itemMenuParasiteEnergySummaryTask(Task* task)
                     showThirdAbility = 1;
                 }
             }
+#ifndef PC_PORT
+            // (on PC, "Lv." is written with the digits)
             if ((abilityRow != 0) || (showThirdAbility != 0)) {
                 sprite         = gGpuPrimCursor;
                 gGpuPrimCursor = sprite + 1;
@@ -1056,6 +1076,7 @@ void itemMenuParasiteEnergySummaryTask(Task* task)
                 sprite->y0 = markY;
                 addPrim(gGpuCurrentOt + object->panel.otIndex.signedValue + 1, sprite);
             }
+#endif
             markRowOffset += 9;
         }
     }
