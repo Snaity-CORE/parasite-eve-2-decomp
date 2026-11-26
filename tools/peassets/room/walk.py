@@ -24,7 +24,7 @@ GAMEPLAY_LOAD, STAGE_LOAD, ROOM_LOAD = 0x80093800, 0x80179950, 0x8017D5C0
 
 # Each game stage's overlay; gameplay points to its per-area tables, one table pointer per stage (from stage 1) for
 # each kind of table - five of them through a one-word wrapper in the overlay (ViewCameraTable and the like).
-STAGES = {1: ("map_akropolis",), 2: ("map_dryfield",), 3: ("map_dryfield_full",), 4: ("map_shelter",), 5: ("map_neo_ark",)}
+STAGES = {1: ("akropolis_stage",), 2: ("map_dryfield",), 3: ("map_dryfield_full",), 4: ("map_shelter",), 5: ("map_neo_ark",)}
 GAMEPLAY_TABLES = {  # gameplay symbol: (the layout an entry points to, wrapped)
     "gWorldCollisionStageResources": ("WorldCollisionRoomResources", True), "gViewIndexTables": ("ViewMapPtr", True),
     "gViewCountTables": ("ViewCount", True), "gWorldCoordRoomLightingTables": ("WorldCoordRoomLighting", False),
@@ -43,18 +43,20 @@ END_MARKS = {
     "AreaApplyRec": lambda d, o: d[o] == 0xFF,
     "PadScriptCmd": lambda d, o: struct.unpack_from("<I", d, o)[0] == 0,
     "AreaObjectPlace": lambda d, o: struct.unpack_from("<H", d, o)[0] == 0xFFFF,
+    "AreaObjectSpawn": lambda d, o: struct.unpack_from("<H", d, o)[0] == 0xFFFF,
     "AreaObjectRoom": lambda d, o: struct.unpack_from("<I", d, o)[0] == 0xFFFFFFFF,
 }
 
 
-def symbol_map(path: Path, owner: str | None = None) -> dict[int, str]:
-    """Address -> name from a symbol map; a stage map's room symbols only for `owner`."""
+def symbol_map(path: Path, owner: str | None = None, owned_only: bool = False) -> dict[int, str]:
+    """Address -> name from a symbol map; a stage map's room symbols only for `owner`, and with `owned_only` nothing
+    else."""
     out = {}
     for line in path.read_text().splitlines():
         m = re.match(r"(\w+)\s*=\s*(0x[0-9A-Fa-f]+);(.*)", line)
         if m:
             o = re.search(r"owner=(\w+)", m.group(3))
-            if o is None or o.group(1) == owner:
+            if (o is None and not owned_only) or (o is not None and o.group(1) == owner):
                 out[int(m.group(2), 16)] = m.group(1)
     return out
 
@@ -65,13 +67,14 @@ class Images:
     package, image and load address), else the room's, or the stage overlay's where `room_name` is None."""
 
     def __init__(self, stage: int, stage_image: bytes, room_name: str | None, room: bytes, gameplay: bytes,
-                 actor: tuple[str, bytes, int] | None = None):
+                 actor: tuple[str, bytes, int] | None = None, stage_symbols: bool = True):
         self.stage, (self.stage_name,) = stage, STAGES[stage]
         self.stage_image, self.room_name, self.room, self.gameplay = stage_image, room_name, room, gameplay
         self.own, self.base = (room, ROOM_LOAD) if room_name else (stage_image, STAGE_LOAD)
         sym = ROOT / "configs" / "USA"
         self.names = {**symbol_map(sym / "sym.main.txt"), **symbol_map(sym / "sym.gameplay.txt"),
-                      **symbol_map(sym / "sym" / "mapui" / f"{self.stage_name}.txt", room_name or "-"),
+                      **symbol_map(sym / "sym" / "mapui" / f"{self.stage_name}.txt", room_name or "-",
+                                   owned_only=not stage_symbols),   # a required stage's own names: its exports
                       **(symbol_map(sym / "sym" / "rooms" / f"{room_name}.txt") if room_name else {})}
         self.package = None
         if actor:

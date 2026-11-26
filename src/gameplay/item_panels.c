@@ -34,7 +34,7 @@
 #include "main/ui.h"
 #include "main/wipsys.h"
 
-#include "mapui/map_akropolis.h"
+#include "stages/akropolis/stage.h"
 
 #include "mapui/map_dryfield.h"
 
@@ -321,7 +321,7 @@ static const UiObjectDesc _gItemPickupPreviewDesc __attribute__((section(".data"
 };
 
 const MenuMapAreaName* const gMenuMapAreaNameTables[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    gMapAkropolisAreaNames,
+    gAkropolisStageAreaNames,
     gMapDryfieldAreaNames,
     gMapDryfieldFullAreaNames,
     gMapShelterAreaNames,
@@ -329,7 +329,7 @@ const MenuMapAreaName* const gMenuMapAreaNameTables[MENU_MAP_STAGE_COUNT] __attr
 };
 
 const MenuMapIcon* const gMenuMapIconTables[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    gMapAkropolisIcons,
+    gAkropolisStageIcons,
     gMapDryfieldIcons,
     gMapDryfieldFullIcons,
     gMapShelterIcons,
@@ -337,7 +337,7 @@ const MenuMapIcon* const gMenuMapIconTables[MENU_MAP_STAGE_COUNT] __attribute__(
 };
 
 const MenuMapMarker* gMenuMapMarkerTables[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    gMapAkropolisMarkers,
+    gAkropolisStageMarkers,
     gMapDryfieldMarkers,
     gMapDryfieldFullMarkers,
     gMapShelterMarkers,
@@ -345,7 +345,7 @@ const MenuMapMarker* gMenuMapMarkerTables[MENU_MAP_STAGE_COUNT] __attribute__((s
 };
 
 const MenuMapArea* gMenuMapAreaTables[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    gMapAkropolisAreas,
+    gAkropolisStageAreas,
     gMapDryfieldAreas,
     gMapDryfieldFullAreas,
     gMapShelterAreas,
@@ -353,7 +353,7 @@ const MenuMapArea* gMenuMapAreaTables[MENU_MAP_STAGE_COUNT] __attribute__((secti
 };
 
 const u8* const gMenuMapPageFlagTables[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    gMapAkropolisPageFlagIds,
+    gAkropolisStagePageFlagIds,
     gMapDryfieldPageFlagIds,
     gMapDryfieldFullPageFlagIds,
     gMapShelterPageFlagIds,
@@ -361,22 +361,22 @@ const u8* const gMenuMapPageFlagTables[MENU_MAP_STAGE_COUNT] __attribute__((sect
 };
 
 const MenuMapAreaShape* const gMenuMapAreaShapeTables[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    gMapAkropolisAreaShapes,
+    gAkropolisStageAreaShapes,
     gMapDryfieldAreaShapes,
     gMapDryfieldFullAreaShapes,
     gMapShelterAreaShapes,
     gMapNeoArkAreaShapes,
 };
 
-/// Map recipe defaults and the isolated Acropolis/MIST navigation boundary.
+/// Map recipe defaults and the isolated Akropolis and MIST navigation boundary.
 enum {
-    MENU_MAP_ACROPOLIS_NAVIGATION_LAST_PAGE = 2,
+    MENU_MAP_AKROPOLIS_NAVIGATION_LAST_PAGE = 2,
     MENU_MAP_AREA_NAME_PANEL_UNTITLED_STYLE = 3,
     MENU_MAP_HELP_INITIAL_FILE_INDEX        = 1
 };
 
 const u8 gMenuMapNavigationLastPages[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    MENU_MAP_ACROPOLIS_NAVIGATION_LAST_PAGE,
+    MENU_MAP_AKROPOLIS_NAVIGATION_LAST_PAGE,
     MAP_DRYFIELD_PAGE_COUNT,
     MAP_DRYFIELD_FULL_PAGE_COUNT,
     MAP_SHELTER_PAGE_COUNT,
@@ -384,7 +384,7 @@ const u8 gMenuMapNavigationLastPages[MENU_MAP_STAGE_COUNT] __attribute__((sectio
 };
 
 const u8 gMenuMapAreaShapeCounts[MENU_MAP_STAGE_COUNT] __attribute__((section(".data"))) = {
-    ARRAY_SIZE(gMapAkropolisAreaShapes),
+    ARRAY_SIZE(gAkropolisStageAreaShapes),
     ARRAY_SIZE(gMapDryfieldAreaShapes),
     ARRAY_SIZE(gMapDryfieldFullAreaShapes),
     ARRAY_SIZE(gMapShelterAreaShapes),

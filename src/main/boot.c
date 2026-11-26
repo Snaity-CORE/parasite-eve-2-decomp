@@ -24,7 +24,7 @@
 #include "main/task_types.h"
 #include "main/gamemain.h"
 
-#include "mapui/map_akropolis.h"
+#include "stages/akropolis/stage.h"
 
 #include "mapui/map_dryfield.h"
 
@@ -142,7 +142,7 @@ static u8* _gMemUnusedDevKitAddress = D_80400000;
 /// Stages 2..5 retain a parking-region record at area zero, of unproven role.
 static const GfxImageSlot* _gGfxImageSlotTablesByStage[6] = {
     NULL,
-    gMapAkropolisImageSlots,
+    gAkropolisStageImageSlots,
     gMapDryfieldImageSlots,
     gMapDryfieldFullImageSlots,
     gMapShelterImageSlotsByArea,

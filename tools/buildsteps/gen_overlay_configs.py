@@ -139,7 +139,7 @@ def check_model_records(name: str, objects: list[dict], data: bytes, load: int) 
                     raise SystemExit(f"{name}: modelSource at 0x{at:X} runs to 0x{end:X}, not its record's end")
 
 
-def declared_models(manifest: dict) -> list[dict]:
+def _manifest_models(manifest: dict) -> list[dict]:
     """Every model the manifest declares, with its package, load address and record.
 
     One row per package, so an object list shared by several slots yields a row
@@ -166,6 +166,51 @@ def declared_models(manifest: dict) -> list[dict]:
                         "in_c": bool(objects[i - 1].get("in_c")),
                     })
     return rows
+
+
+def _asset_rows(manifest: dict, rows: list[dict], placed: list[dict], key: str) -> list[dict]:
+    """The manifest's rows, and those of the objects the asset declarations place that it does not declare: each
+    package's assets are moving out of the manifest into the packages' own declarations (package.py)."""
+    where = {}
+    for family, spec in manifest.items():
+        if isinstance(spec, dict) and "overlays" in spec:
+            entry_names = {id(e): n for n, e in spec["overlays"].items()}
+            for name, _slot, entry in slot_packages(spec):
+                where[name] = (family, entry_names[id(entry)])
+    have = {(r["package"], r[key]) for r in rows}
+    extra = [{"family": where[p["package"]][0], "entry": where[p["package"]][1], **p}
+             for p in placed if p["package"] in where and (p["package"], p[key]) not in have]
+    return rows + extra
+
+
+def _asset_tables():
+    root = Path(__file__).resolve().parents[2] / "tools" / "peassets"
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    import asset_data
+    import package
+    return asset_data, package
+
+
+def declared_models(manifest: dict) -> list[dict]:
+    """Models, one row per package carrying one: its arrays (`model`) and its TmdSource record (`source`)."""
+    data, package = _asset_tables()
+    return _asset_rows(manifest, _manifest_models(manifest), package.placed_models(data.ASSETS, data.EMBEDDED_ASSETS),
+                       "model")
+
+
+def declared_collisions(manifest: dict) -> list[dict]:
+    """Collision grids, one row per package: the grid's first array and its header."""
+    data, package = _asset_tables()
+    return _asset_rows(manifest, _manifest_collisions(manifest),
+                       package.placed_collisions(data.ASSETS, data.EMBEDDED_ASSETS)[0], "source")
+
+
+def declared_collision_patches(manifest: dict) -> list[dict]:
+    """Collision patches: headerless runs of grid arrays that code copies into a live grid."""
+    data, package = _asset_tables()
+    return _asset_rows(manifest, _manifest_collision_patches(manifest),
+                       package.placed_collisions(data.ASSETS, data.EMBEDDED_ASSETS)[1], "offset")
 
 
 def declared_resident_models(resident: dict) -> list[dict]:
@@ -233,7 +278,7 @@ def declared_animations(manifest: dict) -> list[dict]:
     return rows
 
 
-def declared_collisions(manifest: dict) -> list[dict]:
+def _manifest_collisions(manifest: dict) -> list[dict]:
     """Collision grids, one row per package: the grid's first array and its header."""
     rows = []
     for family, spec in manifest.items():
@@ -255,7 +300,7 @@ def declared_collisions(manifest: dict) -> list[dict]:
     return rows
 
 
-def declared_collision_patches(manifest: dict) -> list[dict]:
+def _manifest_collision_patches(manifest: dict) -> list[dict]:
     """Collision patches: headerless runs of grid arrays that code copies into a live grid."""
     rows = []
     for family, spec in manifest.items():
@@ -378,9 +423,14 @@ def object_subsegments(
                 raise SystemExit(f"{name}: variant unit {unit}, but the slot declares no `defines`")
         # A library unit's source is src/lib/, shared by every family.
         text = "libsrc" if lib else "c"
+        runs = dict(obj)
+        if src_dir and not lib and "text" not in runs:
+            # A data-only unit of an entry naming its own directory (the Akropolis map pages): a zero-length text
+            # run where its first section begins gives its .rodata and .data the sibling whose source is there.
+            runs["text"] = next(runs[k] for k in ("rodata", "data") if k in runs)
         for key, sect in (("rodata", ".rodata"), ("text", text), ("data", ".data")):
-            if key in obj:
-                at = int(str(obj[key]), 16)
+            if key in runs:
+                at = int(str(runs[key]), 16)
                 if (variant or (src_dir and not lib)) and key == "text":
                     # The source sits under the family by default; an entry that
                     # names its own directory (`src`, from the repository root)
@@ -512,6 +562,21 @@ def asset_symbols(package: str) -> list[tuple[str, int]]:
     return sorted(out, key=lambda s: s[1])
 
 
+def export_symbols(package: str) -> list[tuple[str, int, str]]:
+    """(symbol, address, reference) the package's link takes from the exports of the packages it binds or requires
+    (package.link_symbols)."""
+    root = Path(__file__).resolve().parents[2]
+    if str(root / "tools" / "peassets") not in sys.path:
+        sys.path.insert(0, str(root / "tools" / "peassets"))
+    import asset_data
+    import package as packages
+    key = next((k for k, r in asset_data.ASSETS.items()
+                if r.get("type") == "package" and r.get("package_name", k) == package), None)
+    if key is None:
+        return []
+    return packages.link_symbols(key, asset_data.ASSETS, asset_data.EMBEDDED_ASSETS, root / "assets" / "USA")
+
+
 def write_if_changed(dest: Path, text: str) -> None:
     """Unchanged files keep their mtime: ninja_config.py treats a config modified during a split as a reason to
     split it again."""
@@ -571,12 +636,16 @@ def generate(family: str, spec: dict, template: str, out_dir: Path) -> list[Path
         stored_bss = has_stored_bss(name, objects, data)
 
         text = template
-        # Declared assets name their own symbols; the overlay's split sees them through a generated map.
-        symbols = asset_symbols(name)
-        if symbols:
+        # Declared assets name their own symbols, and the exports of the packages a package binds or requires
+        # name what it points into there (absolute); the overlay's split sees both through a generated map, and its
+        # link takes the absolute ones (ninja_config.append_overlay_absolute_imports).
+        symbols, imported = asset_symbols(name), export_symbols(name)
+        if symbols or imported:
             sym_path = out_dir / "sym" / f"{name}.txt"
-            write_if_changed(sym_path, f"// Generated by gen_overlay_configs.py from the asset table's `symbol` keys.\n"
-                             + "".join(f"{s} = 0x{a:08X};\n" for s, a in symbols))
+            write_if_changed(sym_path, f"// Generated by gen_overlay_configs.py from the asset table's `symbol` keys"
+                             " and its packages' exports.\n"
+                             + "".join(f"{s} = 0x{a:08X};\n" for s, a in symbols)
+                             + "".join(f"{s} = 0x{a:08X}; // absolute:True {ref}\n" for s, a, ref in imported))
             text = text.replace("    - @@IMPORTS@@", f"    - @@IMPORTS@@\n    - {sym_path.as_posix()}", 1)
             written.append(sym_path)
         for key, val in {

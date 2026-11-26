@@ -11,15 +11,15 @@ offset into the package. The instance holds every object reached, by module and 
 with the C types' fields, pointers by name (`name`, `name[k]`, 0 for NULL). Geometry is the collision asset's: its
 parts are named with their `count`. The instance encodes back into the package exactly (`check`).
 
-The build writes one include per module, `assets/<group>/<module>.inc`, defining the module's objects, and
-`assets/<group>/declarations.inc`, declaring them (gen_room_inc.py). A unit includes the declarations after its
-headers and each module where its block is; where a module's objects are split across units or by other data, the
-unit selects its part with `#define ROOM_PART <its first object>` (and its declarations with
-`#define ROOM_PART declarations_<unit>`) before the include.
+The build writes one include per run of a module, defining its objects, and the declarations (gen_room_inc.py). A
+run is the module's objects that follow each other in a unit, with nothing else between them: `<module>.inc` when the
+module is one run, `<module>_1.inc`, `<module>_2.inc`, ... in address order when other data or a unit boundary
+interrupts it. The declarations are `declarations.inc`, or `declarations_<unit>.inc` per unit of a room of several. A
+unit includes its declarations after its headers and each run where its block is.
 
-An actor package (`pe2pkg`) that states `entries` is decoded the same way: its events, reached from the scripts and
-payloads its record names, mapped at its slot's load address beside gameplay and its room (the room of its group),
-written to `<group>/<package>/events.evs` and built into `assets/<group>/<package>/events.inc` with its declarations.
+An actor package that states `entries` is decoded the same way: its events, reached from the scripts and payloads its
+record names, mapped at its slot's load address beside gameplay and the room it requires, written to
+`<group>/<package>/events.evs` and built into `assets/<group>/<package>/events.inc` with its declarations.
 
     python3 tools/peassets/room decode|check [--only NAME]
 """
@@ -88,16 +88,7 @@ def own_dir(name: str, assets: dict) -> str:
 
 def resident(name: str, assets: dict, kind: str) -> str | None:
     """The package of a kind (room, stage) resident whenever `name` is: one its `requires` name, or theirs."""
-    seen, todo = set(), list(assets[name].get("requires", ()))
-    while todo:
-        r = todo.pop(0)
-        if r in seen:
-            continue
-        seen.add(r)
-        if kind_of(r, assets) == kind:
-            return r
-        todo += assets[r].get("requires", ())
-    return None
+    return next((r for r in package_decl.resident(name, assets) if kind_of(r, assets) == kind), None)
 
 
 def home(name: str, assets: dict) -> str:
@@ -169,12 +160,15 @@ def images(name: str, assets: dict, embedded: dict, assets_root: Path) -> tuple[
     actor = ((assets[name]["package_name"], shape.stored_bytes(name, ctx), package_decl.load_address(name, assets))
              if room != name else None)
     return Images(stage, shape.stored_bytes(overlay, ctx), assets[room]["package_name"],
-                  shape.stored_bytes(room, ctx), shape.stored_bytes("gameplay", ctx), actor), area
+                  shape.stored_bytes(room, ctx), shape.stored_bytes("gameplay", ctx), actor,
+                  stage_symbols=assets[overlay].get("type") != "package"), area
 
 
 # --- decode ----------------------------------------------------------------------------------------------------
 
-def _name_of(im: Images, objs: dict):
+def _name_of(im: Images, objs: dict, foreign: dict[int, str]):
+    """Names pointers: the package's own objects, then the exports of the packages it requires (`foreign`), then
+    what the symbol maps give."""
     def name_of(a: int):
         if a == 0:
             return 0
@@ -184,13 +178,13 @@ def _name_of(im: Images, objs: dict):
                 if rest:
                     raise SystemExit(f"0x{a:08X} points inside an element of {im.names[o.address]}")
                 return im.names[o.address] + (f"[{k}]" if k else "")
-        return im.names.get(a, a)                         # an address nothing names (stale bytes): kept as stored
+        return foreign.get(a) or im.names.get(a, a)       # an address nothing names (stale bytes): kept as stored
     return name_of
 
 
-def _stage_placements(stage: int, assets: dict, embedded: dict, assets_root: Path) -> list[int]:
-    """The placement lists the stage's rooms' variants point to."""
-    out = []
+def _stage_placements(stage: int, assets: dict, embedded: dict, assets_root: Path) -> dict[int, set[str]]:
+    """{placement list: the rooms whose variants point to it} for the stage's rooms."""
+    out: dict[int, set[str]] = {}
     for _area, room in stage_rooms(stage, assets):
         if kind_of(room, assets) != "room":
             continue
@@ -202,11 +196,19 @@ def _stage_placements(stage: int, assets: dict, embedded: dict, assets_root: Pat
                 for i in range(o.count):
                     placements = decode_value(im.room, o.address - ROOM_LOAD + 8 * i, "AreaVariant")["placements"]
                     if placements:
-                        out.append(placements)
+                        out.setdefault(placements, set()).add(room)
     return out
 
 
 _ROOM_ROLES: dict[tuple[int, int], dict[str, str]] = {}
+# A stage's tables with a row per area, by role: (the index of area 1 less one, the entries a row, whether a closing
+# record ends them). Area names are indexed from area 1 (menu_actions.c), the rest from area 0; a room's row is its
+# room's, area 0's and the closing record are the stage's. The area music is the role's first table (the second, the
+# countdown music, is indexed by scene).
+AREA_ROWS = {"map_areas": (0, 1, True), "map_shapes": (0, 1, False), "map_names": (-1, 1, False),
+             "image_slots": (0, 1, False), "movie_workspaces": (0, 1, False), "music": (0, 8, False),
+             "objects": (0, 1, True)}
+ROOM_ROW = "room"                                         # in a stage's per-area table: this area's room holds the row
 TABLE_ROLES = ("collision", "view_maps", "view_counts", "lighting", "cameras", "sprite_views", "warps", "surfaces")
 
 
@@ -237,9 +239,10 @@ def _area_names(stage: int, assets: dict) -> dict[int, dict[int, str]]:
 
 def decode_room(name: str, assets: dict, embedded: dict, assets_root: Path) -> dict[str, Any]:
     im, area = images(name, assets, embedded, assets_root)
+    owners: dict[int, set[str]] = {}                       # a stage's objects one room uses: its part
     if is_stage(name, assets):
-        objs, roles = walk_stage(im, _stage_placements(im.stage, assets, embedded, assets_root),
-                                 assets[name].get("entries", {}))
+        owners = _stage_placements(im.stage, assets, embedded, assets_root)
+        objs, roles = walk_stage(im, list(owners), assets[name].get("entries", {}))
         states = 0
         area_names = _area_names(im.stage, assets)
     elif is_actor(name, assets):
@@ -249,7 +252,7 @@ def decode_room(name: str, assets: dict, embedded: dict, assets_root: Path) -> d
         states, objs, roles = walk(im, area, assets[name].get("entries", {}))
         area_names = {}
     _KINDS[name] = {im.names[a]: o.kind for a, o in objs.items() if a in im.names}
-    name_of = _name_of(im, objs)
+    name_of = _name_of(im, objs, package_decl.required_exports(name, assets))
     entry = {}
     for role, points in roles.items():
         if role == "vibrations":
@@ -271,6 +274,12 @@ def decode_room(name: str, assets: dict, embedded: dict, assets_root: Path) -> d
             else:
                 vals = [named(decode_value(im.own, a - im.base + i * size(o.kind), o.kind), o.kind, name_of)
                         for i in range(o.count)]
+            if o.kind == "MenuMapAreaShape":                 # its shape: an export of the map page bound to it
+                for v in vals:
+                    if isinstance(v.get("model"), int) and v["model"]:
+                        ref = package_decl.resolve_export(name, assets, v["model"],
+                                                          package_decl.map_page_file_id(im.stage, v["page"]))
+                        v["model"] = ref or v["model"]
             if o.kind == "AreaResource":                    # the actor it spawns: an export of the package bound to it
                 for v in vals:
                     if isinstance(v.get("taskTable"), int) and v["taskTable"]:
@@ -291,7 +300,50 @@ def decode_room(name: str, assets: dict, embedded: dict, assets_root: Path) -> d
             else:
                 rec = {"values": vals}
         modules.setdefault(o.module, {})[sym] = rec
-    return {"area": area, "states": states, "entry": entry, "modules": modules}
+    parts: dict[str, dict[str, dict]] = {}
+    if is_stage(name, assets):
+        by_name = {im.names[a]: rooms for a, rooms in owners.items() if a in im.names}
+        rooms_of_area = dict(stage_rooms(im.stage, assets))
+        for table in modules.get("objects", {}).values():     # an area's object places and spawns: its room's
+            for area, row in enumerate(table.get("values", [])):
+                for field in ("places", "spawns"):
+                    if isinstance(row, dict) and isinstance(row.get(field), str) and area in rooms_of_area:
+                        by_name.setdefault(row[field], set()).add(rooms_of_area[area])
+        for sym, rec in modules.get("spawns", {}).items():   # what a spawn table names in its room: the room's exports
+            rooms = by_name.get(sym, set())
+            if len(rooms) != 1:
+                continue
+            room = next(iter(rooms))
+            for spawn in rec.get("values", []):
+                task = spawn.get("taskDesc", {})
+                for field in ("callback", "data"):           # its task, and its model (a word: a number unnamed)
+                    if isinstance(task.get(field), int) and task[field]:
+                        task[field] = package_decl.resolve_export_of(name, assets, room, task[field] & 0xFFFFFFFF) or task[field]
+        objects = {s: (m, r) for m, objs in modules.items() for s, r in objs.items()}
+        for role, (offset, width, closed) in AREA_ROWS.items():    # each room's row of a per-area table: its room's
+            ref = entry.get(role)
+            sym = ref[0] if isinstance(ref, list) else ref
+            if sym not in objects or "values" not in objects[sym][1]:
+                continue
+            rec = objects[sym][1]
+            vals = rec["values"]
+            body = len(vals) - (1 if closed else 0)
+            rows = [vals[i:i + width] if width > 1 else vals[i] for i in range(0, body, width)] + vals[body:]
+            for area, room in rooms_of_area.items():
+                i = area + offset
+                if kind_of(room, assets) == "room" and 0 <= i < body // width:
+                    parts.setdefault(room, {}).setdefault("rows", {})[sym] = rows[i]
+                    rows[i] = ROOM_ROW
+            rec.clear()
+            rec.update({"area_rows": {"offset": offset, "width": width}, "values": rows})
+        for module in list(modules):
+            for sym in list(modules[module]):
+                rooms = by_name.get(sym, set())
+                if len(rooms) == 1:
+                    parts.setdefault(next(iter(rooms)), {}).setdefault(module, {})[sym] = modules[module].pop(sym)
+            if not modules[module]:
+                del modules[module]
+    return {"area": area, "states": states, "entry": entry, "modules": modules, "parts": parts}
 
 
 _KINDS: dict[str, dict[str, str]] = {}
@@ -319,17 +371,28 @@ def _toml(v: Any) -> str:
 def to_toml(name: str, room: dict[str, Any]) -> str:
     lines = [f"# {name}: the room, decoded from its package (tools/peassets/room).", f"area = {room['area']}",
              f"states = {room['states']}", "", "[entry]"] + [f"{r} = {_toml(v)}" for r, v in room["entry"].items()]
-    for module, objects in room["modules"].items():
-        for sym, rec in objects.items():
-            lines += ["", f"[{module}.{sym}]"]
-            if "count" in rec:
-                lines.append(f"count = {rec['count']}")
-            elif "areas" in rec:
-                lines.append(f"areas = {rec['areas']}  # each area's room's object of this role (its [entry])")
-            elif "value" in rec:
-                lines.append(f"value = {_toml(rec['value'])}")
-            else:
-                lines += ["values = ["] + [f"    {_toml(e)}," for e in rec["values"]] + ["]"]
+    sections = [("", room["modules"])] + ([("stage.", room["stage"])] if room.get("stage") else [])
+    rows_lines: list[str] = []
+    for prefix, modules in sections:                     # its own objects, then its part of the stage overlay
+        for module, objects in modules.items():
+            for sym, rec in objects.items():
+                if module == "rows" and prefix:            # a room's row of a stage table: [stage.rows] symbol = row
+                    rows_lines.append(f"{sym} = {_toml(rec)}")
+                    continue
+                lines += ["", f"[{prefix}{module}.{sym}]"]
+                if "count" in rec:
+                    lines.append(f"count = {rec['count']}")
+                elif "areas" in rec:
+                    lines.append(f"areas = {rec['areas']}  # each area's room's object of this role (its [entry])")
+                elif "area_rows" in rec:
+                    lines += [f"area_rows = {_toml(rec['area_rows'])}  # \"{ROOM_ROW}\": that area's room holds the row",
+                              "values = ["] + [f"    {_toml(e)}," for e in rec["values"]] + ["]"]
+                elif "value" in rec:
+                    lines.append(f"value = {_toml(rec['value'])}")
+                else:
+                    lines += ["values = ["] + [f"    {_toml(e)}," for e in rec["values"]] + ["]"]
+    if rows_lines:
+        lines += ["", "[stage.rows]"] + rows_lines
     return "\n".join(lines) + "\n"
 
 
@@ -338,7 +401,26 @@ def read(name: str, assets: dict, assets_root: Path) -> dict[str, Any]:
     `type`, every other object's from the pointer field that reaches it, and a grid's cell lists the geometry no
     field names."""
     room = tomllib.loads(instance_path(name, assets, assets_root).read_text())
-    modules = {k: v for k, v in room.items() if k not in ("area", "states", "entry")}
+    modules = {k: v for k, v in room.items() if k not in ("area", "states", "entry", "stage")}
+    if is_stage(name, assets):                           # with its rooms' parts
+        parts = stage_parts(name, assets, assets_root)
+        for part in parts.values():
+            for module, objs in part.items():
+                if module != "rows":
+                    modules.setdefault(module, {}).update(objs)
+        stage = next(k for k, v in STAGES.items() if v[0] == assets[name].get("package_name", name))
+        room_of = dict(stage_rooms(stage, assets))
+        for objs in modules.values():                    # a per-area table: each room's row from its room
+            for sym, rec in objs.items():
+                if "area_rows" in rec:
+                    offset, width = rec["area_rows"]["offset"], rec["area_rows"]["width"]
+                    flat = []
+                    for i, row in enumerate(rec.pop("values")):
+                        if row == ROOM_ROW:
+                            row = parts[room_of[i - offset]]["rows"][sym]
+                        flat += row if width > 1 and isinstance(row, list) else [row]
+                    rec.pop("area_rows")
+                    rec["values"] = flat
     epath = events_path(name, assets, assets_root)
     if epath.exists():
         names = event_names(name, assets, set())
@@ -384,7 +466,34 @@ def read(name: str, assets: dict, assets_root: Path) -> dict[str, Any]:
             stage = next(k for k, v in STAGES.items() if v[0] == assets[name].get("package_name", name))
             rec["values"] = [_room_entry(stage, i + 1, _table_role(rec["kind"]), assets, assets_root)
                              for i in range(rec.pop("areas"))]
-    return {"area": room["area"], "states": room["states"], "entry": room.get("entry", {}), "modules": modules}
+    return {"area": room["area"], "states": room["states"], "entry": room.get("entry", {}), "modules": modules,
+            "stage": room.get("stage", {})}
+
+
+def stage_room_instances(name: str, assets: dict, assets_root: Path) -> dict[str, Path]:
+    """{room: its instance} for the rooms of the stage overlay `name` that are decoded."""
+    stage = next(k for k, v in STAGES.items() if v[0] == assets[name].get("package_name", name))
+    return {room: instance_path(room, assets, assets_root) for _area, room in stage_rooms(stage, assets)
+            if kind_of(room, assets) == "room" and instance_path(room, assets, assets_root).exists()}
+
+
+def stage_parts(name: str, assets: dict, assets_root: Path) -> dict[str, dict]:
+    """{room: its part of the stage overlay `name`, {module: {symbol: record}}}, from the rooms' instances."""
+    out = {}
+    for room, path in stage_room_instances(name, assets, assets_root).items():
+        part = tomllib.loads(path.read_text()).get("stage")
+        if part:
+            out[room] = part
+    return out
+
+
+def _write_part(room: str, part: dict, assets: dict, assets_root: Path) -> None:
+    """Rewrite a room's instance with `part` as its part of the stage overlay."""
+    path = instance_path(room, assets, assets_root)
+    data = tomllib.loads(path.read_text())
+    inst = {"area": data["area"], "states": data["states"], "entry": data.get("entry", {}),
+            "modules": {k: v for k, v in data.items() if k not in ("area", "states", "entry", "stage")}, "stage": part}
+    path.write_text(to_toml(room, inst), encoding="utf-8")
 
 
 def encode_room(name: str, room: dict[str, Any], assets: dict, embedded: dict, assets_root: Path) -> bytes:
@@ -437,6 +546,14 @@ def decode(name: str, assets: dict, embedded: dict, assets_root: Path) -> Path:
     room = decode_room(name, assets, embedded, assets_root)
     path = instance_path(name, assets, assets_root)
     path.parent.mkdir(parents=True, exist_ok=True)
+    parts = room.pop("parts")
+    if is_stage(name, assets):                           # each room's part goes to its instance
+        stage = next(k for k, v in STAGES.items() if v[0] == assets[name].get("package_name", name))
+        for _area, other in stage_rooms(stage, assets):
+            if kind_of(other, assets) == "room" and instance_path(other, assets, assets_root).exists():
+                _write_part(other, parts.get(other, {}), assets, assets_root)
+    elif path.exists() and kind_of(name, assets) == "room":   # a room keeps the part its stage gave it
+        room["stage"] = tomllib.loads(path.read_text()).get("stage", {})
     events = {**room["modules"].pop("events", {}), **room["modules"].pop("updates", {})}   # area updates: story data
     epath = events_path(name, assets, assets_root)
     if events:
@@ -478,21 +595,12 @@ def _units(package: str) -> list[tuple[int, int, str, str]]:
 
 
 def _cell_macro(package: str, header: int) -> str:
-    """The face-list binding a grid's cell table include calls (the manifest's collisionSource)."""
-    manifest = tomllib.loads((ROOT / "configs" / "USA" / "overlays.toml").read_text())
-
-    def find(t):
-        if isinstance(t, dict):
-            if isinstance(t.get(package), dict) and "objects" in t[package]:
-                return t[package]
-            for v in t.values():
-                r = find(v)
-                if r:
-                    return r
-    for o in find(manifest)["objects"]:
-        if o.get("kind") == "collisionSource" and int(o["at"], 16) == header:
-            return o.get("cell_face_list_macro", "GRID_CELL")
-    raise SystemExit(f"{package}: no collisionSource at 0x{header:X}")
+    """The face-list binding a grid's cell table include calls: its collision asset's `cell_face_list_macro`."""
+    import asset_data
+    for grid in package_decl.placed_collisions(asset_data.ASSETS, asset_data.EMBEDDED_ASSETS)[0]:
+        if grid["package"] == package and grid["source"] == header:
+            return grid["cell_face_list_macro"]
+    raise SystemExit(f"{package}: no collision grid declared with its header at 0x{header:X}")
 
 
 def c_files(name: str, assets: dict, embedded: dict, assets_root: Path) -> dict[str, str]:
@@ -510,14 +618,25 @@ def c_files(name: str, assets: dict, embedded: dict, assets_root: Path) -> dict[
 
     uses: dict[str, set[str]] = {"types": set(), "symbols": set()}    # what the file being written needs declared
 
-    def pointer(ref: str) -> str:
+    def pointer(ref: str, function: bool = False) -> str:
         export = package_decl.export_of(name, assets, ref)
-        if export:                                        # an export of a bound package, by its C symbol
+        if export and function:                           # a function another package exports
             uses["symbols"].add(export[1])
+            return export[1]
+        if export:                                        # an export of a bound or required package, by its C symbol
+            uses["symbols"].add(export[1])
+            owner = ref.partition(".")[0]
+            owner = package_decl.bindings(name, assets).get(owner, owner)
+            if kind_of(owner, assets) in ("room", "stage"):     # a decoded object: an array is named bare
+                theirs = {s: r for m in read(owner, assets, assets_root)["modules"].values() for s, r in m.items()}
+                if "values" in theirs.get(export[1], {}):
+                    return export[1]
             return f"&{export[1]}"
         m = re.fullmatch(r"(\w+)(?:\[(\d+)\])?", ref)
         if m.group(1) not in objects:
             uses["symbols"].add(m.group(1))
+        if function:
+            return m.group(1)
         if m.group(2):
             return f"&{m.group(1)}[{m.group(2)}]"
         if m.group(1) in objects:
@@ -557,8 +676,7 @@ def c_files(name: str, assets: dict, embedded: dict, assets_root: Path) -> dict[
 
     others = sorted(a for a in im.names if im.in_room(a) and im.names[a] not in objects
                     and not any(at[s] < a < end[s] for s in objects))
-    header = [f"/* {name}: written from its room instance by tools/buildsteps/gen_room_inc.py. */",
-              "#define ROOM_CAT_(a, b) a##b", "#define ROOM_CAT(a, b) ROOM_CAT_(a, b)"]
+    header = [f"/* {name}: written from its room instance by tools/buildsteps/gen_room_inc.py. */"]
     files: dict[str, list] = {}
     units = _units(package)
     rodata = {s for s in objects for start, stop, _u, sec in units if sec == ".rodata" and start <= at[s] - im.base < stop}
@@ -584,35 +702,25 @@ def c_files(name: str, assets: dict, embedded: dict, assets_root: Path) -> dict[
         uses["types"], uses["symbols"] = set(), set()
         return list(header) + ([""] + needed if needed else []) + lines
 
-    for module, runs in parts.items():
-        out = []
-        for run in runs:
-            body = [line for s in run for line in definition(s)]
-            if len(runs) == 1:
-                out += [""] + body
-            else:
-                out += ["", f"#define ROOM_IS_{run[0]} 1", f"#if ROOM_CAT(ROOM_IS_, ROOM_PART) == 1"] + body + \
-                       ["#endif", f"#undef ROOM_IS_{run[0]}"]
-        files[f"{module}.inc"] = with_includes(out + ([] if len(runs) == 1 else ["#undef ROOM_PART"]))
-    out = []
+    for module, runs in parts.items():                   # one file per run
+        for k, run in enumerate(runs, 1):
+            name_k = f"{module}.inc" if len(runs) == 1 else f"{module}_{k}.inc"
+            files[name_k] = with_includes([""] + [line for s in run for line in definition(s)])
     for unit, mine in decl.items():
-        lines = [f"{'extern ' if not s.startswith('_') else ''}{declarator(s)};" for s in mine]
-        if len(decl) == 1:
-            out += [""] + lines
-        else:
-            out += ["", f"#define ROOM_IS_declarations_{unit} 1", "#if ROOM_CAT(ROOM_IS_, ROOM_PART) == 1"] + lines + \
-                   ["#endif", f"#undef ROOM_IS_declarations_{unit}"]
-    files["declarations.inc"] = with_includes(out + ([] if len(decl) == 1 else ["#undef ROOM_PART"]))
+        name_u = "declarations.inc" if len(decl) == 1 else f"declarations_{unit}.inc"
+        files[name_u] = with_includes([""] + [f"{'extern ' if not s.startswith('_') else ''}{declarator(s)};" for s in mine])
     return {f: "\n".join(lines) + "\n" for f, lines in files.items()}
 
 
-def module_parts(name: str, assets: dict, embedded: dict, assets_root: Path) -> dict[str, list[str]]:
-    """Each module's parts by their first object (one part: included without a selector)."""
-    out: dict[str, list[str]] = {}
-    for f, text in c_files(name, assets, embedded, assets_root).items():
-        firsts = re.findall(r"#define ROOM_IS_(\w+) 1", text)
-        out[f[:-4]] = firsts
-    return out
+INCLUDE_FILE = re.compile(r"(\w+?)(?:_(\d+))?\.inc")
+
+
+def include_module(file_name: str) -> str:
+    """The module a generated include belongs to: `objects_2.inc` is objects', `declarations_square.inc` the
+    declarations'."""
+    if file_name.startswith("declarations"):
+        return "declarations"
+    return INCLUDE_FILE.fullmatch(file_name).group(1)
 
 
 def _is_rows(r: dict) -> bool:

@@ -25,7 +25,7 @@
 
 #include "gameplay/scene_runtime.h"
 
-#include "mapui/map_akropolis.h"
+#include "stages/akropolis/stage.h"
 
 #include "mapui/map_dryfield.h"
 
@@ -83,7 +83,7 @@ static void _cdCmdResetRing(void);
 /// The map overlay must remain loaded while its row is read.
 static const s32* _gCdCmdMovieWorkspaceBytesByStage[10] = {
     NULL,
-    gMapAkropolisMovieWorkspaceBytesByArea,
+    gAkropolisStageMovieWorkspaceBytesByArea,
     gMapDryfieldMovieWorkspaceBytesByArea,
     NULL,
     NULL,

@@ -286,11 +286,44 @@ def shape_includes(version: str) -> list[tuple[str, Path, Path]]:
     return out
 
 
+def room_tool():
+    """tools/peassets/room, the room tools (imported once, by path)."""
+    if str(TOOLS_DIR / "peassets") not in sys.path:
+        sys.path.insert(0, str(TOOLS_DIR / "peassets"))
+    import room
+    return room
+
+
+# {a stage's instance: the room instances holding its rooms' parts}, which its includes are written from too.
+STAGE_PART_INSTANCES: dict[str, list[str]] = {}
+
+
+def _include_module(file_name: str) -> str:
+    """The module a room include is a run of (`objects_2.inc`: objects), or `declarations` (room.include_module)."""
+    if file_name.startswith("declarations"):
+        return "declarations"
+    return re.fullmatch(r"(\w+?)(?:_\d+)?\.inc", file_name).group(1)
+
+
+def _source_asset_includes() -> dict[str, set[str]]:
+    """{asset directory: the include files the sources name in it}, `#include "assets/<dir>/<file>.inc"`."""
+    out: dict[str, set[str]] = {}
+    pattern = re.compile(r'^#include "assets/([\w/]+)/(\w+\.inc)"', re.M)
+    for path in Path("src").rglob("*"):
+        if path.suffix in (".c", ".h") or path.name.endswith(".inc.c"):
+            for d, f in pattern.findall(path.read_text(errors="replace")):
+                out.setdefault(d, set()).add(f)
+    return out
+
+
 def room_includes(version: str) -> list[tuple[str, Path, list[Path]]]:
-    """(room, its instance, its includes) for every room and stage overlay (asset types `room`, `stage`):
-    gen_room_inc.py writes one include per module the instance holds, `assets/<group>/<module>.inc`, and
-    `assets/<group>/declarations.inc`."""
+    """(room, its instance, its includes) for every room, actor with events and stage overlay: gen_room_inc.py
+    writes one include per run of each module the instance holds (`assets/<group>/<module>.inc`, or
+    `<module>_<n>.inc` for a module of several runs) and its declarations (`declarations.inc`, or
+    `declarations_<unit>.inc` per unit); the ones declared here are those the overlay's sources include, so a source
+    naming a run that is not there fails the build."""
     data, _schema = asset_tables()
+    named = _source_asset_includes()
     out = []
     for key, rec in data.ASSETS.items():
         slot = str((rec.get("load") or {}).get("slot", "")) if rec.get("type") == "package" else ""
@@ -302,11 +335,19 @@ def room_includes(version: str) -> list[tuple[str, Path, list[Path]]]:
         instance = ASSETS_DIR / version / own / ("stage.toml" if kind == "stage" else "room.toml")
         if not instance.exists():
             continue
-        modules = [k for k, v in tomllib.loads(instance.read_text()).items() if isinstance(v, dict) and k != "entry"]
+        modules = {k for k, v in tomllib.loads(instance.read_text()).items() if isinstance(v, dict)
+                   and k not in ("entry", "stage")}       # a room's part of its stage overlay is the stage's C
+        if kind == "stage":                              # the stage's C: with its rooms' parts
+            parts = list(room_tool().stage_room_instances(key, data.ASSETS, ASSETS_DIR / version).values())
+            modules |= {m for p in parts for m in tomllib.loads(p.read_text()).get("stage", {})}
         if (instance.parent / "events.evs").exists():
-            modules.append("events")
+            modules |= {"events", "updates"}
+        modules.add("declarations")
         outdir = BUILD_DIR / "include" / "assets" / own
-        out.append((key, instance, [outdir / f"{m}.inc" for m in dict.fromkeys(modules)] + [outdir / "declarations.inc"]))
+        files = sorted(f for f in named.get(own, ()) if _include_module(f) in modules)
+        out.append((key, instance, [outdir / f for f in files]))
+        if kind == "stage":
+            STAGE_PART_INSTANCES[str(instance)] = sorted(str(p) for p in parts)
     return out
 
 
@@ -329,46 +370,6 @@ def asset_tables():
             _ASSET_TABLES.append(importlib.util.module_from_spec(spec))
             spec.loader.exec_module(_ASSET_TABLES[-1])
     return _ASSET_TABLES
-
-
-EXPORTS_DIR = BUILD_DIR / "exports"
-
-
-def write_export_symbols() -> None:
-    """build/exports/<overlay>.txt: for each package that binds others (asset type `package`, `slots`), the absolute
-    address of every export its bindings name - `symbol = address;`, the address the export's offset at its package's
-    memory slot - which the overlay's link resolves its C's references to them by (package.py). Rewritten only when
-    its content changes, since the split reads it (split_inputs)."""
-    import importlib.util
-    data, _schema = asset_tables()
-    spec = importlib.util.spec_from_file_location("package", TOOLS_DIR / "peassets" / "package.py")
-    package = importlib.util.module_from_spec(spec)
-    sys.path.insert(0, str(TOOLS_DIR / "peassets"))
-    spec.loader.exec_module(package)
-    EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    for key, rec in data.ASSETS.items():
-        if rec.get("type") != "package" or not rec.get("slots"):
-            continue
-        # the exports its decoded data references, `<binding>.<export>` (room/), each once
-        own = rec["group"] if rec.get("load", {}).get("slot") in ("room", "stage") else f"{rec['group']}/{key.rsplit('/', 1)[1]}"
-        texts = [p.read_text() for p in (ASSETS_DIR / "USA" / own).glob("*.toml")] + \
-                [p.read_text() for p in (ASSETS_DIR / "USA" / own).glob("*.evs")]
-        used = {m for t in texts for m in re.findall(r'"?\b([a-z][a-z0-9_]*\.[a-z][a-z0-9_]*)\b"?', t)}
-        lines, seen = [], {}
-        for binding, bound in sorted(rec["slots"].items()):
-            base = package.load_address(bound, data.ASSETS)
-            for export, e in sorted((data.ASSETS[bound].get("exports") or {}).items()):
-                if f"{binding}.{export}" not in used:
-                    continue
-                address = base + e["at"]
-                if seen.setdefault(e["symbol"], address) != address:
-                    raise SystemExit(f"{key}: {e['symbol']} names 0x{seen[e['symbol']]:08X} and 0x{address:08X}: "
-                                     "give one of the packages its own symbol for it")
-                lines.append(f"{e['symbol']} = 0x{address:08X}; // {binding}.{export}")
-        path = EXPORTS_DIR / f"{rec.get('package_name', key)}.txt"
-        text = "\n".join(sorted(set(lines))) + "\n"
-        if not path.is_file() or path.read_text() != text:
-            path.write_text(text)
 
 
 def include_path(name: str, rec: dict) -> str:
@@ -537,6 +538,9 @@ def collision_includes(version: str) -> list[tuple[Path, list[Path], int, int, l
             continue
         raw = ASSETS_DIR / version / "pe2pkg" / f"{grid['package']}.pe2pkg"
         parts = components(raw.read_bytes(), grid["load"], grid["source"])
+        if parts[0]["offset"] != grid["grid"]:              # a declared placement ends where its header begins
+            raise SystemExit(f"{grid['package']}: the grid header at 0x{grid['source']:X} describes a grid at "
+                             f"0x{parts[0]['offset']:X}, not the declared 0x{grid['grid']:X}")
         prefix = f"{grid['package']}_collision_{grid['source']:05X}"
         outputs = [BUILD_DIR / "include" / "assets" / f"{prefix}_{part['name']}.inc" for part in parts]
         out.append((raw, outputs, grid["load"], grid["source"],
@@ -1101,10 +1105,12 @@ def append_overlay_absolute_imports(basename: str, imports_path: str | None = No
             m = re.match(r"^(\w+)\s*=\s*(0x[0-9A-Fa-f]+)", line.strip())
             if m:
                 extra.append(f"{m.group(1)} = {m.group(2)};")
-    exports = EXPORTS_DIR / f"{basename}.txt"           # the exports its package's bindings name
-    if exports.is_file():
-        for line in exports.read_text(encoding="utf-8").splitlines():
-            m = re.match(r"^(\w+)\s*=\s*(0x[0-9A-Fa-f]+)", line.strip())
+    # The exports of the packages its package binds or requires, which gen_overlay_configs writes into the
+    # overlay's generated symbol map as absolute symbols.
+    generated = CONFIG_DIR / "USA" / "generated" / "sym" / f"{basename}.txt"
+    if generated.is_file():
+        for line in generated.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"^(\w+)\s*=\s*(0x[0-9A-Fa-f]+);.*absolute:True", line.strip())
             if m:
                 extra.append(f"{m.group(1)} = {m.group(2)};")
     if not extra:
@@ -1361,10 +1367,12 @@ def ninja_build(
                  str(CONFIG_DIR / version / "overlays.toml"),
                  *sorted(str(p) for p in (peassets / "groups").rglob("*.toml"))]
     for name, instance, incs in room_includes(version):
+        if not incs:                                      # its sources include none of its files (the MIST's r21)
+            continue
         for writer in asset_writers:
             evs = instance.parent / "events.evs"
             writer.build(outputs=[str(i) for i in incs], rule="room-inc", inputs=str(instance),
-                         implicit=room_deps + ([str(evs)] if evs.exists() else []),
+                         implicit=room_deps + ([str(evs)] if evs.exists() else []) + STAGE_PART_INSTANCES.get(str(instance), []),
                          variables={"name": name, "outdir": str(incs[0].parent)})
         ASSET_INC_OUTPUTS.extend(str(i) for i in incs)
     font_deps = [str(GEN_FONT_INC), str(peassets / "asset_data.py"), str(peassets / "asset_schema.py"),
@@ -1710,7 +1718,6 @@ def split_inputs(yaml: str, version_dir: str, basename: str, c_sources: list[str
     paths = [config, base / options["target_path"]]
     paths += [base / p for p in listed("symbol_addrs_path") + listed("reloc_addrs_path")]
     paths += [CONFIG_DIR / version_dir / f"sym.{basename}.imports.txt"]
-    paths += [EXPORTS_DIR / f"{basename}.txt"]          # the exports its bindings name (write_export_symbols)
     paths += [Path(c) for c in c_sources]
     if options.get("extensions_path"):
         # The segment types that place a library or variant unit's source.
@@ -2148,7 +2155,6 @@ def main():
         shutil.rmtree(PERMUTER_DIR, ignore_errors=True)
 
     version_dir = GAME_VERSIONS[game_version_option].metadata.version_dir
-    write_export_symbols()
     jobs = [
         (
             yaml,

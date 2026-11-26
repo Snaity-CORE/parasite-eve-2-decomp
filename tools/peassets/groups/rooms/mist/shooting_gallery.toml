@@ -65,6 +65,8 @@ embedded = [
     { name = "player_story_talk_2", offset = 0x08C08, size = 0x2DC, address = 0x80152A28 },
     { name = "player_story_listen", offset = 0x08EE4, size = 0x1A8, address = 0x80152D04 },
     { name = "player_conversation_bank", offset = 0x0908C, size = 0x50, address = 0x80152EAC },
+    { asset = "characters/pierce/body", offset = 0x0A7CC, size = 0x621C, address = 0x801545EC },
+    { asset = "characters/pierce/glasses", offset = 0x109E8, size = 0x1FC, address = 0x8015A808 },
     { name = "pierce_phone_listen", offset = 0x10BE4, size = 0x22C, address = 0x8015AA04 },
     { name = "pierce_phone_talk", offset = 0x10E10, size = 0x3B8, address = 0x8015AC30 },
     { name = "pierce_quip", offset = 0x111C8, size = 0x1C4, address = 0x8015AFE8 },
@@ -120,6 +122,8 @@ scripts = [
 [package]
 type = "package"
 embedded = [
+    { name = "barrier_collision_1", offset = 0x07B50, size = 0x88 },
+    { name = "barrier_collision_2", offset = 0x07BFC, size = 0x3C },
     { name = "creature_target_1", offset = 0x09354, size = 0x1F0, address = 0x80186914 },
     { name = "creature_target_2", offset = 0x09544, size = 0x1F0, address = 0x80186B04 },
     { name = "creature_target_3", offset = 0x09734, size = 0x1F0, address = 0x80186CF4 },
@@ -139,6 +143,7 @@ embedded = [
     { name = "bullseye_2", offset = 0x0B218, size = 0x1F0, address = 0x801887D8 },
     { name = "bullseye_3", offset = 0x0B408, size = 0x1F0, address = 0x801889C8 },
     { name = "demonstration_target", offset = 0x0B5F8, size = 0x1F0, address = 0x80188BB8 },
+    { name = "collision", offset = 0x0B7E8, size = 0xBC0 },
 ]
 load = { slot = "room" }
 package_name = "mist_shooting_gallery"
@@ -156,13 +161,44 @@ target_scores = [0x079D8]
 view_counts = 2
 wave_scripts = [0x0811C, 0x083EC, 0x08704, 0x08A88, 0x08F80]
 
+[package.exports]
+prepare_training_loadout = { at = 0x006EC, symbol = "mistShootingGalleryPrepareTrainingLoadout" }
+open_weapon_menu = { at = 0x0239C, symbol = "mistShootingGalleryOpenWeaponMenu" }
+set_training_barrier_lowered = { at = 0x02DD0, symbol = "mistShootingGallerySetTrainingBarrierLowered" }
+open_jukebox = { at = 0x03574, symbol = "mistShootingGalleryOpenJukebox" }
+select_room_lights = { at = 0x03C00, symbol = "mistShootingGallerySelectRoomLights" }
+spawn_demo_target = { at = 0x072F4, symbol = "mistShootingGallerySpawnDemoTarget" }
+signal_action = { at = 0x07394, symbol = "mistShootingGallerySignalAction" }
+movie_task_descs = { at = 0x07DC4, symbol = "gMistShootingGalleryMovieTaskDescs" }
+task_descs = { at = 0x080F8, symbol = "gMistShootingGalleryTaskDescs" }
+creature_target_1 = { at = 0x09520, symbol = "gMistShootingGalleryCreatureTarget1Model" }
+creature_target_2 = { at = 0x09710, symbol = "gMistShootingGalleryCreatureTarget2Model" }
+creature_target_3 = { at = 0x09900, symbol = "gMistShootingGalleryCreatureTarget3Model" }
+creature_target_4 = { at = 0x09AF0, symbol = "gMistShootingGalleryCreatureTarget4Model" }
+creature_target_5 = { at = 0x09CE0, symbol = "gMistShootingGalleryCreatureTarget5Model" }
+creature_target_6 = { at = 0x09ED0, symbol = "gMistShootingGalleryCreatureTarget6Model" }
+creature_target_7 = { at = 0x0A0C0, symbol = "gMistShootingGalleryCreatureTarget7Model" }
+creature_target_8 = { at = 0x0A2B0, symbol = "gMistShootingGalleryCreatureTarget8Model" }
+creature_target_9 = { at = 0x0A4A0, symbol = "gMistShootingGalleryCreatureTarget9Model" }
+creature_target_10 = { at = 0x0A690, symbol = "gMistShootingGalleryCreatureTarget10Model" }
+mount = { at = 0x0AA74, symbol = "gMistShootingGalleryMountModel" }
+half_target_1 = { at = 0x0ABD8, symbol = "gMistShootingGalleryHalfTarget1Model" }
+half_target_2 = { at = 0x0AD3C, symbol = "gMistShootingGalleryHalfTarget2Model" }
+half_target_3 = { at = 0x0AEA0, symbol = "gMistShootingGalleryHalfTarget3Model" }
+half_target_4 = { at = 0x0B004, symbol = "gMistShootingGalleryHalfTarget4Model" }
+bullseye_1 = { at = 0x0B1F4, symbol = "gMistShootingGalleryBullseye1Model" }
+bullseye_2 = { at = 0x0B3E4, symbol = "gMistShootingGalleryBullseye2Model" }
+bullseye_3 = { at = 0x0B5D4, symbol = "gMistShootingGalleryBullseye3Model" }
+demonstration_target = { at = 0x0B7C4, symbol = "gMistShootingGalleryDemonstrationTargetModel" }
+controller_task = { at = 0x10B04, symbol = "gMistShootingGalleryControllerTask" }
+
 [targets]
 type = "package"
 exports = { tasks = { at = 0x03174, symbol = "gShootingGalleryTargetsTaskDescriptors" } }
 load = { slot = "actor_1" }
 package_name = "shooting_gallery_targets"
 required = true
-requires = ["gameplay"]
+requires = ["gameplay", "rooms/mist/shooting_gallery/package"]
 sha1 = "ee6e6aba8227822c577ad915a2116932fdcbd056"
 
 [sounds_0]
@@ -239,6 +275,11 @@ bpp = 8
 height = 232
 variants = ["default"]
 width = 128
+
+[collision]
+type = "collision"
+cell_face_list_macro = "MIST_SHOOTING_GALLERY_CELL_FACE_LIST_AT_OFFSET"
+sha1 = "799a9a7679230ffd0eaff8ac63a4bdfacbbc7130"
 
 [bullseye_1]
 type = "model"
@@ -1548,6 +1589,16 @@ rig = "characters/aya/rig"
 [target_kill_kind_9]
 type = "sound"
 sha1 = "a8c00952d8cf99acb2f546a13b6d60ea9d378a80"
+
+[barrier_collision_1]
+type = "collision"
+cell_face_list_macro = "MIST_SHOOTING_GALLERY_BARRIER_CELL_FACE_LIST_AT_OFFSET"
+sha1 = "e8ec8f1230ba7cb7571f3fa0d914078f4658b548"
+
+[barrier_collision_2]
+type = "collision"
+cell_face_list_macro = "MIST_SHOOTING_GALLERY_BARRIER_CELL_FACE_LIST_AT_OFFSET"
+sha1 = "8c046d70da8244f81653f35c2edbe18d3060becb"
 
 [pierce_gallery_idle]
 type = "clip"

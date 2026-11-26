@@ -10,10 +10,14 @@ A package (type `package`) is an overlay image that states where it loads and wh
     requires = ["<package>", ...]              what is resident whenever it is
     slots = { <name> = "<file>" }              the files that fill the slots its objects point into, by name
     exports = { <name> = { at = 0x.., symbol = ".." } }
-                                               the tables other packages point at, by hand: only what they need
+                                               what other packages' data and code name in it, by hand: only what
+                                               they need
 
 with `package_name`, `entries`, `embedded` and `sha1` as a `pe2pkg` or `room` has them. Consumers name what they
-point at through these; no tool reads another package's symbol map. local/package_type_design.md is the design.
+point at through these, and a package's link takes every export of the packages it binds or requires
+(`link_symbols`, written into its generated symbol map by tools/buildsteps/gen_overlay_configs.py); after the link,
+tools/check/check_exports.py holds each export to its own package's image. Nothing here reads splat's symbol files.
+local/package_type_design.md is the design.
 """
 from __future__ import annotations
 
@@ -92,11 +96,11 @@ def load_address(name: str, assets: dict[str, dict[str, Any]]) -> int:
     return assets[f"engine/memory/{slot}"]["at"]
 
 
-def file_id(name: str) -> int | None:
-    """The disc id of the file that loads a package: the stage-0 file holding it as a chunk."""
+def file_ids(name: str) -> set[int]:
+    """The disc ids of the files that load a package: the stage-0 files holding it as a chunk (one, or several: the
+    Akropolis map's first page is files 30100 and 30101)."""
     import asset_data
-    ids = [node["id"] for node in asset_data.TREE[0]["files"].values() if name in (node.get("chunks") or {}).values()]
-    return ids[0] if len(ids) == 1 else None
+    return {node["id"] for node in asset_data.TREE[0]["files"].values() if name in (node.get("chunks") or {}).values()}
 
 
 def resource_file_id(file_number: int, group_index: int) -> int:
@@ -104,6 +108,11 @@ def resource_file_id(file_number: int, group_index: int) -> int:
     hundreds, and its number's units and tens as the id's hundreds (gameplay's area loader)."""
     base = 10 * (group_index + 1) if group_index < 6 else group_index - 6
     return (base + file_number // 100) * 10000 + (file_number % 100) * 100
+
+
+def map_page_file_id(stage: int, page: int) -> int:
+    """The disc id of a stage's map page (a MenuMapAreaShape's `page`): 30000 + 100 x stage + page."""
+    return 30000 + 100 * stage + page
 
 
 def bindings(name: str, assets: dict[str, dict[str, Any]]) -> dict[str, str]:
@@ -116,7 +125,7 @@ def resolve_export(name: str, assets: dict[str, dict[str, Any]], address: int, f
     loads (all of them when no file is given), the export at that address. None where none is."""
     hits = []
     for binding, package in bindings(name, assets).items():
-        if file is not None and file_id(package) != file:
+        if file is not None and file not in file_ids(package):
             continue
         base = load_address(package, assets)
         for export, e in (assets[package].get("exports") or {}).items():
@@ -125,16 +134,165 @@ def resolve_export(name: str, assets: dict[str, dict[str, Any]], address: int, f
     return hits[0] if len(hits) == 1 else None
 
 
+def resident(name: str, assets: dict[str, dict[str, Any]]) -> list[str]:
+    """The packages resident whenever `name` is: its `requires`, and theirs."""
+    out, todo = [], list(assets[name].get("requires", ()))
+    while todo:
+        r = todo.pop(0)
+        if r not in out:
+            out.append(r)
+            todo += assets[r].get("requires", ())
+    return out
+
+
+def required_exports(name: str, assets: dict[str, dict[str, Any]]) -> dict[int, str]:
+    """{address: `<package>.<export>`} for the exports of every package resident whenever `name` is."""
+    out = {}
+    for package in resident(name, assets):
+        exports = assets[package].get("exports") or {}
+        if exports:
+            base = load_address(package, assets)
+            for export, e in exports.items():
+                out[base + e["at"]] = f"{package}.{export}"
+    return out
+
+
+def resolve_export_of(name: str, assets: dict[str, dict[str, Any]], package: str, address: int) -> str | None:
+    """`<binding>.<export>` for the export of `package`, bound by `name`, at `address`: where several packages share
+    a slot (a stage's rooms), the one the referring object belongs with."""
+    binding = next((b for b, p in bindings(name, assets).items() if p == package), None)
+    if binding is None:
+        return None
+    base = load_address(package, assets)
+    return next((f"{binding}.{e}" for e, x in (assets[package].get("exports") or {}).items() if base + x["at"] == address), None)
+
+
 def export_of(name: str, assets: dict[str, dict[str, Any]], ref: str) -> tuple[int, str] | None:
-    """(address, C symbol) of `<binding>.<export>`, or None where `ref` is no such reference."""
+    """(address, C symbol) of `<binding>.<export>` or `<required package>.<export>`, or None where `ref` is no such
+    reference."""
     binding, _, export = ref.partition(".")
     package = bindings(name, assets).get(binding)
+    if package is None and binding in resident(name, assets):
+        package = binding
     if not export or package is None:
         return None
     e = (assets[package].get("exports") or {}).get(export)
     if e is None:
         raise SystemExit(f"{name}: {ref}: {package} exports no {export!r}")
     return load_address(package, assets) + e["at"], e["symbol"]
+
+
+def bank_exports(name: str, assets: dict[str, dict[str, Any]], embedded: dict) -> set[str]:
+    """`<binding or package>.<export>` for every clip a bank this package places binds from a package it binds or
+    requires: what its C names there besides its decoded data."""
+    from animation import declared
+    source = f"{assets[name].get('package_name', name)}.pe2pkg"
+    named = {**{r: r for r in resident(name, assets)}, **bindings(name, assets)}
+    out = set()
+    for bank in declared.placed_banks(assets, embedded):
+        if embedded[bank]["source"] != source:
+            continue
+        for clip in filter(None, declared.bank_slots(bank, assets)):
+            place, other = declared.bank_place(bank, clip, assets, embedded)
+            if other is None:
+                continue
+            address, base = declared.set_address(clip, embedded, place), load_address(other, assets)
+            for export, e in (assets[other].get("exports") or {}).items():
+                if base + e["at"] == address:
+                    out |= {f"{n}.{export}" for n, p in named.items() if p == other}
+    return out
+
+
+def link_symbols(name: str, assets: dict[str, dict[str, Any]], embedded: dict,
+                 assets_root: Path) -> list[tuple[str, int, str]]:
+    """(symbol, address, reference) for every export of the packages `name` binds or requires: what its code and data
+    name there, by the export's offset at its package's memory slot (tools/check/check_exports.py holds each to its
+    own package's image). Where two of them give one symbol different addresses, the one its decoded data or banks
+    name (`<binding>.<export>`, `<package>.<export>`) is the symbol; where they name neither it is left out, so code
+    naming it does not link."""
+    rec = assets[name]
+    if rec.get("type") != "package" or not (rec.get("slots") or rec.get("requires")):
+        return []
+    own = rec["group"] if rec.get("load", {}).get("slot") in ("room", "stage") else f"{rec['group']}/{name.rsplit('/', 1)[1]}"
+    texts = [p.read_text() for pattern in ("*.toml", "*.evs") for p in (assets_root / own).glob(pattern)]
+    used = {m for t in texts for m in re.findall(r'"?\b([a-z][a-z0-9_/]*\.[a-z][a-z0-9_]*)\b"?', t)}
+    used |= bank_exports(name, assets, embedded)           # what its banks bind there
+    named = {**{r: r for r in resident(name, assets)}, **bindings(name, assets)}
+    candidates: dict[str, dict[int, list[str]]] = {}        # symbol -> address -> the references giving it
+    for binding, bound in sorted(named.items()):
+        exports = assets[bound].get("exports") or {}
+        base = load_address(bound, assets) if exports else 0
+        for export, e in sorted(exports.items()):
+            candidates.setdefault(e["symbol"], {}).setdefault(base + e["at"], []).append(f"{binding}.{export}")
+    out = []
+    for symbol, addresses in sorted(candidates.items()):
+        if len(addresses) > 1:
+            addresses = {a: refs for a, refs in addresses.items() if used.intersection(refs)}
+            if len(addresses) > 1:
+                raise SystemExit(f"{name}: its data names {symbol} at " + " and ".join(f"0x{a:08X}" for a in addresses)
+                                 + ": give one of the packages its own symbol for it")
+        out += [(symbol, address, refs[0]) for address, refs in addresses.items()]
+    return sorted(out, key=lambda s: s[1])
+
+
+# --- what packages place ------------------------------------------------------------------------------------------
+
+MODEL_RECORD_SIZE = 0x24                                # a model ends in its TmdSource record
+
+
+def _placements(assets: dict[str, dict[str, Any]], embedded: dict, kind: str):
+    """(package record, placement) for every placement of an asset of `kind` in a package, from the packages'
+    `embedded` lists and an asset's own placement record."""
+    import asset_schema
+    by_source = {f"{r.get('package_name', k)}.pe2pkg": k for k, r in assets.items()
+                 if r.get("type") in asset_schema.PACKAGE_TYPES}
+    seen = set()
+    for key, rec in assets.items():
+        if rec.get("type") not in asset_schema.PACKAGE_TYPES:
+            continue
+        for place in rec.get("embedded", ()):
+            if isinstance(place, dict) and "offset" in place and assets.get(place["name"], {}).get("type") == kind:
+                seen.add((key, place["offset"]))
+                yield key, place
+    for name, place in embedded.items():
+        key = by_source.get(place.get("source"))
+        if key and assets.get(name, {}).get("type") == kind and "offset" in place and (key, place["offset"]) not in seen:
+            yield key, {"name": name, **place}
+
+
+def _loaded(assets: dict[str, dict[str, Any]], embedded: dict, kind: str):
+    """_placements, with each package's load address; a package no memory slot gives one yet is left out."""
+    loads: dict[str, int | None] = {}
+    for key, place in _placements(assets, embedded, kind):
+        if key not in loads:
+            try:
+                loads[key] = load_address(key, assets)
+            except SystemExit:
+                loads[key] = None
+        if loads[key] is not None:
+            yield key, place, loads[key]
+
+
+def placed_models(assets: dict[str, dict[str, Any]], embedded: dict) -> list[dict]:
+    """Every model a package places, as the build's model rows: its arrays (`model`) and its record (`source`)."""
+    return [{"package": assets[key].get("package_name", key), "load": load, "model": p["offset"],
+             "source": p["offset"] + p["size"] - MODEL_RECORD_SIZE, "in_c": True, "name": p["name"]}
+            for key, p, load in _loaded(assets, embedded, "model")]
+
+
+def placed_collisions(assets: dict[str, dict[str, Any]], embedded: dict) -> tuple[list[dict], list[dict]]:
+    """Every collision grid and patch a package places, as the build's rows: a grid's arrays and the header after
+    them, with its face-list binding; a patch's arrays (`pieces`)."""
+    grids, patches = [], []
+    for key, p, load in _loaded(assets, embedded, "collision"):
+        rec, row = assets[p["name"]], {"package": assets[key].get("package_name", key), "load": load, "in_c": True,
+                                       "name": p["name"]}
+        if "pieces" in rec:
+            patches.append({**row, "offset": p["offset"], "pieces": list(rec["pieces"])})
+        else:
+            grids.append({**row, "grid": p["offset"], "source": p["offset"] + p["size"],
+                          "cell_face_list_macro": rec.get("cell_face_list_macro", "GRID_CELL")})
+    return grids, patches
 
 
 def check_package(key: str, rec: dict[str, Any], assets: dict[str, dict[str, Any]]) -> list[str]:
