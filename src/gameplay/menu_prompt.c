@@ -28,6 +28,11 @@
 #include "main/ui.h"
 #include "main/wipsys.h"
 
+#ifdef PC_PORT
+/* main/pc/menu.c: PE2PC's texts, listed for translators. */
+extern const u8 gPcTextLevel[];
+#endif
+
 /// Inventory domains and P.E. menu encoding used by the label and row filters.
 enum {
     ITEM_MENU_ARMOR_ITEM_FIRST             = 0x60,
@@ -1013,15 +1018,19 @@ void itemMenuParasiteEnergySummaryTask(Task* task)
                 // The level-limit local also supplies mode 3 (translucent outlined text).
                 levelText.drawMode = maxLevel;
 #ifdef PC_PORT
-                // "Lv." is text here, in the digits' face and on their line
-                // (the console's is a picture, a few pixels off), the digit
-                // after it, the two centred under the element's caption.
-                levelText.x = object->panel.contentOriginX.unsignedValue + columnX + gItemMenuParasiteEnergyCaptions[element].xOffset +
-                              ((element == 0) ? ITEM_MENU_FIRE_CAPTION_WIDTH / 2 + PC_LEVEL_SPLIT_X : ITEM_MENU_OTHER_ELEMENT_CAPTION_WIDTH / 2 + PC_LEVEL_SPLIT_X_WIDE);
-                levelText.alignment = TEXT_ALIGNMENT_RIGHT;
-                textDrawString(&levelText, (const u8*)"Lv.");
-                levelText.x        += 2;
-                levelText.alignment = TEXT_ALIGNMENT_LEFT;
+                // Above the console's resolution, "Lv." is text, in the
+                // digits' face and on their line (the console's is a
+                // picture, a few pixels off, kept at its resolution), the
+                // digit after it, the two centred under the element's
+                // caption. Drawn as text, a mod's strings/ translate it.
+                if (pc_above_console()) {
+                    levelText.x = object->panel.contentOriginX.unsignedValue + columnX + gItemMenuParasiteEnergyCaptions[element].xOffset +
+                                  ((element == 0) ? ITEM_MENU_FIRE_CAPTION_WIDTH / 2 + PC_LEVEL_SPLIT_X : ITEM_MENU_OTHER_ELEMENT_CAPTION_WIDTH / 2 + PC_LEVEL_SPLIT_X_WIDE);
+                    levelText.alignment = TEXT_ALIGNMENT_RIGHT;
+                    textDrawString(&levelText, gPcTextLevel);
+                    levelText.x        += 2;
+                    levelText.alignment = TEXT_ALIGNMENT_LEFT;
+                }
 #endif
                 textDrawString(&levelText, textItoaSigned(numberText, abilityLevel[0]));
             }
@@ -1058,8 +1067,10 @@ void itemMenuParasiteEnergySummaryTask(Task* task)
                     showThirdAbility = 1;
                 }
             }
-#ifndef PC_PORT
-            // (on PC, "Lv." is written with the digits)
+#ifdef PC_PORT
+            // (above the console's resolution, "Lv." is written with the digits)
+            if (!pc_above_console())
+#endif
             if ((abilityRow != 0) || (showThirdAbility != 0)) {
                 sprite         = gGpuPrimCursor;
                 gGpuPrimCursor = sprite + 1;
@@ -1076,7 +1087,6 @@ void itemMenuParasiteEnergySummaryTask(Task* task)
                 sprite->y0 = markY;
                 addPrim(gGpuCurrentOt + object->panel.otIndex.signedValue + 1, sprite);
             }
-#endif
             markRowOffset += 9;
         }
     }

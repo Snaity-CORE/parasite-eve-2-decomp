@@ -439,6 +439,9 @@ const u8* pc_text_translate(const u8* text);
 /// The text to draw in a face: `text`, or for the small face (whose glyph
 /// table stops at 'z') a copy with accented letters made plain.
 const u8* pc_text_for_face(const u8* text, s32 small);
+/// Whether the game is drawn above the console's resolution (the host's
+/// mods::above_console), where finer text replaces some of its pictures.
+s32 pc_above_console(void);
 #endif
 
 #endif // MAIN_TEXT_H
