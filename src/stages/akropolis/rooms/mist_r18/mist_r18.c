@@ -31,7 +31,7 @@
 #include "main/text.h"
 #include "main/tmd_types.h"
 
-#include "mapui/map_akropolis.h"
+#include "stages/akropolis/stage.h"
 #include "../../../../shared/room/backdrop_crossfade.h"
 
 #include "assets/rooms/mist/r18/declarations.inc"
@@ -386,7 +386,7 @@ static void _mistR18AdvanceBriefingState(Task* unusedTask)
             _gMistR18BriefingStep = BRIEFING_CHECK_DRYFIELD_MAP;
         } else if (briefingStep == BRIEFING_CHECK_DRYFIELD_MAP) {
             // Reopen the reminder menu without resetting its map-opened latch.
-            if (mapAkropolisWasDryfieldMapSelected() != true) {
+            if (akropolisStageWasDryfieldMapSelected() != true) {
                 evsStartScript(_gMistR18DryfieldMapReminderScript, EVENT_SCRIPT_HUD_HIDE_RESTORE);
                 _gMistR18RetainKeyItemMenuState = true;
                 return;
@@ -914,7 +914,7 @@ static void _mistR18SetOrderingDepthShift(s8 depthShift)
 /// Opens the briefing's key-item menu without reinitializing it on reminder passes.
 static void _mistR18OpenKeyItemMenu(void)
 {
-    mapAkropolisOpenKeyItemMenu(0, _gMistR18RetainKeyItemMenuState);
+    akropolisStageOpenKeyItemMenu(0, _gMistR18RetainKeyItemMenuState);
 }
 
 /// Registers the room task and starts the introductory briefing event with its skip script.

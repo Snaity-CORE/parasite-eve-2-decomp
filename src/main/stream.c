@@ -20,7 +20,7 @@
 #include "main/tmd.h"
 #include "main/gamemain.h"
 
-#include "mapui/map_akropolis.h"
+#include "stages/akropolis/stage.h"
 #include "mapui/map_dryfield.h"
 #include "mapui/map_neo_ark.h"
 
@@ -276,7 +276,7 @@ static void _streamAssignMovieBuffers(const GameLocationKey* location)
             return;
         }
         case GAME_STAGE_AKROPOLIS + 1:
-            mapAkropolisSetupMovieBuffers(location);
+            akropolisStageSetupMovieBuffers(location);
             return;
         case GAME_STAGE_DRYFIELD + 1:
             mapDryfieldSetupMovieBuffers(location);

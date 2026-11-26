@@ -15,7 +15,7 @@
 #include "main/stage.h"
 #include "main/task.h"
 
-#include "mapui/map_akropolis.h"
+#include "stages/akropolis/stage.h"
 
 #include "mapui/map_dryfield.h"
 
@@ -34,7 +34,7 @@ u8 gCapRoomCompletionSoundsEnabled;
 /// the loaded map overlay; selected room callback code must also remain loaded.
 static TaskDesc* const _gObjectTaskStageRoomTables[6] __attribute__((section(".data"))) = {
     NULL,
-    gMapAkropolisRoomTaskDescriptors,
+    gAkropolisStageRoomTaskDescriptors,
     gMapDryfieldRoomTaskDescriptors,
     gMapDryfieldFullRoomTaskDescriptors,
     gMapShelterRoomTaskDescriptors,
